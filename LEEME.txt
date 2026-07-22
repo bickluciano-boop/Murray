@@ -1,0 +1,469 @@
+OJO GPS PARA WINDOWS - VERSION 16.4.27 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+
+SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
+
+TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
+
+    3650-8698-4882
+
+NOVEDAD 16.4.27
+
+- Quien active Ojo GPS con un código de prueba (no de administrador) ahora
+  ve un cartel en el encabezado, al lado de Soporte y Ayuda, con los días
+  que le quedan (por ejemplo "Vence en 2 días"). Antes no había forma de
+  saberlo desde la app; solo se enteraba cuando dejaba de funcionar. Con
+  tu código de administrador seguís viendo "ADMINISTRADOR" como siempre,
+  no este cartel.
+
+NOVEDAD 16.4.26
+
+NOVEDAD 16.4.26
+
+- Nuevo botón "Soporte" en el encabezado, al lado de Ayuda. Al tocarlo
+  ofrece tres formas de escribir: mail (soporte@ojoguard.app), WhatsApp,
+  o pedirle ayuda a una IA (copia una descripción del problema, con la
+  versión de Ojo GPS incluida, y abre un chat de IA para pegarla).
+
+NOVEDAD 16.4.25
+
+- Nuevo panel de Administrador, adentro de la app. Si tu código es de
+  administrador (como el de arriba), aparece un cartel "⚙ ADMINISTRADOR"
+  en la parte de arriba de la ventana; al tocarlo se abre un panel para
+  generar códigos de activación vos mismo, eligiendo la cantidad de días,
+  sin salir a buscar Generar-Codigo-Demo.cmd. Los códigos que generás ahí
+  para otras personas nunca tienen la marca de administrador, sin
+  importar cuántos días les des — no ven este panel bajo ninguna
+  circunstancia.
+
+NOVEDAD 16.4.24
+
+- Arreglado: al elegir una dirección con altura (ej. "1750, Avenida
+  Callao..."), el cartel "Destino elegido" mostraba solo el número
+  ("1750"), sin la calle. Ahora muestra calle y altura juntos ("Avenida
+  Callao 1750") en los tres lugares donde puede pasar: al elegir de la
+  lista de búsqueda, al tocar el mapa, y al marcar un punto directo.
+- La línea de barrio, hora local y día/noche (debajo del destino elegido)
+  ahora se ve en negrita, más legible, en vez de la letra fina de antes.
+
+NOVEDAD 16.4.23
+
+- Ojo GPS ahora pide un código de activación al abrir. Si no hay uno
+  guardado, o venció, aparece un cartel simple pidiéndolo antes de dejar
+  entrar. Sirve para dar copias de prueba con fecha de vencimiento, por
+  ejemplo a un inversor: le das la carpeta y un código de X días, y a
+  partir de que lo activa tiene exactamente esos días de uso. Vencido el
+  plazo, la app vuelve a pedir código y no anda hasta que le des uno
+  nuevo válido.
+- Para generar un código nuevo (para vos o para cualquier persona), abrí
+  Generar-Codigo-Demo.cmd, escribí cuántos días le das, y te muestra el
+  código para copiar y mandar. Podés generar todos los códigos que
+  quieras, para tantas personas como quieras.
+- Ojo importante: esto NO es una protección real tipo licencia comercial.
+  Ojo GPS se distribuye como código Python legible (no un .exe armado),
+  así que alguien con conocimientos de programación que abra el archivo
+  ojo_gps_app.py técnicamente podría sacar el chequeo. Para frenar a
+  alguien que solo quiere ver la app sin que te quede usándola gratis
+  para siempre, alcanza de sobra — no es para protegerte de alguien que
+  se proponga específicamente saltárselo.
+
+NOVEDAD 16.4.22
+
+- En modo Caminar, el punto ya no camina pegado al medio de la calle: se
+  corre unos 2,5 metros hacia el costado en todo el recorrido, así se ve
+  más parecido a ir por la vereda. Importante: esto es una simulación
+  visual, no sabe dónde está la vereda real de cada cuadra. Siempre se
+  corre para el mismo costado, así que en calles muy anchas o en curvas
+  muy cerradas puede no coincidir exactamente con la vereda real. No se
+  aplica a Bicicleta ni Auto.
+
+NOVEDAD 16.4.21
+
+- Arreglado: al cambiar la velocidad durante un recorrido en marcha, el
+  cartel de "Distancia / Duración estimada" se quedaba con el número de
+  cuando arrancó el recorrido y no se actualizaba. Ahora ese cartel muestra
+  la distancia que falta y el tiempo estimado a la velocidad actual, y se
+  recalcula solo, en vivo, a cada paso y cada vez que tocás Caminar,
+  Bicicleta, Auto o movés el control de velocidad.
+
+NOVEDAD 16.4.20
+
+- El recorrido ahora respeta el modo elegido: con Caminar arma el camino
+  usando rutas peatonales (veredas, sendas) en vez de siempre calcular por
+  la calle como si fuera auto; con Bicicleta usa rutas para bici. Antes,
+  los tres botones (Caminar / Bicicleta / Auto) solo cambiaban la
+  velocidad, pero el camino en sí siempre era el de auto. Ojo: esto
+  depende de qué tan completo esté mapeado el barrio en OpenStreetMap; en
+  zonas con poco detalle peatonal puede seguir usando la calle porque no
+  hay otra ruta cargada.
+- La foto de Street View ahora prioriza la imagen mejor orientada hacia el
+  punto elegido, no solo la más cercana. Antes podía tocar una foto sacada
+  mirando a lo largo de la calle (autos, el camino) en vez de mirando hacia
+  el frente del local o edificio. Sigue siendo una entre las fotos que haya
+  disponibles en Mapillary cerca del punto, así que en zonas con poca
+  cobertura el resultado puede no mejorar mucho.
+
+NOVEDAD 16.4.19
+
+- Arreglado de nuevo: en algunas máquinas la foto de Street View seguía sin
+  mostrarse ("No se pudo mostrar la foto recibida.") a pesar de la
+  corrección de la 16.4.18. Esta vez la causa era el formato interno con el
+  que se armaba la foto (PPM). Se cambió al mismo formato que ya usa el
+  mapa (PNG), que se sabe que funciona bien en Windows porque el mapa
+  siempre se vio correctamente.
+
+NOVEDAD 16.4.18
+
+- Arreglado: la foto de Street View no se mostraba (aparecia "No se pudo
+  mostrar la foto recibida.") aunque la busqueda funcionara bien. La causa
+  era un detalle interno de como Windows arma esa foto para mostrarla en
+  pantalla; ya esta corregido.
+
+NOVEDAD 16.4.17
+
+- Street View ya viene con un token de Mapillary configurado: Ver Street
+  View funciona de entrada, sin ningun paso previo.
+- Si mas adelante ese token deja de funcionar (por ejemplo, si Mapillary lo
+  revoca), Ojo GPS lo detecta solo, lo avisa dentro de la ventana de Street
+  View y abre directamente la carpeta correspondiente en el Explorador de
+  Windows para que pongas uno nuevo (antes solo mostraba la ruta como texto
+  en un cartel, lo que generaba confusion).
+
+NOVEDAD 16.4.16
+
+- Nuevo boton Ver Street View: muestra una foto de la calle cerca del punto
+  elegido, sin abrir el navegador y sin bloquear Ojo GPS.
+- Disponible en la pantalla principal (junto a Mostrar datos tecnicos) y
+  dentro de Elegir en el mapa (junto a Usar esta ubicacion).
+- Flujo pensado: Elegir ubicacion -> Street View (opcional) -> Cambiar
+  ubicacion.
+- Si no hay foto disponible a menos de 50 metros, Ojo GPS lo indica
+  claramente en vez de dejar la ventana vacia.
+- Usa fotos de Mapillary (gratis) en lugar de Google Street View para que no
+  haga falta una cuenta de facturacion.
+- 1-Instalar-Python-3.13.cmd ahora tambien instala Pillow, que Ojo GPS usa
+  para mostrar las fotos.
+
+SI ALGUNA VEZ NECESITAS CAMBIAR EL TOKEN DE STREET VIEW
+
+Si el token incluido deja de andar, Ojo GPS te lo va a decir solo dentro de
+la ventana de Street View y va a abrir la carpeta correspondiente para vos.
+Estos pasos son para cuando querés cambiarlo por tu cuenta, antes de que
+falle:
+
+1. Entra a mapillary.com/dashboard/developers e inicia sesion o crea una
+   cuenta (es gratis).
+2. Crea una aplicacion y copia el token de acceso.
+3. Anda a %LOCALAPPDATA%\Ojo GPS y abri (o crea) el archivo
+   mapillary_token.txt.
+4. Pega el token nuevo, solo, sin nada mas alrededor, y guarda el archivo.
+5. Volve a tocar Ver Street View: ese token pasa a usarse en lugar del que
+   ya viene incluido.
+
+NOVEDAD 16.4.15
+
+- El botón Ver y editar en el mapa de Dirección de partida restaura la
+  ventana del mapa y la muestra siempre delante de Ojo GPS.
+- Si el mapa no puede abrirse, ahora aparece el motivo del error; el botón ya
+  no queda aparentemente sin respuesta.
+- La misma corrección se aplica a Dirección de llegada.
+
+NOVEDAD 16.4.14
+
+- Ver y editar en el mapa abre inmediatamente, sin esperar primero una
+  búsqueda de direcciones por Internet.
+- Se quitó Street View externo porque abría un navegador separado y podía
+  demorar demasiado.
+- Street View volverá solamente cuando pueda integrarse dentro de Ojo GPS con
+  una experiencia rápida y clara.
+
+MEJORAS CONSERVADAS DE 16.4.13
+
+- El mapa descarga varias partes al mismo tiempo para aparecer más rápido.
+- El zoom espera un instante antes de recargar para evitar bloqueos.
+- Las partes descargadas del mapa quedan guardadas en la PC y se reutilizan.
+
+CONSERVA TODO LO QUE FUNCIONABA EN 16.4.12
+
+- El mapa abre y cambia de punto con menos demora, reutilizando las imagenes
+  que ya descargo.
+- En Simular recorrido, partida y llegada quedan arriba y el tipo de
+  movimiento, la velocidad y el tiempo se ven juntos con mayor claridad.
+- El puente mantiene la ubicacion con menos carga para el iPhone.
+- Se conservan el semaforo, Wi-Fi sin cable, Fijar GPS, Joystick, recorrido y
+  Volver al GPS real.
+
+NOVEDAD 16.4.11
+
+- Una sola ventana muestra partida P y llegada L al mismo tiempo.
+- Podés editar cualquiera de las dos sin perder la otra ni empezar de nuevo.
+- Los dos puntos quedan guardados hasta que confirmás con Listo.
+
+MEJORAS CONSERVADAS DE 16.4.10
+
+- Si escribís manualmente la dirección de partida, Ojo GPS la convierte en coordenadas antes de abrir el mapa de llegada.
+- El mapa muestra P azul (partida) y L roja (llegada) al mismo tiempo.
+- El mapa ajusta automáticamente el encuadre para que entren ambos puntos.
+
+MEJORAS CONSERVADAS DE 16.4.9
+
+- Al elegir en el mapa la dirección de llegada de un recorrido, la partida ya
+  seleccionada permanece visible con un marcador azul P.
+- La llegada se marca en rojo con una L, para distinguir claramente ambos
+  extremos antes de iniciar la simulación.
+- El mapa de llegada se abre centrado en la partida cuando todavía no existe
+  una llegada seleccionada.
+- Las teclas + y - vuelven a controlar el zoom del mapa, incluido el teclado
+  numérico.
+- Se incluye PENDIENTES.md con lo próximo a validar y desarrollar.
+
+NOVEDAD 16.4.8
+
+- Versión consolidada y verificada del selector de ubicaciones en el mapa.
+- El destino principal puede elegirse escribiendo una dirección o marcando el
+  punto exacto en el mapa.
+- En Simular recorrido, la partida y la llegada también pueden elegirse de
+  forma independiente en el mapa.
+- La versión 16.4.8 consolidó y verificó el selector de ubicaciones en el mapa.
+
+NOVEDAD 16.4.7
+
+- En Simular recorrido, tanto la dirección de partida como la de llegada
+  pueden escribirse o elegirse directamente en el mapa.
+- El punto marcado vuelve al campo correcto sin cambiar por error el destino
+  principal de Ojo GPS.
+
+CORRECCION 16.4.6
+
+- Los botones + y - del mapa vuelven a acercar y alejar correctamente.
+- La hora del destino ahora es un reloj en vivo: se actualiza cada minuto
+  segun la zona horaria del lugar elegido y ya no queda congelada.
+- Se conserva sin cambios el resto del funcionamiento probado en 16.4.5.
+
+NOVEDAD 16.4.5
+
+- Destino elegido, zona y hora local ahora son la informacion principal.
+- Latitud y longitud quedan ocultas en Mostrar datos tecnicos.
+- El mapa se puede arrastrar manteniendo presionado el mouse o el dedo.
+- El zoom funciona con la rueda del mouse y con los botones + y -.
+- Al marcar un punto, Ojo GPS busca su direccion y la pasa al destino visible.
+
+NOVEDAD 16.4.4
+
+- Nuevo boton ELEGIR EN EL MAPA para marcar un punto exacto aunque no conozcas
+  la altura de la calle.
+- El mapa permite acercar o alejar con los botones o la rueda del mouse.
+- La ventana del mapa se adapta al tamaño y a la escala de la pantalla para
+  que los controles no queden fuera de vista.
+- Al elegir un destino, Ojo GPS muestra en una sola linea la localidad, ciudad,
+  pais, hora local y si alli es de dia o de noche.
+- Esta mejora conserva el semaforo, Cable, Wi-Fi, Fijar GPS, Joystick y
+  Simular recorrido tal como fueron probados.
+
+NOVEDAD 16.4.3
+
+- Despues de aceptar el permiso de Windows, Ojo GPS continua automaticamente
+  la conexion Wi-Fi y el semaforo puede pasar a verde.
+- Ya no hay que volver a pulsar Cambiar ubicacion durante la preparacion.
+- Mantené el iPhone conectado y desbloqueado hasta que el indicador este verde;
+  recien entonces podes retirar el cable.
+
+NOVEDAD 16.4.2
+
+- Simular recorrido muestra claramente Direccion de partida arriba y
+  Direccion de llegada debajo.
+- Ambos campos ofrecen sugerencias completas mientras escribis, incluyendo
+  barrio, ciudad y pais, para evitar elegir una calle repetida equivocada.
+- El control de velocidad tiene mayor contraste y se distingue mejor.
+- Si cerras Simular recorrido antes de iniciar, la busqueda pendiente se
+  cancela correctamente: podes entrar enseguida a Joystick u otra funcion.
+- Una respuesta atrasada de Internet ya no puede bloquear la pantalla ni
+  cambiar el estado a Desconectado.
+
+NOVEDAD 16.4.0
+
+- "Simular recorrido" ahora se abre dentro de la ventana principal.
+- Dirección de partida arriba y dirección de llegada debajo.
+- Velocidad para caminar, bicicleta o auto.
+- Controles para pausar, continuar y detener el recorrido.
+----------------
+- Simular recorrido ahora muestra dos campos claros dentro de su propia ventana:
+  arriba Direccion de partida y debajo Direccion de llegada.
+- Ya no hace falta preparar la partida y el destino en la pantalla principal.
+- Al iniciar, Ojo GPS coloca primero la ubicacion en la partida y luego avanza
+  por calles hasta la llegada.
+
+NOVEDAD 16.3.8
+----------------
+- El boton Recorrido ahora se llama Simular recorrido para que su funcion se
+  entienda antes de abrirlo.
+
+NOVEDAD 16.3.7
+----------------
+- Las explicaciones breves ahora se acomodan dentro de la pantalla y nunca
+  quedan cortadas en los bordes.
+- El encabezado inicial ya no impone un procedimiento: primero permite elegir
+  la funcion y deriva a Ayuda para ver los pasos correspondientes.
+- El aviso de perdida de conexion aclara los intentos automaticos y que revisar.
+
+NOVEDAD 16.3.6
+----------------
+- Explicaciones breves al dejar el mouse sobre cada botón.
+- Nueva ventana AYUDA con instrucciones según lo que quieras hacer.
+- La ayuda separa claramente Cable, Wi-Fi, Fijar GPS, Recorrido, Joystick y GPS real.
+
+Esta version conserva el modo Cable estable y el modo Wi-Fi experimental.
+Mantiene activas las coordenadas cada pocos segundos y, si el puente deja de
+responder, intenta reconectarlo automaticamente.
+Agrega un asistente FIJAR GPS con el procedimiento comprobado en
+iPhone con iOS moderno. La ubicacion puede seguir activa sin cable, sin Wi-Fi,
+con Ojo GPS cerrado y aunque el telefono cambie de red.
+Agrega un JOYSTICK para desplazar la ubicacion en tiempo real con tres modos:
+Caminar (5 km/h), Bicicleta (15 km/h) y Auto (40 km/h).
+La ventana del joystick se adapta a pantallas con escala de Windows alta.
+El joystick ahora es circular y analogico: permite desplazarse libremente en
+cualquier angulo, incluidas diagonales. La distancia al centro regula la
+intensidad del movimiento dentro del modo de velocidad elegido.
+La primera vez que se abre el joystick aparece una demostracion animada lenta,
+con pausas para leer, que explica como usarlo con mouse o pantalla tactil.
+Puede cerrarse con el boton OMITIR X y repetirse cuando quieras
+con el boton COMO SE USA.
+Agrega RECORRIDO AUTOMATICO entre la ubicacion activa y otro destino. Calcula
+el camino por calles, permite elegir una velocidad de 1 a 120 km/h, muestra
+distancia y duracion estimada, y permite pausar, continuar o detener.
+La preparacion detecta automaticamente las dos sintaxis de pymobiledevice3.
+Esta version usa el tunel TCP requerido por iOS moderno y Python 3.13.
+Registra una compatibilidad LZFSE para evitar que Windows intente compilar
+el componente opcional que no usa el puente GPS.
+El boton VOLVER AL GPS REAL ahora explica como reactivar Modo de desarrollador,
+fuerza la restauracion estable por cable y confirma cuando el GPS real regreso.
+
+SEMAFORO DE CONEXION
+- Verde: puente conectado y respondiendo.
+- Verde, UBICACION FIJA: la orden fija fue aceptada y ya podes desconectar.
+- Amarillo: conectando o intentando recuperar el puente.
+- Rojo: desconectado; la ubicacion simulada no esta garantizada.
+
+Ningun intento de conexion puede quedar esperando indefinidamente.
+
+REQUISITOS YA INSTALADOS
+- Python 3.13 para Wi-Fi
+- pymobiledevice3
+- Pillow (para mostrar las fotos de Street View)
+- iTunes de Microsoft Store
+- Modo de desarrollador activado en el iPhone
+- Street View ya incluye un token de Mapillary listo para usar (no hace
+  falta conseguir ni configurar nada)
+
+COMO ABRIR
+1. Extrae toda la carpeta del ZIP.
+2. La primera vez, ejecuta 1-Instalar-Python-3.13.cmd y espera INSTALACION COMPLETA.
+3. Conecta y desbloquea el iPhone.
+4. Hace doble clic en Abrir-Ojo-GPS.vbs.
+
+COMO USAR CON CABLE
+1. Busca una direccion o lugar y selecciona un resultado.
+2. Tambien podes escribir latitud y longitud manualmente.
+3. Pulsa Cambiar ubicacion.
+4. Espera hasta ver Ubicacion simulada activa.
+5. Pulsa Volver al GPS real cuando termines.
+
+COMO USAR EL JOYSTICK
+1. Conecta el iPhone y pulsa Cambiar ubicacion.
+2. Espera Ubicacion simulada activa en verde.
+3. Pulsa Joystick.
+4. Elegi Caminar, Bicicleta o Auto.
+5. Arrastra el circulo central hacia la direccion deseada.
+6. Podes moverlo en cualquier angulo, incluidas diagonales.
+7. Cuanto mas lo alejes del centro, mayor sera la intensidad.
+8. Soltalo para detenerte. Tambien podes usar las flechas del teclado.
+9. Si necesitas volver a ver la demostracion, pulsa COMO SE USA.
+
+El joystick necesita mantener la conexion por cable o Wi-Fi. Si despues queres
+dejar fija la posicion final, cerra el joystick y usa Fijar GPS.
+
+COMO USAR UN RECORRIDO AUTOMATICO
+1. Activa una ubicacion y espera Ubicacion simulada activa en verde.
+2. Pulsa Simular recorrido.
+3. Escribi arriba la Direccion de partida.
+4. Escribi debajo la Direccion de llegada.
+5. Elegi la velocidad con el control o usa Caminar, Bicicleta o Auto.
+6. Pulsa Buscar ruta e iniciar.
+7. Ojo GPS mostrara distancia y duracion estimada y avanzara por las calles.
+8. Podes pausar, continuar o detener sin volver al GPS real.
+9. Al llegar, la ubicacion final permanece activa. Podes usar el joystick,
+   iniciar otro recorrido o pulsar Fijar GPS.
+
+El calculo del camino requiere Internet. El movimiento necesita mantener la
+conexion por cable o Wi-Fi. La ruta multipunto se agregara en una version futura.
+
+COMO FIJAR LA UBICACION Y DESCONECTAR
+1. Conecta el iPhone por CABLE y dejalo desbloqueado.
+2. Busca y selecciona el destino.
+3. Pulsa Cambiar ubicacion y espera Ubicacion simulada activa en verde.
+4. Pulsa Fijar GPS. Ojo GPS mostrara una guia numerada.
+5. SIN RETIRAR EL CABLE, en el iPhone entra en:
+   Ajustes > Privacidad y seguridad > Modo de desarrollador.
+6. Desactiva Modo de desarrollador.
+7. Espera que Ojo GPS detecte la desconexion y confirma que hiciste el paso 6.
+8. Cuando aparezca UBICACION FIJA, ya podes retirar el cable, cerrar Ojo GPS,
+   cambiar de Wi-Fi o salir con el iPhone.
+
+IMPORTANTE SOBRE UBICACION FIJA
+- Es una funcion experimental exclusiva para iPhone/iOS.
+- Desactivar Modo de desarrollador es justamente el paso que fija la ubicacion
+  en la version de iOS probada.
+- NO retires el cable antes de desactivar Modo de desarrollador.
+- No apagues ni reinicies el iPhone si queres conservar la ubicacion fija.
+- Para cambiar nuevamente la ubicacion o restaurarla desde Ojo GPS, reactiva
+  Modo de desarrollador y conecta el iPhone.
+- Android requiere otra aplicacion y otro procedimiento.
+
+PRIMERA PREPARACION DEL MODO WI-FI
+1. Conecta el iPhone por cable, dejalo desbloqueado y en la misma red Wi-Fi que la PC.
+2. Abre Ojo GPS y elige Wi-Fi (experimental).
+3. Pulsa Preparar Wi-Fi.
+4. Acepta el permiso de administrador de Windows.
+   Si Windows Firewall pregunta, marca Redes privadas, desmarca Redes publicas
+   y pulsa Permitir acceso.
+5. Deja abierta la ventana negra llamada Ojo GPS - Puente Wi-Fi.
+6. Retira el cable.
+7. Busca un destino y pulsa Cambiar ubicacion.
+8. Si usas Cambiar ubicacion, no cierres Ojo GPS ni el puente durante el uso.
+   Si usas Fijar GPS y aparece UBICACION FIJA, ya podes cerrarlos.
+
+IMPORTANTE SOBRE WI-FI
+- El iPhone y la PC deben estar conectados a la misma red Wi-Fi.
+- La PC y el iPhone deben permanecer encendidos y en la misma red.
+- Si el iPhone deja de ser visible, el semaforo pasa a amarillo o rojo.
+- La aplicacion intentara reconectar y volver a aplicar el destino.
+- En modo continuo, si se cierra la PC, Ojo GPS o el puente, iOS puede volver al GPS real.
+- Wi-Fi es experimental: el modo Cable sigue siendo la opcion mas estable.
+
+La busqueda de lugares utiliza datos de OpenStreetMap.
+Si la aplicacion se cierra inesperadamente, reiniciar el iPhone restaura el GPS real.
+NOVEDAD 16.3.3
+---------------
+- El botón ahora se llama "Fijar GPS".
+- Al pulsarlo aparece una explicación animada y lenta del procedimiento.
+- La guía indica: "Desactivá en tu dispositivo el Modo de desarrollador".
+- Incluye una X y la opción Omitir para cerrarla.
+- Esperá siempre la confirmación verde antes de desconectar el cable.
+
+NOVEDAD 16.3.4
+---------------
+- La pantalla muestra siempre el orden correcto del procedimiento:
+  1. Busca y elegi la direccion.
+  2. Pulsa Cambiar ubicacion.
+  3. Espera el indicador verde.
+  4. Recien entonces pulsa Fijar GPS.
+- Fijar GPS permanece bloqueado mientras el iPhone esta desconectado o la
+  nueva ubicacion todavia no fue aplicada.
+- La guia de Fijar GPS aclara que es el paso final, no el primero.
+
+NOVEDAD 16.3.5
+---------------
+- El texto inferior ahora cambia según el momento del procedimiento.
+- Durante el uso normal indica mantener activo el Modo de desarrollador.
+- Durante Fijar GPS indica desactivarlo, pero advierte que todavía no hay que
+  retirar el cable.
+- Solo cuando aparece UBICACION FIJA en verde indica que se puede desconectar.
