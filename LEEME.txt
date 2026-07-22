@@ -1,10 +1,27 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.27 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS - VERSION 16.4.28 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.28
+
+- Arreglado: al elegir una dirección para partida o llegada de un Recorrido
+  desde el mapa (por ejemplo "1750, Avenida Callao..."), el cartel mostraba
+  solo el número ("1750"), sin la calle. Era el mismo problema que ya se
+  había arreglado en la 16.4.24 para "Destino elegido", pero el Recorrido y
+  "Elegir en el mapa" armaban ese texto por su cuenta en vez de usar la
+  misma corrección. Ahora los tres caminos (destino principal, mapa,
+  recorrido) arman el nombre igual: "calle + altura" cuando están
+  disponibles.
+- Arreglado: el Panel de Administrador y Generar-Codigo-Demo.cmd permitían
+  generar un código de activación de 10.000 días o más (por ejemplo, para
+  dar acceso "de por vida"). Ese código se mostraba como si estuviera bien,
+  pero nunca podía activarse del otro lado — quedaba roto sin ningún aviso.
+  Ahora piden un número de días entre 1 y 9999 y avisan si te pasás, en vez
+  de entregar en silencio un código que no sirve.
 
 NOVEDAD 16.4.27
 

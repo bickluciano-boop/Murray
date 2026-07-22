@@ -1,5 +1,40 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.28
+
+- [x] **Códigos de activación de 10.000+ días quedaban rotos en silencio.**
+  `_generate_activation_code` arma el payload como `f"{days:04d}"`, que solo
+  garantiza un mínimo de 4 dígitos, no un máximo. Con `days >= 10000` el
+  payload pasa a tener 5+ dígitos, el código final queda con un largo
+  distinto a 12 caracteres, y `_validate_activation_code` lo rechaza
+  siempre — pero nada avisaba esto al generarlo, ni en el Panel de
+  Administrador ni en `Generar-Codigo-Demo.cmd` / `--generar-codigo`, que
+  solo chequeaban que fuera un número positivo. Reproducido a mano: 9999
+  días genera un código válido, 10000 y 36500 generan códigos que
+  `_validate_activation_code` siempre rechaza. Se agregó la constante
+  `MAX_ACTIVATION_DAYS = 9999`; `_generate_activation_code` ahora levanta
+  `ValueError` fuera de ese rango, y los tres puntos de entrada (panel de
+  administrador, `main() --generar-codigo`) validan el rango antes de
+  generar y muestran un mensaje claro en vez de entregar un código roto.
+- [x] **"Partida"/"Llegada" del Recorrido y del mapa mostraban solo la
+  altura, sin la calle, para direcciones con número primero (ej. "1750,
+  Avenida Callao...").** Es el mismo problema que se arregló en la 16.4.24
+  para "Destino elegido", pero ese arreglo unificó solo los tres lugares
+  que armaban ese cartel puntual (`select_result`, `PLACE_REVERSE`,
+  `MAP_REVERSE`) en `_short_place_label`; el Recorrido (`_begin_route`) y
+  "Elegir en el mapa" para partida/llegada (`_use_map_location`) seguían
+  armando el nombre corto con `texto.split(",")[0]` por su cuenta. Se
+  extendió `_short_place_label` a ambos caminos: `_geocode_route_location`
+  ahora pide `addressdetails=1` a Nominatim y devuelve el item completo (no
+  solo el `display_name`); `_selected_route_location` hace lo mismo;
+  `_route_prepare_worker` calcula `origin_short`/`destination_short` con
+  `_short_place_label` antes de armar la ruta, y ese valor viaja tal cual
+  hasta `_begin_route` sin volver a cortarlo. Para el mapa, se agregó
+  `self.map_selected_short` y `self.map_selected_address_details`,
+  poblados en el handler de `MAP_REVERSE` (incluido el camino de partida/
+  llegada marcadas directamente en el mapa de Recorrido), y usados en
+  `_use_map_location` en vez del corte ingenuo por coma.
+
 ## Completado en 16.4.27
 
 - [x] **Cartel de días restantes para códigos no-admin.** Pedido de Lu:
@@ -294,6 +329,17 @@
 
 ## Validación de la próxima ronda
 
+- [ ] Probar el Panel de Administrador y `Generar-Codigo-Demo.cmd` con 9999
+  días (debe generar código válido) y con 10000 (debe rechazarlo con el
+  mensaje de error, sin generar nada).
+- [ ] Probar Simular recorrido con una dirección con altura primero (ej.
+  "1750, Avenida Callao...") como partida y como llegada, eligiéndola desde
+  la lista de sugerencias, desde el mapa, y tipeada a mano; confirmar que
+  el cartel de "Distancia restante" muestra calle y altura, no solo el
+  número, en los tres casos.
+- [ ] Repetir la misma prueba con "Elegir en el mapa" desde la pantalla
+  principal (no desde Recorrido): marcar un punto con altura primero y
+  confirmar que "Destino elegido" muestra la calle completa.
 - [ ] Activar la carpeta "para compartir" con un código de pocos días y
   confirmar que se ve "Vence en N días" (no "ADMINISTRADOR"), que baja de
   a uno por día, y que en la última hora antes de vencer cambia a mostrar

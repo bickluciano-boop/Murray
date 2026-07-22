@@ -51,7 +51,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "activacion.json"
-APP_VERSION = "16.4.27"
+APP_VERSION = "16.4.28"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -123,7 +123,12 @@ class ToolTip:
             self.window = None
 
 
+MAX_ACTIVATION_DAYS = 9999
+
+
 def _generate_activation_code(days: int, admin: bool = False) -> str:
+    if not 0 <= days <= MAX_ACTIVATION_DAYS:
+        raise ValueError(f"La cantidad de días debe estar entre 0 y {MAX_ACTIVATION_DAYS}.")
     payload = f"{days:04d}"
     message = payload + ("ADMIN" if admin else "")
     signature = hmac.new(ACTIVATION_SECRET, message.encode("ascii"), hashlib.sha256).hexdigest()[:8].upper()
@@ -236,7 +241,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title("Ojo GPS 16.4.27 para iPhone en Windows")
+        self.root.title("Ojo GPS 16.4.28 para iPhone en Windows")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -314,6 +319,8 @@ class OjoGPSApp:
         self.map_render_job: str | None = None
         self.map_info_text = tk.StringVar(value="Hacé clic en el mapa para marcar el punto exacto.")
         self.map_selected_address = ""
+        self.map_selected_short = ""
+        self.map_selected_address_details: dict = {}
         self.map_target = "main"
         self.map_route_edit_target = "origin"
         self.map_drag_start: tuple[float, float] | None = None
@@ -379,7 +386,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.27", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.28", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text="Ubicación para iPhone desde Windows. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -882,8 +889,10 @@ class OjoGPSApp:
 
         def _generate() -> None:
             text = days_var.get().strip()
-            if not text.isdigit() or int(text) <= 0:
-                message_var.set("Ingresá un número de días válido (por ejemplo, 7).")
+            if not text.isdigit() or not 0 < int(text) <= MAX_ACTIVATION_DAYS:
+                message_var.set(
+                    f"Ingresá un número de días válido, entre 1 y {MAX_ACTIVATION_DAYS} (por ejemplo, 7)."
+                )
                 return
             days = int(text)
             code = _generate_activation_code(days, admin=False)
@@ -1109,7 +1118,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.27"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.28"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -1166,7 +1175,7 @@ class OjoGPSApp:
                 self.route_origin_entry.focus_set()
                 return
             try:
-                (lat, lon), display_name = self._geocode_route_location(query)
+                (lat, lon), origin_item = self._geocode_route_location(query)
             except Exception as exc:
                 messagebox.showerror(
                     "Simular recorrido",
@@ -1175,10 +1184,12 @@ class OjoGPSApp:
                 )
                 self.route_origin_entry.focus_set()
                 return
+            display_name = origin_item.get("display_name", query)
             self.route_selected_locations["origin"] = {
                 "lat": str(lat),
                 "lon": str(lon),
                 "display_name": display_name,
+                "address": origin_item.get("address") or {},
             }
             self.route_origin_address.set(display_name)
         self.open_map("destination")
@@ -1324,6 +1335,7 @@ class OjoGPSApp:
             map_title = "Elegí la dirección de llegada"
         else:
             self.map_selected_address = self.address.get().strip()
+            self.map_selected_short = ""
             map_title = "Elegí el punto exacto"
         win = tk.Toplevel(self.root)
         self.map_window = win
@@ -1501,7 +1513,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.27"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.28"})
             with urllib.request.urlopen(req, timeout=8) as response:
                 raw = response.read()
             try:
@@ -1595,6 +1607,8 @@ class OjoGPSApp:
         self.map_marker = (lat, lon)
         self._draw_map_marker(event.x, event.y)
         self.map_selected_address = ""
+        self.map_selected_short = ""
+        self.map_selected_address_details = {}
         self.map_info_text.set("Buscando la dirección del punto elegido…")
         threading.Thread(target=self._reverse_worker, args=(lat, lon, True), daemon=True).start()
 
@@ -1646,6 +1660,7 @@ class OjoGPSApp:
                 "lat": str(lat),
                 "lon": str(lon),
                 "display_name": chosen_address,
+                "address": self.map_selected_address_details,
             }
             self.route_suggestion_ids[field] += 1
             listbox.delete(0, tk.END)
@@ -1659,7 +1674,7 @@ class OjoGPSApp:
         self.longitude.set(f"{lon:.7f}")
         if self.map_selected_address:
             self.address.set(self.map_selected_address)
-            self.selected_name.set(self.map_selected_address.split(",")[0])
+            self.selected_name.set(self.map_selected_short or self.map_selected_address.split(",")[0])
         else:
             self.address.set(chosen_address)
             self.selected_name.set(chosen_address)
@@ -1800,7 +1815,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.27"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.28"},
             )
             with urllib.request.urlopen(search_req, timeout=12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -1829,14 +1844,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.27"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.28"},
                 )
                 with urllib.request.urlopen(detail_req, timeout=12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.27"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.28"})
                 with urllib.request.urlopen(img_req, timeout=15) as response:
                     raw = response.read()
                 try:
@@ -1874,7 +1889,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.27"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.28"})
             with urllib.request.urlopen(req, timeout=20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -1910,7 +1925,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.27"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.28"})
             with urllib.request.urlopen(req, timeout=10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2218,7 +2233,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.27"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.28"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2292,42 +2307,45 @@ class OjoGPSApp:
         except ValueError:
             return None
 
-    def _geocode_route_location(self, query: str) -> tuple[tuple[float, float], str]:
+    def _geocode_route_location(self, query: str) -> tuple[tuple[float, float], dict]:
         coordinates = self._parse_route_coordinates(query)
         if coordinates is not None:
-            return coordinates, f"{coordinates[0]:.6f}, {coordinates[1]:.6f}"
+            display_name = f"{coordinates[0]:.6f}, {coordinates[1]:.6f}"
+            return coordinates, {"display_name": display_name, "address": {}}
         params = urllib.parse.urlencode({
             "q": query,
             "format": "jsonv2",
             "limit": 1,
             "accept-language": "es",
+            "addressdetails": 1,
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.27"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.28"},
         )
         with urllib.request.urlopen(request, timeout=20) as response:
             results = json.loads(response.read().decode("utf-8"))
         if not results:
             raise RuntimeError(f"No encontramos esta dirección: {query}")
-        item = results[0]
-        return (float(item["lat"]), float(item["lon"])), item.get("display_name", query)
+        return (float(results[0]["lat"]), float(results[0]["lon"])), results[0]
 
     @staticmethod
     def _selected_route_location(item, fallback: str):
         if not item:
             return None
-        return (float(item["lat"]), float(item["lon"])), item.get("display_name", fallback)
+        return (float(item["lat"]), float(item["lon"])), item
 
     def _route_prepare_worker(self, request_id: int, origin_query: str, destination_query: str, origin_item, destination_item, profile: str) -> None:
         try:
             origin_selected = self._selected_route_location(origin_item, origin_query)
             destination_selected = self._selected_route_location(destination_item, destination_query)
-            origin, origin_name = origin_selected or self._geocode_route_location(origin_query)
-            destination, destination_name = destination_selected or self._geocode_route_location(destination_query)
+            origin, origin_full_item = origin_selected or self._geocode_route_location(origin_query)
+            destination, destination_full_item = destination_selected or self._geocode_route_location(destination_query)
             if self._distance_m(origin, destination) < 2.0:
                 raise RuntimeError("La partida y la llegada coinciden. Elegí dos lugares diferentes.")
-            self._route_worker(request_id, origin, destination, origin_name, destination_name, profile)
+            origin_short = self._short_place_label(origin_full_item)
+            destination_short = self._short_place_label(destination_full_item)
+            self._route_worker(request_id, origin, destination, origin_short, destination_short, profile)
         except Exception as exc:
             self.events.put(("ROUTE_PLAN_ERROR", json.dumps({"request_id": request_id, "message": str(exc)})))
 
@@ -2336,8 +2354,8 @@ class OjoGPSApp:
         request_id: int,
         origin: tuple[float, float],
         destination: tuple[float, float],
-        origin_name: str = "Partida",
-        destination_name: str = "Llegada",
+        origin_short: str = "Partida",
+        destination_short: str = "Llegada",
         profile: str = "driving",
     ) -> None:
         try:
@@ -2349,7 +2367,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.27"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.28"})
             with urllib.request.urlopen(request, timeout=25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
@@ -2365,8 +2383,8 @@ class OjoGPSApp:
                 "request_id": request_id,
                 "points": points,
                 "distance": float(routes[0].get("distance", 0.0)),
-                "origin_name": origin_name,
-                "destination_name": destination_name,
+                "origin_short": origin_short,
+                "destination_short": destination_short,
             }
             self.events.put(("ROUTE_PLAN_OK", json.dumps(result)))
         except Exception as exc:
@@ -2375,8 +2393,8 @@ class OjoGPSApp:
     def _begin_route(
         self,
         points: list[tuple[float, float]],
-        origin_name: str = "Partida",
-        destination_name: str = "Llegada",
+        origin_short: str = "Partida",
+        destination_short: str = "Llegada",
     ) -> None:
         # Antes de iniciar el avance, el GPS se coloca exactamente en la partida elegida.
         origin = points[0]
@@ -2395,8 +2413,8 @@ class OjoGPSApp:
         self.route_paused = False
         self.route_pause_button.configure(state="normal", text="Pausar")
         self.route_stop_button.configure(state="normal")
-        self.route_origin_short = origin_name.split(",")[0]
-        self.route_destination_short = destination_name.split(",")[0]
+        self.route_origin_short = origin_short
+        self.route_destination_short = destination_short
         self._update_route_info_text()
         self.set_status("Recorrido automático en marcha", GREEN)
         self._route_tick()
@@ -3076,6 +3094,7 @@ class OjoGPSApp:
                         # acaba de cambiar mientras se resolvía la dirección.
                         if current and abs(float(current["lat"]) - float(item["lat"])) < 0.0000001 and abs(float(current["lon"]) - float(item["lon"])) < 0.0000001:
                             current["display_name"] = resolved
+                            current["address"] = item.get("address") or {}
                             variable, _listbox = self._route_widgets(route_field)
                             variable.set(resolved)
                             point_name = "Partida" if route_field == "origin" else "Llegada"
@@ -3085,6 +3104,8 @@ class OjoGPSApp:
                             )
                     else:
                         self.map_selected_address = resolved
+                        self.map_selected_short = label
+                        self.map_selected_address_details = item.get("address") or {}
                         self.map_info_text.set("Destino: " + self.map_selected_address)
                 elif kind == "MAP_TILES":
                     payload = json.loads(value)
@@ -3242,8 +3263,8 @@ class OjoGPSApp:
                     points = [(float(item[0]), float(item[1])) for item in payload["points"]]
                     self._begin_route(
                         points,
-                        payload.get("origin_name", "Partida"),
-                        payload.get("destination_name", "Llegada"),
+                        payload.get("origin_short", "Partida"),
+                        payload.get("destination_short", "Llegada"),
                     )
                 elif kind == "ROUTE_PLAN_ERROR":
                     payload = json.loads(value)
@@ -3523,8 +3544,14 @@ class OjoGPSApp:
 
 def main() -> None:
     if len(sys.argv) >= 2 and sys.argv[1] == "--generar-codigo":
-        if len(sys.argv) < 3 or not sys.argv[2].isdigit():
-            print("Uso: ojo_gps_app.py --generar-codigo <cantidad de dias> [--admin]")
+        if (
+            len(sys.argv) < 3
+            or not sys.argv[2].isdigit()
+            or not 0 < int(sys.argv[2]) <= MAX_ACTIVATION_DAYS
+        ):
+            print(
+                f"Uso: ojo_gps_app.py --generar-codigo <cantidad de dias, entre 1 y {MAX_ACTIVATION_DAYS}> [--admin]"
+            )
             return
         days = int(sys.argv[2])
         admin = len(sys.argv) >= 4 and sys.argv[3] == "--admin"
