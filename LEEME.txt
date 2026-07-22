@@ -1,10 +1,20 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.28 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS - VERSION 16.4.29 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.29
+
+- El Panel de Administrador ahora, además de generar el código, ofrece
+  mandarlo directo por Mail o WhatsApp. Arma un mensaje con el código y los
+  pasos para activarlo, y abre tu cliente de mail o WhatsApp con ese texto
+  ya cargado — elegís vos a quién mandárselo. Importante: esto solo prepara
+  el mensaje de texto; la carpeta de Ojo GPS para compartir la seguís
+  adjuntando vos a mano, como hasta ahora (ni el mail ni WhatsApp permiten
+  adjuntar un archivo automáticamente desde un link).
 
 NOVEDAD 16.4.28
 

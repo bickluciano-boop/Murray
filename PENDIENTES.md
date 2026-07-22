@@ -1,5 +1,22 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.29
+
+- [x] **El Panel de Administrador manda el código por Mail o WhatsApp.**
+  Pedido de Lu: además de generar el código, poder mandarlo directo sin
+  copiar y pegar a mano. `_open_admin_panel` guarda el último código y la
+  cantidad de días generados en `last_code` (dict mutable, para que los dos
+  nuevos botones lean el valor actualizado sin variables globales). El
+  nuevo `_send_code(via)` arma un mensaje de texto fijo (código + pasos
+  para activarlo) y abre `mailto:?subject=...&body=...` (sin destinatario
+  fijo, lo elige quien lo manda) o `https://wa.me/?text=...` (sin número
+  fijo, abre el selector de contacto de WhatsApp), con el mismo patrón de
+  `urllib.parse.quote` que ya usa el botón Soporte. Límite real, avisado en
+  el LEEME: ni `mailto:` ni el link de WhatsApp pueden adjuntar un archivo
+  agregado por código — eso es una restricción de esos protocolos, no algo
+  que dependa de Ojo GPS. Por eso esto solo prepara el mensaje de texto; la
+  carpeta para compartir se sigue adjuntando a mano, como hasta ahora.
+
 ## Completado en 16.4.28
 
 - [x] **Códigos de activación de 10.000+ días quedaban rotos en silencio.**
@@ -329,6 +346,12 @@
 
 ## Validación de la próxima ronda
 
+- [ ] En el Panel de Administrador, generar un código y tocar Mail:
+  confirmar que abre el cliente de correo con el código y los pasos ya
+  escritos, sin destinatario fijo. Repetir con WhatsApp y confirmar que
+  abre el selector de contacto con el mismo texto. Tocar cualquiera de los
+  dos sin haber generado un código todavía y confirmar que avisa en vez de
+  abrir algo vacío.
 - [ ] Probar el Panel de Administrador y `Generar-Codigo-Demo.cmd` con 9999
   días (debe generar código válido) y con 10000 (debe rechazarlo con el
   mensaje de error, sin generar nada).
