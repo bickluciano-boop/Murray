@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -51,7 +52,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "activacion.json"
-APP_VERSION = "16.4.29"
+APP_VERSION = "16.4.30"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -852,6 +853,31 @@ class OjoGPSApp:
             ).pack(fill="x", pady=(0, 8))
         select_topic("Cambiar con cable")
 
+    def _build_share_zip(self) -> Path | None:
+        """Arma el ZIP de la carpeta de Ojo GPS (esta versión) listo para adjuntar."""
+        share_dir = Path.home() / "Ojo GPS - para compartir"
+        zip_path = share_dir / f"Ojo GPS {APP_VERSION}.zip"
+        exclude_dir_names = {"__pycache__", ".git"}
+        try:
+            share_dir.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for path in APP_DIR.rglob("*"):
+                    relative = path.relative_to(APP_DIR)
+                    if path.is_dir() or exclude_dir_names & set(relative.parts):
+                        continue
+                    zf.write(path, arcname=Path(f"Ojo GPS {APP_VERSION}") / relative)
+        except OSError:
+            return None
+        return zip_path
+
+    def _reveal_share_zip(self, zip_path: Path) -> None:
+        if sys.platform != "win32":
+            return
+        try:
+            subprocess.run(["explorer", "/select,", str(zip_path)])
+        except OSError:
+            pass
+
     def _open_admin_panel(self) -> None:
         window = tk.Toplevel(self.root)
         window.title("Ojo GPS - Panel de administrador")
@@ -925,15 +951,22 @@ class OjoGPSApp:
                 message_var.set("Primero generá un código.")
                 return
             plural = "s" if last_code["days"] != 1 else ""
+            zip_path = self._build_share_zip()
+            attach_step = (
+                f'1. Extraé el ZIP adjunto ("{zip_path.name}") en una carpeta.\n'
+                if zip_path else
+                "1. Extraé la carpeta de Ojo GPS que te compartan.\n"
+            )
             text = (
                 "Ojo GPS - código de acceso\n\n"
                 f"Código: {last_code['code']}\n"
                 f"Válido por {last_code['days']} día{plural} desde que lo actives.\n\n"
                 "Cómo activarlo:\n"
-                "1. Abrí Ojo GPS.\n"
-                "2. Cuando te pida el código de activación, pegá este:\n"
+                f"{attach_step}"
+                "2. Abrí Ojo GPS.\n"
+                "3. Cuando te pida el código de activación, pegá este:\n"
                 f"   {last_code['code']}\n"
-                "3. Listo, ya podés usar la app durante ese tiempo."
+                "4. Listo, ya podés usar la app durante ese tiempo."
             )
             if via == "mail":
                 subject = urllib.parse.quote("Código de acceso a Ojo GPS")
@@ -941,6 +974,11 @@ class OjoGPSApp:
                 webbrowser.open(f"mailto:?subject={subject}&body={body}")
             else:
                 webbrowser.open(f"https://wa.me/?text={urllib.parse.quote(text)}")
+            if zip_path:
+                self._reveal_share_zip(zip_path)
+                message_var.set(f'Se abrió la carpeta con "{zip_path.name}" seleccionado: arrastralo al mensaje.')
+            else:
+                message_var.set("No se pudo preparar el ZIP; adjuntalo a mano desde la carpeta de Ojo GPS.")
 
         share_row = ttk.Frame(frame)
         share_row.pack(fill="x", pady=(0, 18))

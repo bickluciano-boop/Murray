@@ -1,6 +1,41 @@
 # Pendientes de Ojo GPS
 
-## Completado en 16.4.29
+## Visión a futuro (sin empezar)
+
+- [ ] **Múltiples combinaciones de SO/dispositivo, y manejo solo desde el
+  celular.** Pedido de Lu: a futuro va a hacer falta repartir Ojo GPS para
+  distintas combinaciones (Windows+iPhone, Windows+Android, Mac+iPhone,
+  Mac+Android), con el objetivo final de una app de iPhone que no dependa
+  de la PC — la PC serviría solo para la instalación inicial, y después
+  todo se manejaría desde el celular, como iAnyGo. Es un cambio de
+  arquitectura grande (hoy toda la simulación de GPS corre en la PC y se
+  empuja al iPhone por cable/Wi-Fi vía `ojo_gps_bridge.py`; pasar esa
+  lógica al propio celular es un proyecto aparte, no un ajuste). Anotado
+  acá para no perderlo; no arranca hasta que se defina por dónde empezar.
+
+## Completado en 16.4.30
+
+- [x] **El botón de Mail/WhatsApp del Panel de Administrador ahora deja el
+  ZIP listo para adjuntar, no solo el texto.** Pedido de Lu: después de
+  que el botón mandaba el código por texto, hacía falta ir a buscar a
+  mano la carpeta de Ojo GPS para adjuntarla. `mailto:` y el link de
+  `wa.me` no pueden adjuntar un archivo por código — es una restricción
+  de esos protocolos que no depende de Ojo GPS (ver límite ya anotado en
+  16.4.29) — así que no hay forma de que quede attachado sin que la
+  persona lo arrastre. Lo que sí se puede automatizar es todo el paso
+  previo: el nuevo `_build_share_zip()` arma un ZIP de la carpeta actual
+  de Ojo GPS (`APP_DIR`, excluyendo `__pycache__`/`.git`) en
+  `~/Ojo GPS - para compartir/Ojo GPS {APP_VERSION}.zip`, y `_send_code`
+  lo llama antes de abrir el mail/WhatsApp; `_reveal_share_zip()` abre el
+  Explorador con `explorer /select,` apuntando directo al archivo. El
+  texto del mensaje también se actualizó para mencionar el adjunto en el
+  primer paso. Deliberadamente no se armó envío automático de mail vía
+  SMTP con credenciales guardadas en el código: Ojo GPS se distribuye
+  como código Python legible a cada persona que prueba la app (ver
+  16.4.23), así que cualquier credencial embebida viajaría con cada
+  copia repartida — riesgo de seguridad real, no solo teórico. Si más
+  adelante hace falta un envío realmente automático, hay que decidir antes
+  dónde vive esa credencial (no en el código fuente compartido).
 
 - [x] **El Panel de Administrador manda el código por Mail o WhatsApp.**
   Pedido de Lu: además de generar el código, poder mandarlo directo sin
