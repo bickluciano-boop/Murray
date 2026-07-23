@@ -28,6 +28,33 @@
     sistema de licencias más parecido a SaaS que los códigos de
     activación HMAC que tiene Ojo GPS hoy.
 
+## Completado en 16.4.33
+
+- [x] **Cambiar de modo (Caminar/Bicicleta/Auto) con el Recorrido ya en
+  marcha dejaba un auto yendo contramano.** Reportado por Lu: "encontré
+  un error en la ruta cuando está en caminar y querés cambiar y elegís
+  auto... puede ir contra mano de los autos y pareciera que va a
+  chocar... sigue respetando la modalidad caminar, pero en velocidad
+  auto." Causa: `_set_route_speed(speed, profile)` — que disparan los
+  tres botones "Caminar/Bicicleta/Auto" del panel de Recorrido —
+  solo actualizaba `self.route_speed` y `self.route_profile`; nunca
+  tocaba `self.route_points`, que es el camino que ya se había calculado
+  una única vez contra OSRM con el perfil elegido al arrancar. Ese
+  camino no se recalcula solo: con perfil `foot` puede legítimamente ir
+  contramano (para un peatón no importa el sentido de circulación) o por
+  veredas, y si después cambiás a `driving` sin recalcular, el punto
+  simulado sigue exactamente esos mismos tramos pero ahora a 40 km/h. Se
+  agregó `_recalculate_active_route(profile)`: si el cambio de modo pasa
+  con el Recorrido activo (`route_active` y `route_points` no vacío),
+  pausa el avance (`route_paused = True`, mismo flag que usa el botón
+  Pausar) y vuelve a pedir el camino a `_route_worker` desde la posición
+  actual (`self.current_coords`) hasta el mismo destino
+  (`route_points[-1]`) con el perfil nuevo; cuando OSRM responde,
+  `_begin_route` de siempre reanuda (pone `route_paused = False`) ya
+  sobre el camino correcto. Si cambiás de modo antes de arrancar el
+  Recorrido no pasa nada especial — sigue funcionando como antes, se usa
+  ese perfil recién al calcular por primera vez.
+
 ## Completado en 16.4.32
 
 - [x] **La ventana seguía mostrando "Ojo GPS 16.4.29" después de subir a

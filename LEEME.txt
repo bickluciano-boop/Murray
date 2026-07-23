@@ -1,10 +1,20 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.32 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS - VERSION 16.4.33 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.33
+
+- Arreglado: si cambiabas el modo (Caminar/Bicicleta/Auto) con un
+  Recorrido ya en marcha, la app seguía el camino calculado para el modo
+  anterior pero a la velocidad del modo nuevo — por ejemplo, un camino de
+  a pie (que puede ir contramano de los autos) recorrido a velocidad de
+  auto, y se veía como si fuera a chocar. Ahora, al cambiar de modo a
+  mitad de Recorrido, se vuelve a calcular el camino desde la posición
+  actual hasta el mismo destino, ya con el modo nuevo.
 
 NOVEDAD 16.4.32
 

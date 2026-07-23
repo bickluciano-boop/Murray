@@ -52,7 +52,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "activacion.json"
-APP_VERSION = "16.4.32"
+APP_VERSION = "16.4.33"
 USER_AGENT = f"OjoGPS-Windows/{APP_VERSION}"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
@@ -2337,8 +2337,33 @@ class OjoGPSApp:
     def _set_route_speed(self, speed: float, profile: str | None = None) -> None:
         self.route_speed.set(speed)
         self._route_speed_changed()
-        if profile is not None:
-            self.route_profile = profile
+        if profile is None:
+            return
+        profile_changed = profile != self.route_profile
+        self.route_profile = profile
+        if profile_changed and self.route_active and self.route_points and self.current_coords is not None:
+            self._recalculate_active_route(profile)
+
+    def _recalculate_active_route(self, profile: str) -> None:
+        """Vuelve a pedir el camino desde la posición actual al cambiar el
+        modo (a pie/bici/auto) a mitad de un Recorrido ya en marcha.
+
+        Sin esto, el camino calculado para el modo anterior (por ejemplo a
+        pie, que puede ir contramano de los autos porque para peatones eso
+        es válido) se seguía recorriendo tal cual pero a la velocidad del
+        modo nuevo, y se veía como si un auto fuera contramano.
+        """
+        self.route_paused = True
+        destination = self.route_points[-1]
+        origin = self.current_coords
+        self.route_request_id += 1
+        request_id = self.route_request_id
+        self.route_info_text.set("Recalculando el camino para el nuevo modo de movimiento...")
+        threading.Thread(
+            target=self._route_worker,
+            args=(request_id, origin, destination, self.route_origin_short, self.route_destination_short, profile),
+            daemon=True,
+        ).start()
 
     def start_route(self) -> None:
         if self.route_active:
