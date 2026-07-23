@@ -12,6 +12,21 @@
   empuja al iPhone por cable/Wi-Fi vía `ojo_gps_bridge.py`; pasar esa
   lógica al propio celular es un proyecto aparte, no un ajuste). Anotado
   acá para no perderlo; no arranca hasta que se defina por dónde empezar.
+  Lu mandó capturas de iAnyGo (23/07) como referencia concreta de hacia
+  dónde apunta esto — tres cosas puntuales que muestra esa app y que
+  Ojo GPS hoy no tiene:
+  - Selección de dispositivo unificada: un solo ícono de conectar que
+    detecta solo si lo que se enchufó es iOS o Android ("Pulga 11"
+    reconocido automáticamente), en vez de que la persona tenga que
+    saber de antemano qué app o modo usar.
+  - En "Movimiento de punto único", además de elegir el modo (caminar/
+    bici/moto/auto) con velocidad ajustable, ofrece varias rutas
+    alternativas para el mismo origen-destino (en la captura: 2.81km,
+    6.25km y 3.67km) para elegir, no una sola calculada automáticamente.
+  - Panel de cuenta con licencias: login con mail, plan ("Oficial"),
+    y contador de dispositivos usados sobre el total permitido — un
+    sistema de licencias más parecido a SaaS que los códigos de
+    activación HMAC que tiene Ojo GPS hoy.
 
 ## Completado en 16.4.31
 
