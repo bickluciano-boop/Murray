@@ -28,6 +28,26 @@
     sistema de licencias más parecido a SaaS que los códigos de
     activación HMAC que tiene Ojo GPS hoy.
 
+## Completado en 16.4.32
+
+- [x] **La ventana seguía mostrando "Ojo GPS 16.4.29" después de subir a
+  16.4.30 y 16.4.31.** Reportado por Lu al probar la 16.4.31: "te abre la
+  versión 29 en la carpeta 31". Causa: `self.root.title(...)` y el
+  `ttk.Label` del encabezado grande tenían el string `"Ojo GPS 16.4.29"`
+  escrito literal, en vez de armarse con la constante `APP_VERSION` que se
+  agregó en la 16.4.26 justo para que un solo lugar controle el número en
+  toda la app. Como el `sed` que se usa para subir de versión solo toca
+  `APP_VERSION = "..."`, estos dos textos quedaron congelados en "16.4.29"
+  desde entonces sin que nadie lo notara — no era un problema de que Lu
+  abriera la carpeta vieja, la carpeta 16.4.31 era la correcta y el código
+  de adentro (ZIP adjunto, ruta a pie) ya era el nuevo; solo el número en
+  pantalla mentía. Se cambiaron los dos a f-strings con `APP_VERSION`.
+  Aprovechando el mismo arreglo, se reemplazaron además los 10 lugares que
+  tenían `"OjoGPS-Windows/16.4.29"` fijo como User-Agent para Nominatim/
+  OSRM por una constante `USER_AGENT` derivada de `APP_VERSION` — no se
+  veía en pantalla, pero es exactamente el mismo tipo de bug y ahora ya no
+  puede volver a pasar en ningún lado.
+
 ## Completado en 16.4.31
 
 - [x] **Recorrido en modo Caminar/Bicicleta se veía "como de auto".**

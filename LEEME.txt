@@ -1,10 +1,22 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.31 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS - VERSION 16.4.32 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.32
+
+- Arreglado: el título de la ventana y el encabezado grande ("Ojo GPS
+  16.4.29") quedaban pegados en un número fijo, escrito a mano, en vez de
+  seguir la versión real de la app. Por eso la 16.4.30 y la 16.4.31 seguían
+  mostrando "16.4.29" en pantalla aunque el código sí era el nuevo. Ahora
+  los dos toman el número de la misma constante que ya usa el resto de la
+  app (`APP_VERSION`), así que de acá en adelante suben solos con cada
+  versión. También se limpiaron 10 lugares más que tenían "16.4.29" fijo
+  en el identificador que la app manda a los servicios de mapas (invisible
+  para vos, pero mismo problema de fondo).
 
 NOVEDAD 16.4.31
 
