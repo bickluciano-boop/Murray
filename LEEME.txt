@@ -1,10 +1,21 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.30 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS - VERSION 16.4.31 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.31
+
+- Arreglado: un Recorrido en modo Caminar (o Bicicleta) armaba un camino
+  que parecía de auto (daba vueltas raras, no aprovechaba atajos a pie).
+  La causa era el servidor de mapas gratuito que arma el camino: el que
+  se usaba para Caminar y Bicicleta en realidad solo sabe calcular rutas
+  de auto, y cuando le pedías "a pie" te daba la ruta de auto sin avisar
+  que no podía. Ahora Caminar y Bicicleta piden la ruta a otro servidor
+  (también gratuito, de FOSSGIS/OpenStreetMap) que sí calcula esos dos
+  modos por separado. Auto sigue igual que antes.
 
 NOVEDAD 16.4.30
 

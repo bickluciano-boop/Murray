@@ -52,7 +52,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "activacion.json"
-APP_VERSION = "16.4.30"
+APP_VERSION = "16.4.31"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -2437,8 +2437,18 @@ class OjoGPSApp:
             origin_lat, origin_lon = origin
             destination_lat, destination_lon = destination
             osrm_profile = profile if profile in ("foot", "bike", "driving") else "driving"
+            # router.project-osrm.org (servidor demo público) corre un único
+            # perfil, el de auto: pedirle /route/v1/foot/ o /route/v1/bike/
+            # no da error, devuelve en silencio la misma ruta de auto (ver
+            # PENDIENTES.md). Para Caminar/Bicicleta hace falta un servidor
+            # que sí corra esos perfiles por separado: routing.openstreetmap.de
+            # (FOSSGIS) publica routed-foot y routed-bike para eso.
+            if osrm_profile == "driving":
+                base_url = "https://router.project-osrm.org/route/v1/driving/"
+            else:
+                base_url = f"https://routing.openstreetmap.de/routed-{osrm_profile}/route/v1/{osrm_profile}/"
             url = (
-                f"https://router.project-osrm.org/route/v1/{osrm_profile}/"
+                f"{base_url}"
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )

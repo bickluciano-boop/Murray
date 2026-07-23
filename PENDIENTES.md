@@ -13,6 +13,30 @@
   lógica al propio celular es un proyecto aparte, no un ajuste). Anotado
   acá para no perderlo; no arranca hasta que se defina por dónde empezar.
 
+## Completado en 16.4.31
+
+- [x] **Recorrido en modo Caminar/Bicicleta se veía "como de auto".**
+  Reportado por Lu: al simular un Recorrido a pie, el camino elegido no
+  era creíble para alguien caminando — daba vueltas largas típicas de
+  auto en vez de ir por el camino más corto o usar atajos peatonales.
+  Causa raíz: `_route_worker` pedía la ruta a `router.project-osrm.org`
+  con `/route/v1/foot/...` o `/route/v1/bike/...`, pero ese servidor
+  demo público solo corre el perfil de auto — confirmado por búsqueda
+  web (issues de Project-OSRM/osrm-backend y documentación de la R
+  package `osrm`): cualquier perfil que no sea `driving` lo ignora en
+  silencio y devuelve la misma geometría de auto, sin error ni aviso.
+  Esto pasaba desde que se agregó routing multi-perfil, no es una
+  regresión de una versión reciente. Arreglo: para `foot`/`bike` la URL
+  ahora apunta a `https://routing.openstreetmap.de/routed-{perfil}/...`
+  (servicio de FOSSGIS, que sí corre routed-foot y routed-bike como
+  procesos separados con sus propios perfiles); `driving` se deja en
+  `router.project-osrm.org` porque ese es justo el perfil que ese
+  servidor sabe calcular. No se pudo probar en vivo contra el servidor
+  real en esta sesión (el proxy de red del entorno de desarrollo bloquea
+  `router.project-osrm.org` y `routing.openstreetmap.de`), así que
+  conviene que Lu confirme con una prueba real que el camino a pie ahora
+  se ve razonable antes de darlo por cerrado del todo.
+
 ## Completado en 16.4.30
 
 - [x] **El botón de Mail/WhatsApp del Panel de Administrador ahora deja el
