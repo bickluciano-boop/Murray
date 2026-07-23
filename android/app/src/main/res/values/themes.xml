@@ -1,0 +1,5 @@
+<resources>
+    <!-- Extiende el tema del sistema directamente: sin esto, evitamos
+         depender de AppCompat/Material solo para esta pantalla mínima. -->
+    <style name="Theme.OjoGPS" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

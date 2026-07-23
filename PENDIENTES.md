@@ -1,20 +1,84 @@
 # Pendientes de Ojo GPS
 
+## En progreso: Ojo GPS para Android
+
+Decisión (23/07, con Lu): de las cuatro combinaciones anotadas en "Visión
+a futuro" (Windows+Android, Mac+iPhone, Mac+Android, e iPhone 100% sin
+PC), se arranca por **Android** — con dos modos en paralelo, porque
+técnicamente son la misma app vista desde dos lados:
+
+- **Windows controlando un Android por cable/ADB**, como hoy funciona
+  Windows+iPhone.
+- **Android solo-celular**, sin PC en ningún momento — el objetivo final
+  que Lu pidió, y que para Android sí es alcanzable de verdad (a
+  diferencia de iPhone, ver más abajo).
+
+Por qué Android y no las otras tres opciones: investigado por búsqueda
+web (23/07). Android tiene una función de desarrollador oficial para
+esto — "aplicación de ubicación simulada" (mock location): cualquier app
+puede pedir ese rol una vez habilitado en Opciones de desarrollador, y
+desde ahí controla el GPS del sistema sin ingeniería inversa ni jailbreak
+(a diferencia de iOS, donde Ojo GPS ya usa el único mecanismo que existe
+— el servicio de desarrollo `LocationSimulation` de Apple — y ese exige
+siempre un host de confianza pareado). Confirmado con un caso real:
+iAnyGo tiene una app de Android en Google Play que anda sin PC en ningún
+momento, ni para instalar. Para iPhone, en cambio, ni iAnyGo lo logra de
+verdad: su "sin computadora" resultó ser, mirándolo con detalle, "sin el
+cable enchufado todo el rato" (lo que Ojo GPS ya tiene con el modo
+Wi-Fi), no "sin PC jamás". Mac+iPhone y Mac+Android quedan atrás en la
+cola porque no agregan una capacidad nueva, solo repiten en otro sistema
+operativo lo que ya existe.
+
+Arquitectura elegida (mismo mecanismo que usan las apps de fake-GPS de
+Android sin root, confirmado mirando el código de referencia
+`amotzte/android-mock-location-for-development`):
+
+1. Una app companion de Android (nueva, Kotlin) se registra como
+   proveedor de ubicación de prueba con `LocationManager.addTestProvider`
+   + `setTestProviderLocation` — la misma API que usa cualquier app de
+   ubicación falsa, pensada por Google justamente para testing. Requiere
+   un paso manual único en el celular: Opciones de desarrollador →
+   "Seleccionar aplicación de ubicación de simulación" → elegir Ojo GPS
+   (equivalente al Modo de desarrollador que ya hay que activar en el
+   iPhone).
+2. Esa misma app tiene una pantalla propia (buscar dirección, tocar en
+   el mapa, joystick) para el modo solo-celular — no depende de nada más.
+3. Para el modo Windows+Android, el celular no necesita nada adicional:
+   la PC le manda las coordenadas por `adb shell am broadcast` a un
+   receptor que la app ya tiene andando (mismo canal que usaría cualquier
+   automatización por ADB). El lado Windows necesita `adb.exe` disponible
+   (equivalente a como Windows+iPhone necesita iTunes/Apple Mobile Device
+   Service).
+
+Primer avance de código (23/07): esqueleto inicial de la app Android en
+`android/` (proyecto Gradle/Kotlin, una sola Activity con
+`LocationManager` de prueba + `BroadcastReceiver` + campos de lat/lon a
+mano) y un módulo Python nuevo (`ojo_gps_android_bridge.py`) con los
+comandos de `adb` para instalar/habilitar/mandar ubicación. **Importante:
+nada de esto se compiló ni se probó** — este entorno de desarrollo no
+tiene el SDK de Android instalado (sí Java y Gradle, pero compilar un
+`com.android.application` necesita `android.jar`/build-tools, que hace
+falta bajar de `dl.google.com`, fuera del proxy permitido acá). Lu tiene
+que abrir `android/` en Android Studio (que baja el SDK solo) para
+compilarlo y probarlo en un Android real; hasta que eso no ande, todo
+este código es un borrador razonado, no algo verificado. Tampoco está
+integrado todavía al `ojo_gps_app.py` existente (esa parte de la interfaz
+de Windows es el paso siguiente, una vez que la app de Android ya
+funcione sola).
+
 ## Visión a futuro (sin empezar)
 
-- [ ] **Múltiples combinaciones de SO/dispositivo, y manejo solo desde el
-  celular.** Pedido de Lu: a futuro va a hacer falta repartir Ojo GPS para
-  distintas combinaciones (Windows+iPhone, Windows+Android, Mac+iPhone,
-  Mac+Android), con el objetivo final de una app de iPhone que no dependa
-  de la PC — la PC serviría solo para la instalación inicial, y después
-  todo se manejaría desde el celular, como iAnyGo. Es un cambio de
-  arquitectura grande (hoy toda la simulación de GPS corre en la PC y se
-  empuja al iPhone por cable/Wi-Fi vía `ojo_gps_bridge.py`; pasar esa
-  lógica al propio celular es un proyecto aparte, no un ajuste). Anotado
-  acá para no perderlo; no arranca hasta que se defina por dónde empezar.
-  Lu mandó capturas de iAnyGo (23/07) como referencia concreta de hacia
-  dónde apunta esto — tres cosas puntuales que muestra esa app y que
-  Ojo GPS hoy no tiene:
+- [ ] **Mac+iPhone y Mac+Android.** Mismas dos combinaciones que faltan
+  de la lista original (ver decisión de Android arriba). No agregan
+  capacidad nueva, solo repiten en macOS lo que ya funciona en Windows —
+  quedan atrás en la cola por eso, no porque sean menos importantes.
+  Mac+iPhone es la más barata de las dos: `pymobiledevice3` ya es
+  multiplataforma, así que es sobre todo empaquetado (instalador,
+  lanzadores, permisos de macOS), no lógica nueva.
+- [ ] **Ideas sueltas de iAnyGo (capturas de Lu, 23/07), sin empezar.**
+  Con un solo tipo de dispositivo soportado hasta ahora no había mucho
+  que aplicar de esto; con Android sumado (ver arriba) empieza a tener
+  más sentido, en especial la primera:
   - Selección de dispositivo unificada: un solo ícono de conectar que
     detecta solo si lo que se enchufó es iOS o Android ("Pulga 11"
     reconocido automáticamente), en vez de que la persona tenga que
