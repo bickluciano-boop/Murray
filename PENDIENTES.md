@@ -1,5 +1,22 @@
 # Pendientes de Ojo GPS
 
+## Notas de soporte (para no volver a perder la solución)
+
+- **"Modo de desarrollador" desaparece de Ajustes en el iPhone y no se
+  puede reactivar Fijar GPS.** Ya pasó dos veces (una en una versión
+  vieja, sin dejar registro de la solución, y de vuelta el 23/07 — por
+  eso esta nota). Pasa después de usar Fijar GPS: al desactivar Modo de
+  desarrollador para fijar la ubicación, iOS esconde el interruptor de
+  Ajustes hasta que vuelve a detectar que algo lo necesita. Solución que
+  encontró Lu el 23/07: conectar el iPhone y probar Cambiar ubicación en
+  Ojo GPS para que aparezca el cartel "Se requiere el modo de
+  desarrollador" y reiniciar cuando lo pida; si después de reiniciar la
+  opción sigue sin verse en Ajustes > Privacidad y seguridad, **buscar
+  "desarrollador" en el buscador de Ajustes** — ahí aparece directo,
+  aunque no esté listada a simple vista. Se documentó paso a paso en
+  LEEME.txt (sección "SI MODO DE DESARROLLADOR DESAPARECIO DE AJUSTES")
+  para que quien lo use lo encuentre solo, sin depender de este chat.
+
 ## En progreso: Ojo GPS para Android
 
 Decisión (23/07, con Lu): de las cuatro combinaciones anotadas en "Visión

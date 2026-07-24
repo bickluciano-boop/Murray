@@ -487,6 +487,24 @@ IMPORTANTE SOBRE UBICACION FIJA
   Modo de desarrollador y conecta el iPhone.
 - Android requiere otra aplicacion y otro procedimiento.
 
+SI "MODO DE DESARROLLADOR" DESAPARECIO DE AJUSTES (para reactivarlo)
+Esto es normal en iOS: el interruptor se esconde solo cuando esta apagado,
+hasta que el sistema detecta de nuevo que algo lo necesita.
+1. Conecta el iPhone por cable y abri Ojo GPS. Proba Cambiar ubicacion
+   aunque sepas que todavia va a fallar.
+2. En el iPhone deberia aparecer un cartel "Se requiere el modo de
+   desarrollador". Reinicia el iPhone cuando lo pida.
+3. Si despues de reiniciar Ajustes > Privacidad y seguridad NO muestra
+   la opcion Modo de desarrollador en la lista (pasa a veces): abri
+   Ajustes, toca la lupa de busqueda arriba, y escribi "desarrollador".
+   Ahi aparece directo, aunque no este listada a simple vista en
+   Privacidad y seguridad. Tocala y activala.
+4. El iPhone va a pedir reiniciar una vez mas. Confirma, desbloquea, y
+   reconecta el cable con Ojo GPS.
+Si ninguno de estos pasos funciona, el ultimo recurso (no borra fotos ni
+apps) es Ajustes > General > Transferir o restablecer iPhone >
+Restablecer > Restablecer ubicacion y privacidad.
+
 PRIMERA PREPARACION DEL MODO WI-FI
 1. Conecta el iPhone por cable, dejalo desbloqueado y en la misma red Wi-Fi que la PC.
 2. Abre Ojo GPS y elige Wi-Fi (experimental).
