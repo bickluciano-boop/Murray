@@ -68,7 +68,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.34"
+APP_VERSION = "16.4.35"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -269,7 +269,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.34 para iPhone en {PLATFORM_NAME}")
+        self.root.title(f"Ojo GPS 16.4.35 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -414,7 +414,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.34", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.35", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -1192,7 +1192,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.34"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.35"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -1587,7 +1587,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.34"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.35"})
             with urllib.request.urlopen(req, timeout=8) as response:
                 raw = response.read()
             try:
@@ -1889,7 +1889,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.34"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.35"},
             )
             with urllib.request.urlopen(search_req, timeout=12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -1918,14 +1918,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.34"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.35"},
                 )
                 with urllib.request.urlopen(detail_req, timeout=12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.34"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.35"})
                 with urllib.request.urlopen(img_req, timeout=15) as response:
                     raw = response.read()
                 try:
@@ -1963,7 +1963,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.34"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.35"})
             with urllib.request.urlopen(req, timeout=20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -1999,7 +1999,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.34"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.35"})
             with urllib.request.urlopen(req, timeout=10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2307,7 +2307,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.34"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.35"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2395,7 +2395,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.34"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.35"},
         )
         with urllib.request.urlopen(request, timeout=20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2441,7 +2441,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.34"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.35"})
             with urllib.request.urlopen(request, timeout=25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []

@@ -43,13 +43,18 @@ pip_install() {
     shift
     local err_file
     err_file="$(mktemp)"
-    "$python_bin" -m pip install --upgrade "$@" 2>"$err_file"
+    # ">&2 2>err_file", en ese orden, manda la salida normal de pip (todo el
+    # "Collecting...", "Successfully installed...") a la terminal, y separado
+    # capura solo los errores en err_file. Sin esto, ese texto de progreso
+    # terminaria mezclado con lo que esta funcion devuelve por stdout a quien
+    # la llama con "$(...)" (por ejemplo, ensure_ojo_gps_ready mas abajo).
+    "$python_bin" -m pip install --upgrade "$@" >&2 2>"$err_file"
     local status=$?
     if [ $status -ne 0 ] && grep -qi "externally-managed-environment" "$err_file"; then
         # Python de Homebrew suele bloquear pip install directo; --break-system-packages
         # es seguro aca porque instalamos en el Python dedicado de Ojo GPS, no en uno
         # que uses para otra cosa.
-        "$python_bin" -m pip install --upgrade --break-system-packages "$@"
+        "$python_bin" -m pip install --upgrade --break-system-packages "$@" >&2
         status=$?
     elif [ $status -ne 0 ]; then
         cat "$err_file" >&2
@@ -72,10 +77,12 @@ pip_install_binary_only() {
     shift
     local err_file
     err_file="$(mktemp)"
-    "$python_bin" -m pip install --upgrade --only-binary=:all: "$@" 2>"$err_file"
+    # Ver el comentario en pip_install sobre por que la salida normal de pip
+    # va a la terminal (>&2) y no se deja mezclar con el stdout de esta función.
+    "$python_bin" -m pip install --upgrade --only-binary=:all: "$@" >&2 2>"$err_file"
     local status=$?
     if [ $status -ne 0 ] && grep -qi "externally-managed-environment" "$err_file"; then
-        "$python_bin" -m pip install --upgrade --break-system-packages --only-binary=:all: "$@"
+        "$python_bin" -m pip install --upgrade --break-system-packages --only-binary=:all: "$@" >&2
         status=$?
     elif [ $status -ne 0 ]; then
         cat "$err_file" >&2
@@ -103,7 +110,7 @@ ensure_ojo_gps_ready() {
         echo "No se encontro Python 3.13. Instalando..." >&2
         if command -v brew >/dev/null 2>&1; then
             echo "Instalando Python 3.13 con Homebrew (puede demorar varios minutos)..." >&2
-            if ! brew install python@3.13; then
+            if ! brew install python@3.13 >&2; then
                 echo "La instalacion con Homebrew fallo." >&2
                 return 1
             fi

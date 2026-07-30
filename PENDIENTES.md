@@ -1,5 +1,34 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.35
+
+- [x] **Bug propio (no de la Mac de Marian esta vez): "python3.13: cannot
+  execute: File name too long" al abrir Ojo GPS después de instalar
+  pymobiledevice3/Pillow.** Confirmado que no era el PATH (`echo ${#PATH}`
+  dio 353, un largo normal). La causa real: `pip_install`/
+  `pip_install_binary_only` solo redirigían el `stderr` de pip a un archivo
+  temporal para poder inspeccionarlo; el `stdout` normal de pip
+  ("Collecting...", "Successfully installed...") no se tocaba, así que
+  cuando estas funciones corren *adentro* de `ensure_ojo_gps_ready()` —que
+  a su vez se llama como `PYTHON_BIN="$(ensure_ojo_gps_ready)"`— todo ese
+  texto de pip terminaba mezclado en la misma captura de stdout que el
+  nombre del intérprete. `Abrir-Ojo-GPS-Mac.command` terminaba armando
+  `exec "$PYTHON_BIN" ojo_gps_app.py` con un "nombre de programa" de
+  cientos de caracteres (todo el log de pip pegado), y `execve()` lo
+  rechaza con `ENAMETOOLONG` — exactamente el mensaje que vio Marian.
+  Arreglado agregando `>&2` a los tres comandos que imprimían a stdout
+  dentro de `ensure_ojo_gps_ready` (`brew install`, y los dos `pip install`
+  de `pip_install`/`pip_install_binary_only`), para que su salida vaya a la
+  terminal en vez de mezclarse con el valor devuelto. Reproducido y
+  verificado con un Python simulado que imprime salida de pip ruidosa a
+  propósito (fuera del proyecto): antes del fix, la captura contenía todo
+  el log de pip pegado al nombre del intérprete; después del fix, la
+  captura queda limpia (solo el nombre del binario) y el log de pip se ve
+  igual en pantalla. Ver también la nota en 16.4.32/16.4.33: los tests
+  sintéticos anteriores no habían detectado esto porque los mocks de
+  Python nunca imprimían nada por su cuenta — quedó expuesto recién al
+  probar con un `pip` real que sí es verborrágico.
+
 ## Completado en 16.4.34
 
 - [x] **Tercer problema real en la Mac de Marian: después de instalar las
