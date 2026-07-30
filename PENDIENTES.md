@@ -1,5 +1,27 @@
 # Pendientes de Ojo GPS
 
+## Validado en una Mac real (16.4.35)
+
+- [x] **Confirmado con Marian, de punta a punta, en su MacBook Air real**:
+  `Abrir-Ojo-GPS-Mac.command` instaló Python 3.13 (vía instalador de
+  python.org, sin Homebrew), las Herramientas de línea de comandos, y
+  pymobiledevice3/Pillow con paquetes ya compilados (sin Rust/OpenSSL), y
+  abrió Ojo GPS con la interfaz completa: título "Ojo GPS 16.4.35 para
+  iPhone en Mac", subtítulo "... desde Mac", badge "⚙ ADMINISTRADOR"
+  visible sin recortarse en el encabezado (con la fuente real de macOS —
+  la sospecha de que el recorte visto en 16.4.29 era solo un artefacto de
+  probar en Linux sin las fuentes de Apple queda confirmada: acá se ve
+  bien). Activación con el código de administrador (3650-8698-4882)
+  funcionó igual que en Windows.
+  Todavía sin probar en esta Mac: el circuito completo con un iPhone real
+  conectado (Cambiar ubicación, Joystick, Fijar GPS, Wi-Fi) — lo de arriba
+  cubre instalación y arranque de la app, no el puente con el teléfono.
+  Se encontraron y corrigieron en el camino tres bugs reales de los
+  scripts de Mac (ver 16.4.33, 16.4.34, 16.4.35 más abajo): detección de
+  Herramientas de línea de comandos, instalación de pymobiledevice3/Pillow
+  solo con paquetes ya compilados, y un bug de redirección de stdout que
+  rompía el lanzamiento de la app.
+
 ## Completado en 16.4.35
 
 - [x] **Bug propio (no de la Mac de Marian esta vez): "python3.13: cannot
@@ -583,28 +605,22 @@
 
 ## Validación de la próxima ronda
 
-- [ ] Probar Abrir-Ojo-GPS-Mac.command como primer archivo abierto en una Mac
-  recién formateada (sin Python, sin Homebrew, sin nada instalado todavía):
-  confirmar que instala todo solo y abre la app, sin pedir ejecutar
-  1-Instalar-Python-Mac.command antes. Repetirlo con Generar-Codigo-Demo-Mac
-  y con Puente-WiFi-Administrador-Mac como el primer archivo abierto.
-- [ ] **Prioridad: probar todo el soporte Mac en una Mac real**, no
-  disponible en el entorno donde se escribió este código:
-  - 1-Instalar-Python-Mac.command en una Mac sin Python 3.13 ni Homebrew
-    (debe explicar cómo instalar Homebrew) y en una con Homebrew ya
-    instalado (debe instalar Python 3.13 solo, y pymobiledevice3/Pillow sin
-    error de "externally-managed-environment").
-  - El paso de Gatekeeper (click derecho > Abrir) en los cuatro .command la
-    primera vez que se ejecutan.
-  - Abrir-Ojo-GPS-Mac.command: confirma que abre la app y que la ventana de
-    Terminal que queda no interfiere con el uso normal.
-  - Preparar Wi-Fi en Mac: confirmar que se abre una Terminal nueva, que
-    pide la contraseña con `sudo`, y que el flujo completo con un iPhone
-    real (retirar cable, Fijar GPS) funciona igual que en Windows.
-  - Comparar visualmente la interfaz en Mac contra Windows: los tamaños de
-    fuente con `Helvetica Neue` (usados como reemplazo de "Segoe UI") no se
-    probaron visualmente en una Mac real, solo con una familia distinta en
-    Linux sin fuentes de Apple.
+- [x] ~~Probar Abrir-Ojo-GPS-Mac.command como primer archivo abierto en una Mac
+  sin nada instalado todavía~~ — confirmado con Marian: instaló Python,
+  Herramientas de línea de comandos y dependencias solo, sin pedir correr
+  1-Instalar-Python-Mac.command antes. Falta repetir el mismo caso
+  puntualmente con Generar-Codigo-Demo-Mac y Puente-WiFi-Administrador-Mac
+  como primer archivo abierto (probado por ahora solo con
+  Abrir-Ojo-GPS-Mac.command).
+- [x] ~~El paso de Gatekeeper y la interfaz visual en una Mac real~~ —
+  confirmado con Marian: "Abrir de todas formas" desde Ajustes del Sistema
+  funcionó, y la interfaz con `Helvetica Neue` se ve completa (el recorte
+  del badge visto en Linux/Xvfb en 16.4.29 era un artefacto de ese entorno
+  de prueba, no un bug real).
+- [ ] **Todavía pendiente en Mac: el circuito completo con un iPhone real**
+  (Cambiar ubicación, Joystick, Fijar GPS) y Preparar Wi-Fi (confirmar que
+  abre una Terminal nueva, pide la contraseña con `sudo`, y el flujo de
+  retirar cable / Fijar GPS funciona igual que en Windows).
 - [ ] En el Panel de Administrador, generar un código y tocar Mail:
   confirmar que abre el cliente de correo con el código y los pasos ya
   escritos, sin destinatario fijo. Repetir con WhatsApp y confirmar que
