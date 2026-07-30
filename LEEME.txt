@@ -1,10 +1,24 @@
-OJO GPS PARA WINDOWS - VERSION 16.4.29 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.30 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.30
+
+- Ojo GPS ahora también corre en Mac (antes solo Windows). Es la misma app
+  y el mismo procedimiento con el iPhone (cable, Wi-Fi, Fijar GPS, Joystick,
+  Simular recorrido); lo que cambia son los archivos para instalar y abrir
+  la app, adaptados a Mac: 1-Instalar-Python-Mac.command,
+  Abrir-Ojo-GPS-Mac.command, Puente-WiFi-Administrador-Mac.command y
+  Generar-Codigo-Demo-Mac.command (los .cmd/.vbs de Windows siguen
+  funcionando igual que siempre en Windows). Ver "COMO ABRIR EN MAC" más
+  abajo para el detalle. IMPORTANTE: esta parte todavía no se probó en una
+  Mac real — antes de darle una copia a alguien, probala vos primero en tu
+  Mac siguiendo esos pasos.
+- Android sigue sin soporte por ahora (ver PENDIENTES.md para el plan).
 
 NOVEDAD 16.4.29
 
@@ -372,7 +386,7 @@ SEMAFORO DE CONEXION
 
 Ningun intento de conexion puede quedar esperando indefinidamente.
 
-REQUISITOS YA INSTALADOS
+REQUISITOS YA INSTALADOS (WINDOWS)
 - Python 3.13 para Wi-Fi
 - pymobiledevice3
 - Pillow (para mostrar las fotos de Street View)
@@ -381,11 +395,35 @@ REQUISITOS YA INSTALADOS
 - Street View ya incluye un token de Mapillary listo para usar (no hace
   falta conseguir ni configurar nada)
 
-COMO ABRIR
+REQUISITOS EN MAC
+- Python 3.13 (el instalador de Mac lo agrega solo con Homebrew si lo tenes,
+  o te indica cómo instalarlo si no)
+- pymobiledevice3 y Pillow (los agrega el mismo instalador)
+- Modo de desarrollador activado en el iPhone
+- No hace falta iTunes en Mac
+
+COMO ABRIR EN WINDOWS
 1. Extrae toda la carpeta del ZIP.
 2. La primera vez, ejecuta 1-Instalar-Python-3.13.cmd y espera INSTALACION COMPLETA.
 3. Conecta y desbloquea el iPhone.
 4. Hace doble clic en Abrir-Ojo-GPS.vbs.
+
+COMO ABRIR EN MAC
+1. Extrae toda la carpeta del ZIP (o descomprimila con doble clic si Mac no
+   lo hizo solo).
+2. La primera vez, hace doble clic en 1-Instalar-Python-Mac.command y esperá
+   INSTALACION COMPLETA. Si macOS dice que no puede abrirlo por venir de un
+   "desarrollador no identificado": click derecho (o Control+clic) sobre el
+   archivo, elegí Abrir, y confirmá Abrir en el cartel que aparece. Esto solo
+   hace falta la primera vez, para cada uno de los archivos .command.
+3. Conecta y desbloquea el iPhone.
+4. Hace doble clic en Abrir-Ojo-GPS-Mac.command (con el mismo paso de click
+   derecho > Abrir la primera vez, si hace falta).
+
+Nota sobre Mac: a diferencia de Windows, en Mac queda una ventana de Terminal
+abierta mientras Ojo GPS está abierto (Mac no tiene una forma de abrir la app
+sin mostrar esa ventana, como sí permite Windows). Podés minimizarla, pero no
+cerrarla mientras uses la app.
 
 COMO USAR CON CABLE
 1. Busca una direccion o lugar y selecciona un resultado.
@@ -446,12 +484,15 @@ IMPORTANTE SOBRE UBICACION FIJA
 - Android requiere otra aplicacion y otro procedimiento.
 
 PRIMERA PREPARACION DEL MODO WI-FI
-1. Conecta el iPhone por cable, dejalo desbloqueado y en la misma red Wi-Fi que la PC.
+1. Conecta el iPhone por cable, dejalo desbloqueado y en la misma red Wi-Fi que la PC/Mac.
 2. Abre Ojo GPS y elige Wi-Fi (experimental).
 3. Pulsa Preparar Wi-Fi.
-4. Acepta el permiso de administrador de Windows.
-   Si Windows Firewall pregunta, marca Redes privadas, desmarca Redes publicas
-   y pulsa Permitir acceso.
+4. En Windows: Acepta el permiso de administrador de Windows. Si Windows
+   Firewall pregunta, marca Redes privadas, desmarca Redes publicas y pulsa
+   Permitir acceso.
+   En Mac: se abre una Terminal nueva y te pide tu contraseña de Mac (hace
+   falta para crear el tunel de red); escribila ahí y presiona Enter. Si
+   macOS pregunta por permiso de red local, permitilo.
 5. Deja abierta la ventana negra llamada Ojo GPS - Puente Wi-Fi.
 6. Retira el cable.
 7. Busca un destino y pulsa Cambiar ubicacion.

@@ -1,5 +1,103 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.30
+
+- [x] **Soporte para Mac, arrancando por iPhone (pedido de Lu: "terminar la
+  versión Windows, Android y Mac iPhone").** `pymobiledevice3` y Tkinter ya
+  son multiplataforma, así que `ojo_gps_app.py` y `ojo_gps_bridge.py` casi
+  no necesitaron tocarse en su lógica — el trabajo fue sacar todo lo que
+  asumía Windows a secas:
+  - `IS_WINDOWS`/`IS_MAC`/`PLATFORM_NAME` nuevos, calculados una sola vez
+    desde `sys.platform`. `WIFI_TUNNEL` e `INSTALLER_SCRIPT_NAME` ahora
+    apuntan al archivo correcto según el sistema (`.cmd`/`.vbs` en Windows,
+    `.command` en Mac).
+  - `_app_data_dir()` reemplaza los cinco lugares que armaban la carpeta de
+    datos a mano con `%LOCALAPPDATA%`: en Windows sigue siendo la misma
+    carpeta de siempre, en Mac pasa a `~/Library/Application Support/Ojo
+    GPS` (la convención real de macOS, no un genérico `~/Ojo GPS`).
+  - `ui_font(size, semibold=False)` reemplaza las 51 apariciones de
+    `"Segoe UI"`/`"Segoe UI Semibold"` como family literal. En Windows
+    devuelve exactamente lo mismo que antes (`"Segoe UI"` es una familia
+    real ahí). En Mac/Linux esas dos familias no existen, así que devuelve
+    `("Helvetica Neue", size, "bold")` en vez de inventar una familia
+    "Helvetica Neue Semibold" que probablemente no exista con ese nombre
+    exacto — variar el peso con el tercer elemento del tuple de Tk es la
+    forma correcta de pedir bold sin depender de que el nombre de familia
+    exista tal cual.
+  - `_launch_wifi_tunnel` ahora bifurca: en Windows sigue usando
+    `ctypes.windll.shell32.ShellExecuteW(..., "runas", ...)` sin cambios;
+    en Mac no hay equivalente directo a elevar un proceso desde código, así
+    que abre el `.command` en una Terminal nueva (`open -a Terminal ...`) y
+    el `sudo` de adentro del script pide la contraseña ahí mismo — mismo
+    resultado final (privilegios elevados, ventana visible del puente),
+    pasos de UI distintos. El cartel que sigue explica "Aceptá el permiso
+    de Windows" o "Ingresá tu contraseña de Mac" según corresponda.
+  - `os.startfile(...)` (para abrir la carpeta del token de Mapillary
+    vencido) solo existe en Windows; se agregó la rama Mac con
+    `subprocess.run(["open", ...])`.
+  - Título y subtítulo de la ventana principal ("... en Windows" / "...
+    desde Windows") ahora arman esa parte con `PLATFORM_NAME`.
+  - Cuatro scripts nuevos, equivalentes a los `.cmd`/`.vbs` de Windows:
+    `1-Instalar-Python-Mac.command` (instala Python 3.13 con Homebrew si
+    está disponible, si no explica cómo conseguirlo; instala
+    pymobiledevice3/lzfse_stub/Pillow con reintento
+    `--break-system-packages` si pip se queja de "externally-managed-
+    environment", que es como viene el Python de Homebrew de fábrica),
+    `Abrir-Ojo-GPS-Mac.command`, `Puente-WiFi-Administrador-Mac.command`
+    (con `sudo`) y `Generar-Codigo-Demo-Mac.command`. Los cuatro quedaron
+    con permiso de ejecución (`chmod +x`).
+  - LEEME.txt suma "REQUISITOS EN MAC" y "COMO ABRIR EN MAC" en paralelo a
+    las secciones de Windows, incluyendo el paso de click derecho > Abrir
+    que macOS exige la primera vez para scripts sin firmar, y la
+    advertencia de que en Mac queda una ventana de Terminal visible
+    mientras Ojo GPS está abierto (a diferencia de Windows, que puede
+    lanzar la app sin ventana con `pyw`/VBS) — es una limitación real de
+    macOS con un script suelto, no algo que se pueda evitar sin empaquetar
+    una `.app` de verdad (`py2app` o similar), que queda para una versión
+    futura si hace falta.
+  - Verificado con un smoke test en Linux con Xvfb (no hay Mac disponible
+    en este entorno): la app arranca sin excepciones con el refactor
+    completo, `ui_font()` con la familia de fallback (`DejaVu Sans` en este
+    caso) renderiza bien, el panel de Administrador sigue generando y
+    rechazando códigos igual que antes. Lo que NO se pudo verificar acá,
+    por no tener una Mac real: que Homebrew instale Python 3.13 sin
+    fricción, que `sudo` dentro de una Terminal abierta con `open -a
+    Terminal` pida la contraseña como se espera, que los `.command` corran
+    con doble clic después del paso de Gatekeeper, y el flujo Wi-Fi
+    completo con un iPhone real. **Antes de repartir esta versión a
+    alguien con Mac, hay que probar el circuito completo en una Mac real
+    primero.**
+
+## Evolución futura — Soporte Android
+
+- [ ] **Diseño elegido (todavía sin construir): app-puente mínima +
+  ADB, en vez de requerir root.** A diferencia de iOS, donde
+  `pymobiledevice3` habla con un servicio de diagnóstico que ya trae el
+  sistema (nada que instalar en el teléfono), Android no expone una forma
+  de inyectar ubicación desde una PC sin que algo corra en el propio
+  teléfono — es una limitación real de la plataforma, no algo que dependa
+  de cómo se programe Ojo GPS. La opción que pidió Lu ("la más vanguardista
+  y que funcione lo más real posible, como la opción PC") es la que menos
+  fricción de setup tiene sin pedir root:
+  - Una app Android chica (un `TestLocationProvider` registrado vía
+    `LocationManager.addTestProvider`), pensada para instalarse sola desde
+    Ojo GPS con `adb install -r` la primera vez que se conecta un Android
+    por USB — sin pasar por Play Store.
+  - Ojo GPS habilita el mock location de esa app con
+    `adb shell appops set <paquete> android:mock_location allow` (requiere
+    que el usuario tenga Depuración USB activada en Opciones de
+    desarrollador, equivalente al Modo de desarrollador que ya se le pide
+    para iPhone).
+  - Actualización de posición en vivo: `adb forward` de un puerto TCP hacia
+    un socket que la app-puente escucha adentro del teléfono, mismo patrón
+    `MOVE:lat,lon` que ya usa `ojo_gps_bridge.py` con el iPhone — para
+    reusar tal cual toda la lógica de Joystick/Recorrido/Fijar que ya está
+    escrita y probada del lado de Ojo GPS.
+  - Esto es un proyecto nuevo, no una extensión chica: hace falta un
+    proyecto Android (Kotlin, Gradle), firmar el APK, y probarlo en
+    dispositivos Android reales — ninguno disponible en este entorno de
+    desarrollo. Queda para una etapa aparte después de validar Mac.
+
 ## Completado en 16.4.29
 
 - [x] **El Panel de Administrador manda el código por Mail o WhatsApp.**
@@ -346,6 +444,23 @@
 
 ## Validación de la próxima ronda
 
+- [ ] **Prioridad: probar todo el soporte Mac en una Mac real**, no
+  disponible en el entorno donde se escribió este código:
+  - 1-Instalar-Python-Mac.command en una Mac sin Python 3.13 ni Homebrew
+    (debe explicar cómo instalar Homebrew) y en una con Homebrew ya
+    instalado (debe instalar Python 3.13 solo, y pymobiledevice3/Pillow sin
+    error de "externally-managed-environment").
+  - El paso de Gatekeeper (click derecho > Abrir) en los cuatro .command la
+    primera vez que se ejecutan.
+  - Abrir-Ojo-GPS-Mac.command: confirma que abre la app y que la ventana de
+    Terminal que queda no interfiere con el uso normal.
+  - Preparar Wi-Fi en Mac: confirmar que se abre una Terminal nueva, que
+    pide la contraseña con `sudo`, y que el flujo completo con un iPhone
+    real (retirar cable, Fijar GPS) funciona igual que en Windows.
+  - Comparar visualmente la interfaz en Mac contra Windows: los tamaños de
+    fuente con `Helvetica Neue` (usados como reemplazo de "Segoe UI") no se
+    probaron visualmente en una Mac real, solo con una familia distinta en
+    Linux sin fuentes de Apple.
 - [ ] En el Panel de Administrador, generar un código y tocar Mail:
   confirmar que abre el cliente de correo con el código y los pasos ya
   escritos, sin destinatario fijo. Repetir con WhatsApp y confirmar que

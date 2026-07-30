@@ -29,18 +29,35 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
+IS_WINDOWS = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
+PLATFORM_NAME = "Mac" if IS_MAC else "Windows"
+
 APP_DIR = Path(__file__).resolve().parent
 BRIDGE = APP_DIR / "ojo_gps_bridge.py"
-WIFI_TUNNEL = APP_DIR / "Puente-WiFi-Administrador.cmd"
-CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+WIFI_TUNNEL = APP_DIR / ("Puente-WiFi-Administrador-Mac.command" if IS_MAC else "Puente-WiFi-Administrador.cmd")
+INSTALLER_SCRIPT_NAME = "1-Instalar-Python-Mac.command" if IS_MAC else "1-Instalar-Python-3.13.cmd"
+CREATE_NO_WINDOW = 0x08000000 if IS_WINDOWS else 0
 GREEN = "#16786f"
 GREEN_DARK = "#105f59"
 BG = "#f4f7f6"
 TEXT = "#173230"
 MUTED = "#687b79"
-HELP_STATE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "ayuda.json"
+
+
+def _app_data_dir() -> Path:
+    """Carpeta de datos propios de Ojo GPS, según convención de cada sistema."""
+    if IS_WINDOWS:
+        return Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS"
+    if IS_MAC:
+        return Path.home() / "Library" / "Application Support" / "Ojo GPS"
+    return Path.home() / ".ojo_gps"
+
+
+APP_DATA_DIR = _app_data_dir()
+HELP_STATE = APP_DATA_DIR / "ayuda.json"
 MAPILLARY_API = "https://graph.mapillary.com"
-MAPILLARY_TOKEN_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "mapillary_token.txt"
+MAPILLARY_TOKEN_FILE = APP_DATA_DIR / "mapillary_token.txt"
 # Token propio ya registrado, para que Street View funcione sin configuracion
 # manual. Si mapillary_token.txt existe y tiene contenido, ese archivo manda
 # (permite reemplazarlo el dia que haga falta regenerarlo).
@@ -50,10 +67,21 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # en el codigo fuente que se distribuye), pero alcanza para que un codigo no
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
-ACTIVATION_FILE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "activacion.json"
-APP_VERSION = "16.4.29"
+ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
+APP_VERSION = "16.4.30"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
+
+
+def ui_font(size: int, semibold: bool = False) -> tuple:
+    """Fuente de interfaz según el sistema. Windows tiene "Segoe UI Semibold"
+    como familia propia; en Mac y Linux se simula con peso "bold" sobre una
+    familia real de esos sistemas, en vez de asumir que existe una familia
+    con ese nombre exacto."""
+    if IS_WINDOWS:
+        return ("Segoe UI Semibold", size) if semibold else ("Segoe UI", size)
+    family = "Helvetica Neue" if IS_MAC else "DejaVu Sans"
+    return (family, size, "bold") if semibold else (family, size)
 
 
 class ToolTip:
@@ -99,7 +127,7 @@ class ToolTip:
             fg="white",
             padx=10,
             pady=7,
-            font=("Segoe UI", 9),
+            font=ui_font(9),
         ).pack()
         tip.update_idletasks()
         width = tip.winfo_reqwidth()
@@ -221,9 +249,9 @@ def _check_activation() -> tuple[bool, bool, datetime | None]:
     frame.pack(fill="both", expand=True)
     tk.Label(
         frame, textvariable=message_var, bg="white", fg="#173230",
-        font=("Segoe UI", 10), wraplength=280, justify="left",
+        font=ui_font(10), wraplength=280, justify="left",
     ).pack(anchor="w", pady=(0, 12))
-    entry = tk.Entry(frame, textvariable=code_var, font=("Segoe UI", 13), justify="center")
+    entry = tk.Entry(frame, textvariable=code_var, font=ui_font(13), justify="center")
     entry.pack(fill="x", pady=(0, 14))
     entry.focus_set()
     buttons = tk.Frame(frame, bg="white")
@@ -241,7 +269,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title("Ojo GPS 16.4.29 para iPhone en Windows")
+        self.root.title(f"Ojo GPS 16.4.30 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -314,7 +342,7 @@ class OjoGPSApp:
         self.map_render_id = 0
         self.map_tile_cache: dict[tuple[int, int, int], str] = {}
         self.map_tile_cache_lock = threading.Lock()
-        self.map_cache_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "map_cache"
+        self.map_cache_dir = APP_DATA_DIR / "map_cache"
         self.map_cache_dir.mkdir(parents=True, exist_ok=True)
         self.map_render_job: str | None = None
         self.map_info_text = tk.StringVar(value="Hacé clic en el mapa para marcar el punto exacto.")
@@ -338,7 +366,7 @@ class OjoGPSApp:
         self.street_view_canvas: tk.Canvas | None = None
         self.street_view_photo = None
         self.street_view_request_id = 0
-        self.street_view_cache_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Ojo GPS" / "street_view_cache"
+        self.street_view_cache_dir = APP_DATA_DIR / "street_view_cache"
         self.street_view_cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.address = tk.StringVar(value="Obelisco, Buenos Aires")
@@ -365,18 +393,18 @@ class OjoGPSApp:
             pass
         style.configure("TFrame", background=BG)
         style.configure("Card.TFrame", background="white")
-        style.configure("TLabel", background=BG, foreground=TEXT, font=("Segoe UI", 10))
-        style.configure("Card.TLabel", background="white", foreground=TEXT, font=("Segoe UI", 10))
-        style.configure("Title.TLabel", background=BG, foreground=GREEN_DARK, font=("Segoe UI Semibold", 28))
-        style.configure("Subtitle.TLabel", background=BG, foreground=MUTED, font=("Segoe UI", 11))
-        style.configure("Section.TLabel", background="white", foreground=TEXT, font=("Segoe UI Semibold", 12))
-        style.configure("Status.TLabel", background="white", foreground=GREEN_DARK, font=("Segoe UI Semibold", 11))
-        style.configure("PlaceContext.TLabel", background="white", foreground=GREEN_DARK, font=("Segoe UI Semibold", 10))
-        style.configure("Primary.TButton", font=("Segoe UI Semibold", 11), padding=(16, 11), background=GREEN, foreground="white")
+        style.configure("TLabel", background=BG, foreground=TEXT, font=ui_font(10))
+        style.configure("Card.TLabel", background="white", foreground=TEXT, font=ui_font(10))
+        style.configure("Title.TLabel", background=BG, foreground=GREEN_DARK, font=ui_font(28, semibold=True))
+        style.configure("Subtitle.TLabel", background=BG, foreground=MUTED, font=ui_font(11))
+        style.configure("Section.TLabel", background="white", foreground=TEXT, font=ui_font(12, semibold=True))
+        style.configure("Status.TLabel", background="white", foreground=GREEN_DARK, font=ui_font(11, semibold=True))
+        style.configure("PlaceContext.TLabel", background="white", foreground=GREEN_DARK, font=ui_font(10, semibold=True))
+        style.configure("Primary.TButton", font=ui_font(11, semibold=True), padding=(16, 11), background=GREEN, foreground="white")
         style.map("Primary.TButton", background=[("active", GREEN_DARK), ("disabled", "#9ab8b5")])
-        style.configure("Secondary.TButton", font=("Segoe UI Semibold", 10), padding=(12, 9))
-        style.configure("TEntry", padding=8, font=("Segoe UI", 10))
-        style.configure("Card.TRadiobutton", background="white", foreground=TEXT, font=("Segoe UI Semibold", 10))
+        style.configure("Secondary.TButton", font=ui_font(10, semibold=True), padding=(12, 9))
+        style.configure("TEntry", padding=8, font=ui_font(10))
+        style.configure("Card.TRadiobutton", background="white", foreground=TEXT, font=ui_font(10, semibold=True))
 
     def _build_ui(self) -> None:
         outer = ttk.Frame(self.root, padding=(30, 24, 30, 24))
@@ -386,8 +414,8 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.29", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(header_left, text="Ubicación para iPhone desde Windows. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.30", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
         self.help_button.pack(side="right", padx=(10, 0))
@@ -402,7 +430,7 @@ class OjoGPSApp:
         self.top_status_dot = tk.Canvas(traffic, width=22, height=22, bg="white", highlightthickness=0)
         self.top_dot = self.top_status_dot.create_oval(3, 3, 19, 19, fill="#c94f45", outline="")
         self.top_status_dot.pack(side="left")
-        tk.Label(traffic, textvariable=self.connection_text, bg="white", fg=TEXT, font=("Segoe UI Semibold", 10)).pack(side="left", padx=(7, 0))
+        tk.Label(traffic, textvariable=self.connection_text, bg="white", fg=TEXT, font=ui_font(10, semibold=True)).pack(side="left", padx=(7, 0))
         ToolTip(traffic, "Verde: conectado. Amarillo: procesando. Rojo: desconectado.")
 
         if self.is_admin:
@@ -412,7 +440,7 @@ class OjoGPSApp:
             )
             admin_badge.pack(side="right", padx=(18, 0))
             admin_label = tk.Label(
-                admin_badge, text="⚙ ADMINISTRADOR", bg="#fff4e0", fg="#8a5a10", font=("Segoe UI Semibold", 10),
+                admin_badge, text="⚙ ADMINISTRADOR", bg="#fff4e0", fg="#8a5a10", font=ui_font(10, semibold=True),
             )
             admin_label.pack()
             admin_badge.bind("<Button-1>", lambda _event: self._open_admin_panel())
@@ -433,7 +461,7 @@ class OjoGPSApp:
             )
             expiry_badge.pack(side="right", padx=(18, 0))
             tk.Label(
-                expiry_badge, text=expiry_text, bg="#eef6f5", fg=GREEN_DARK, font=("Segoe UI Semibold", 10),
+                expiry_badge, text=expiry_text, bg="#eef6f5", fg=GREEN_DARK, font=ui_font(10, semibold=True),
             ).pack()
             ToolTip(expiry_badge, "Días de uso restantes de esta copia de prueba de Ojo GPS.")
 
@@ -448,7 +476,7 @@ class OjoGPSApp:
             text="PRIMERO ELEGÍ QUÉ QUERÉS HACER. Para ver cada función paso a paso, abrí Ayuda.",
             bg="#e5f3f1",
             fg=GREEN_DARK,
-            font=("Segoe UI Semibold", 10),
+            font=ui_font(10, semibold=True),
         ).pack(anchor="w")
 
         self.main_panel = ttk.Frame(card, style="Card.TFrame")
@@ -517,7 +545,7 @@ class OjoGPSApp:
             relief="flat",
             highlightthickness=1,
             highlightbackground="#dbe7e5",
-            font=("Segoe UI", 9),
+            font=ui_font(9),
         )
         self.results.pack(fill="x")
         self.results.bind("<<ListboxSelect>>", self.select_result)
@@ -627,7 +655,7 @@ class OjoGPSApp:
         )
         origin_map_button.pack(side="left", padx=(8, 0))
         ToolTip(origin_map_button, "Marcá directamente en el mapa la dirección de partida.")
-        self.route_origin_results = tk.Listbox(locations, height=2, exportselection=False, font=("Segoe UI", 9))
+        self.route_origin_results = tk.Listbox(locations, height=2, exportselection=False, font=ui_font(9))
         self.route_origin_results.pack(fill="x", pady=(0, 10))
         self.route_origin_entry.bind("<KeyRelease>", lambda _event: self._schedule_route_suggestions("origin"))
         self.route_origin_results.bind("<<ListboxSelect>>", lambda _event: self._select_route_suggestion("origin"))
@@ -643,7 +671,7 @@ class OjoGPSApp:
         )
         destination_map_button.pack(side="left", padx=(8, 0))
         ToolTip(destination_map_button, "Marcá directamente en el mapa la dirección de llegada.")
-        self.route_destination_results = tk.Listbox(locations, height=2, exportselection=False, font=("Segoe UI", 9))
+        self.route_destination_results = tk.Listbox(locations, height=2, exportselection=False, font=ui_font(9))
         self.route_destination_results.pack(fill="x", pady=(0, 12))
         self.route_destination_entry.bind("<KeyRelease>", lambda _event: self._schedule_route_suggestions("destination"))
         self.route_destination_results.bind("<<ListboxSelect>>", lambda _event: self._select_route_suggestion("destination"))
@@ -826,13 +854,13 @@ class OjoGPSApp:
         help_title = tk.StringVar()
         help_text = tk.StringVar()
 
-        tk.Label(content, textvariable=help_title, bg="white", fg=GREEN_DARK, font=("Segoe UI Semibold", 17), anchor="w").pack(fill="x")
+        tk.Label(content, textvariable=help_title, bg="white", fg=GREEN_DARK, font=ui_font(17, semibold=True), anchor="w").pack(fill="x")
         tk.Label(
             content,
             textvariable=help_text,
             bg="white",
             fg=TEXT,
-            font=("Segoe UI", 11),
+            font=ui_font(11),
             justify="left",
             anchor="nw",
             wraplength=430,
@@ -908,7 +936,7 @@ class OjoGPSApp:
 
         result_row = ttk.Frame(frame)
         result_row.pack(fill="x", pady=(10, 6))
-        result_entry = ttk.Entry(result_row, textvariable=result_var, font=("Segoe UI Semibold", 13), justify="center", state="readonly")
+        result_entry = ttk.Entry(result_row, textvariable=result_var, font=ui_font(13, semibold=True), justify="center", state="readonly")
         result_entry.pack(side="left", fill="x", expand=True)
 
         def _copy() -> None:
@@ -956,7 +984,7 @@ class OjoGPSApp:
 
         ttk.Label(frame, text="Códigos generados en esta sesión:", style="Card.TLabel").pack(anchor="w", pady=(4, 6))
         history_box = tk.Listbox(
-            frame, height=6, font=("Segoe UI", 9), relief="flat",
+            frame, height=6, font=ui_font(9), relief="flat",
             highlightthickness=1, highlightbackground="#dbe7e5", activestyle="none",
         )
         history_box.pack(fill="both", expand=True)
@@ -1042,7 +1070,7 @@ class OjoGPSApp:
             messagebox.showerror(
                 "Ojo GPS - Wi-Fi",
                 "El modo Wi-Fi de este iPhone necesita Python 3.13.\n\n"
-                "Cerrá Ojo GPS, ejecutá 1-Instalar-Python-3.13.cmd y después volvé a abrir la aplicación.",
+                f"Cerrá Ojo GPS, ejecutá {INSTALLER_SCRIPT_NAME} y después volvé a abrir la aplicación.",
             )
             return
         if self.bridge is not None:
@@ -1096,20 +1124,29 @@ class OjoGPSApp:
 
     def _launch_wifi_tunnel(self) -> None:
         try:
-            result = ctypes.windll.shell32.ShellExecuteW(
-                None,
-                "runas",
-                str(WIFI_TUNNEL),
-                None,
-                str(APP_DIR),
-                1,
-            )
-            if result <= 32:
-                raise RuntimeError("Windows no pudo abrir el puente como administrador")
-            self.set_status("Puente Wi-Fi iniciando; aceptá el permiso de Windows", "#d59b2b")
+            if IS_MAC:
+                # macOS no tiene un equivalente directo al "runas" de Windows para
+                # elevar un script desde código; abrimos el .command en una
+                # Terminal nueva y el "sudo" adentro del script pide la
+                # contraseña ahí mismo, en vez de un cartel gráfico separado.
+                subprocess.Popen(["open", "-a", "Terminal", str(WIFI_TUNNEL)])
+                permission_hint = "Ingresá tu contraseña de Mac cuando la Terminal te la pida"
+            else:
+                result = ctypes.windll.shell32.ShellExecuteW(
+                    None,
+                    "runas",
+                    str(WIFI_TUNNEL),
+                    None,
+                    str(APP_DIR),
+                    1,
+                )
+                if result <= 32:
+                    raise RuntimeError("Windows no pudo abrir el puente como administrador")
+                permission_hint = "Aceptá el permiso de Windows"
+            self.set_status(f"Puente Wi-Fi iniciando; {permission_hint.lower()}", "#d59b2b")
             messagebox.showinfo(
                 "Ojo GPS - Wi-Fi",
-                "Aceptá el permiso de Windows y dejá abierta la ventana negra del puente.\n\n"
+                f"{permission_hint} y dejá abierta la ventana negra del puente.\n\n"
                 "Mantené el iPhone conectado y desbloqueado. Al cerrar este aviso, Ojo GPS continuará automáticamente.\n\n"
                 "Retirá el cable solamente cuando el indicador esté verde.",
             )
@@ -1155,7 +1192,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.29"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.30"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -1532,7 +1569,7 @@ class OjoGPSApp:
         if self.map_canvas is None:
             return
         self.map_canvas.delete("all")
-        self.map_canvas.create_text(384, 245, text="Cargando mapa…", fill=GREEN_DARK, font=("Segoe UI Semibold", 13))
+        self.map_canvas.create_text(384, 245, text="Cargando mapa…", fill=GREEN_DARK, font=ui_font(13, semibold=True))
         self.map_render_id += 1
         request_id = self.map_render_id
         width = max(640, self.map_canvas.winfo_width() or 768)
@@ -1550,7 +1587,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.29"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.30"})
             with urllib.request.urlopen(req, timeout=8) as response:
                 raw = response.read()
             try:
@@ -1656,7 +1693,7 @@ class OjoGPSApp:
         self.map_canvas.create_oval(x - 10, y - 10, x + 10, y + 10, fill="#e24b3b", outline="white", width=3, tags="marker")
         self.map_canvas.create_line(x, y + 8, x, y + 21, fill="#e24b3b", width=4, tags="marker")
         if self.map_target in ("destination", "route"):
-            self.map_canvas.create_text(x, y - 1, text="L", fill="white", font=("Segoe UI Semibold", 8), tags="marker")
+            self.map_canvas.create_text(x, y - 1, text="L", fill="white", font=ui_font(8, semibold=True), tags="marker")
 
     def _draw_map_reference_marker(self, x: float, y: float) -> None:
         """Dibuja la partida sin confundirla con la llegada que se está eligiendo."""
@@ -1679,7 +1716,7 @@ class OjoGPSApp:
             y - 1,
             text="P",
             fill="white",
-            font=("Segoe UI Semibold", 9),
+            font=ui_font(9, semibold=True),
             tags="reference_marker",
         )
 
@@ -1783,7 +1820,7 @@ class OjoGPSApp:
             messagebox.showerror(
                 "Street View",
                 "Falta el paquete Pillow, necesario para mostrar fotos.\n\n"
-                "Volvé a ejecutar 1-Instalar-Python-3.13.cmd para instalarlo y probá de nuevo.",
+                f"Volvé a ejecutar {INSTALLER_SCRIPT_NAME} para instalarlo y probá de nuevo.",
             )
             return
         token = self._load_mapillary_token()
@@ -1814,7 +1851,7 @@ class OjoGPSApp:
         canvas.create_text(
             STREET_VIEW_MAX_SIZE[0] / 2, STREET_VIEW_MAX_SIZE[1] / 2,
             text="Buscando vista de calle…", fill="white",
-            font=("Segoe UI Semibold", 12), tags="status",
+            font=ui_font(12, semibold=True), tags="status",
         )
         actions = ttk.Frame(win, padding=(18, 0, 18, 16))
         actions.pack(fill="x")
@@ -1852,7 +1889,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.29"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.30"},
             )
             with urllib.request.urlopen(search_req, timeout=12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -1881,14 +1918,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.29"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.30"},
                 )
                 with urllib.request.urlopen(detail_req, timeout=12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.29"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.30"})
                 with urllib.request.urlopen(img_req, timeout=15) as response:
                     raw = response.read()
                 try:
@@ -1926,7 +1963,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.29"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.30"})
             with urllib.request.urlopen(req, timeout=20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -1962,7 +1999,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.29"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.30"})
             with urllib.request.urlopen(req, timeout=10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2073,7 +2110,7 @@ class OjoGPSApp:
             text="Cómo fijar el GPS",
             bg="white",
             fg=GREEN_DARK,
-            font=("Segoe UI Semibold", 20),
+            font=ui_font(20, semibold=True),
         ).pack(side="left")
         tk.Button(
             header,
@@ -2084,7 +2121,7 @@ class OjoGPSApp:
             activebackground="#eef5f4",
             relief="flat",
             bd=0,
-            font=("Segoe UI", 18),
+            font=ui_font(18),
             cursor="hand2",
         ).pack(side="right")
 
@@ -2093,7 +2130,7 @@ class OjoGPSApp:
             text="Paso final · La ubicación ya debe estar activa en verde · Solo para iPhone",
             bg="white",
             fg=MUTED,
-            font=("Segoe UI", 10),
+            font=ui_font(10),
         ).pack(anchor="w", padx=24)
 
         canvas = tk.Canvas(window, width=560, height=150, bg="#f7fbfa", highlightthickness=0)
@@ -2103,11 +2140,11 @@ class OjoGPSApp:
         # iPhone, cable y PC: la animación cambia su estado, pero no toca el GPS.
         canvas.create_rectangle(55, 20, 145, 135, width=3, outline=GREEN_DARK, tags="phone")
         canvas.create_rectangle(70, 42, 130, 96, fill="white", outline="#cbdad8")
-        canvas.create_text(100, 112, text="iPhone", fill=TEXT, font=("Segoe UI Semibold", 10))
+        canvas.create_text(100, 112, text="iPhone", fill=TEXT, font=ui_font(10, semibold=True))
         canvas.create_line(145, 78, 365, 78, width=7, fill=GREEN, tags="cable")
         canvas.create_rectangle(365, 36, 505, 123, width=3, outline=GREEN_DARK, tags="pc")
-        canvas.create_text(435, 80, text="Ojo GPS", fill=GREEN_DARK, font=("Segoe UI Semibold", 15))
-        canvas.create_text(100, 67, text="CONECTADO", fill=GREEN, font=("Segoe UI Semibold", 9), tags="phone_state")
+        canvas.create_text(435, 80, text="Ojo GPS", fill=GREEN_DARK, font=ui_font(15, semibold=True))
+        canvas.create_text(100, 67, text="CONECTADO", fill=GREEN, font=ui_font(9, semibold=True), tags="phone_state")
         canvas.create_oval(420, 18, 450, 48, fill="#d59b2b", outline="", tags="signal")
 
         steps_frame = tk.Frame(window, bg="white")
@@ -2129,7 +2166,7 @@ class OjoGPSApp:
                 fg=MUTED,
                 padx=12,
                 pady=8,
-                font=("Segoe UI", 10),
+                font=ui_font(10),
             )
             label.pack(fill="x", pady=2)
             self.fix_help_step_labels.append(label)
@@ -2141,7 +2178,7 @@ class OjoGPSApp:
             text="La ubicación quedará fija aunque cambies de red.",
             bg="white",
             fg=GREEN_DARK,
-            font=("Segoe UI Semibold", 10),
+            font=ui_font(10, semibold=True),
         ).pack(side="left")
         tk.Button(
             footer,
@@ -2152,7 +2189,7 @@ class OjoGPSApp:
             activebackground="#eef5f4",
             relief="flat",
             bd=0,
-            font=("Segoe UI", 9),
+            font=ui_font(9),
             cursor="hand2",
         ).pack(side="right")
 
@@ -2169,9 +2206,9 @@ class OjoGPSApp:
         step = self.fix_help_frame % 4
         for index, label in enumerate(self.fix_help_step_labels):
             if index == step:
-                label.configure(bg="#e5f3f1", fg=GREEN_DARK, font=("Segoe UI Semibold", 10))
+                label.configure(bg="#e5f3f1", fg=GREEN_DARK, font=ui_font(10, semibold=True))
             else:
-                label.configure(bg="white", fg=MUTED, font=("Segoe UI", 10))
+                label.configure(bg="white", fg=MUTED, font=ui_font(10))
 
         canvas = self.fix_help_canvas
         if step == 0:
@@ -2270,7 +2307,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.29"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.30"},
             )
             with urllib.request.urlopen(request, timeout=20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2358,7 +2395,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.29"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.30"},
         )
         with urllib.request.urlopen(request, timeout=20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2404,7 +2441,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.29"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.30"})
             with urllib.request.urlopen(request, timeout=25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
@@ -2859,10 +2896,10 @@ class OjoGPSApp:
         pad.create_line(30, 130, 230, 130, fill="#c3dcd9", width=2)
         pad.create_line(59, 59, 201, 201, fill="#d4e5e3", width=2)
         pad.create_line(201, 59, 59, 201, fill="#d4e5e3", width=2)
-        pad.create_text(130, 11, text="N", fill=GREEN_DARK, font=("Segoe UI Semibold", 10))
-        pad.create_text(249, 130, text="E", fill=GREEN_DARK, font=("Segoe UI Semibold", 10))
-        pad.create_text(130, 249, text="S", fill=GREEN_DARK, font=("Segoe UI Semibold", 10))
-        pad.create_text(11, 130, text="O", fill=GREEN_DARK, font=("Segoe UI Semibold", 10))
+        pad.create_text(130, 11, text="N", fill=GREEN_DARK, font=ui_font(10, semibold=True))
+        pad.create_text(249, 130, text="E", fill=GREEN_DARK, font=ui_font(10, semibold=True))
+        pad.create_text(130, 249, text="S", fill=GREEN_DARK, font=ui_font(10, semibold=True))
+        pad.create_text(11, 130, text="O", fill=GREEN_DARK, font=ui_font(10, semibold=True))
         self.joystick_heading_line = pad.create_line(
             130, 130, 130, 130, fill=GREEN_DARK, width=5, arrow="last"
         )
@@ -3154,7 +3191,7 @@ class OjoGPSApp:
                         image = tk.PhotoImage(data=tile["data"])
                         self.map_images.append(image)
                         self.map_canvas.create_image(tile["x"], tile["y"], image=image, anchor="nw")
-                    self.map_canvas.create_text(8, 8, text="© OpenStreetMap", anchor="nw", fill="#173230", font=("Segoe UI", 8))
+                    self.map_canvas.create_text(8, 8, text="© OpenStreetMap", anchor="nw", fill="#173230", font=ui_font(8))
                     cx, cy = self._world_pixels(self.map_center[0], self.map_center[1], self.map_zoom)
                     if self.map_target == "route":
                         origin = self.route_selected_locations.get("origin")
@@ -3190,7 +3227,7 @@ class OjoGPSApp:
                             self.map_canvas.winfo_height() / 2,
                             text="No se pudo cargar el mapa. Revisá Internet y volvé a intentar.",
                             fill="#c45a4a",
-                            font=("Segoe UI Semibold", 12),
+                            font=ui_font(12, semibold=True),
                         )
                 elif kind == "STREET_VIEW_OK":
                     payload = json.loads(value)
@@ -3205,7 +3242,7 @@ class OjoGPSApp:
                             self.street_view_canvas.winfo_width() / 2,
                             self.street_view_canvas.winfo_height() / 2,
                             text="No se pudo mostrar la foto recibida.",
-                            fill="white", font=("Segoe UI Semibold", 12),
+                            fill="white", font=ui_font(12, semibold=True),
                         )
                         continue
                     self.street_view_photo = photo
@@ -3214,7 +3251,7 @@ class OjoGPSApp:
                     ch = self.street_view_canvas.winfo_height() or STREET_VIEW_MAX_SIZE[1]
                     self.street_view_canvas.create_image(cw / 2, ch / 2, image=photo, anchor="center")
                     self.street_view_canvas.create_text(
-                        8, ch - 8, text="© Mapillary", anchor="sw", fill="white", font=("Segoe UI", 8),
+                        8, ch - 8, text="© Mapillary", anchor="sw", fill="white", font=ui_font(8),
                     )
                 elif kind == "STREET_VIEW_EMPTY":
                     payload = json.loads(value)
@@ -3225,7 +3262,7 @@ class OjoGPSApp:
                         (self.street_view_canvas.winfo_width() or STREET_VIEW_MAX_SIZE[0]) / 2,
                         (self.street_view_canvas.winfo_height() or STREET_VIEW_MAX_SIZE[1]) / 2,
                         text="No hay vista de calle disponible cerca de este punto",
-                        fill="white", font=("Segoe UI Semibold", 12),
+                        fill="white", font=ui_font(12, semibold=True),
                         width=STREET_VIEW_MAX_SIZE[0] - 40, justify="center",
                     )
                 elif kind == "STREET_VIEW_ERROR":
@@ -3237,7 +3274,7 @@ class OjoGPSApp:
                         (self.street_view_canvas.winfo_width() or STREET_VIEW_MAX_SIZE[0]) / 2,
                         (self.street_view_canvas.winfo_height() or STREET_VIEW_MAX_SIZE[1]) / 2,
                         text="No se pudo cargar Street View.\n" + str(payload.get("message", "")),
-                        fill="#f0a898", font=("Segoe UI Semibold", 11),
+                        fill="#f0a898", font=ui_font(11, semibold=True),
                         width=STREET_VIEW_MAX_SIZE[0] - 40, justify="center",
                     )
                 elif kind == "STREET_VIEW_AUTH_ERROR":
@@ -3245,9 +3282,14 @@ class OjoGPSApp:
                     if payload.get("id") != self.street_view_request_id or self.street_view_canvas is None:
                         continue
                     MAPILLARY_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-                    if sys.platform == "win32":
+                    if IS_WINDOWS:
                         try:
                             os.startfile(MAPILLARY_TOKEN_FILE.parent)
+                        except OSError:
+                            pass
+                    elif IS_MAC:
+                        try:
+                            subprocess.run(["open", str(MAPILLARY_TOKEN_FILE.parent)])
                         except OSError:
                             pass
                     self.street_view_canvas.delete("all")
@@ -3261,7 +3303,7 @@ class OjoGPSApp:
                             "mapillary.com/dashboard/developers) y volvé a tocar "
                             "Ver Street View."
                         ),
-                        fill="#f0a898", font=("Segoe UI Semibold", 11),
+                        fill="#f0a898", font=ui_font(11, semibold=True),
                         width=STREET_VIEW_MAX_SIZE[0] - 40, justify="center",
                     )
                 elif kind == "WIFI_PREP_OK":
