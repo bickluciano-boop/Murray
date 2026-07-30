@@ -1,5 +1,31 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.34
+
+- [x] **Tercer problema real en la Mac de Marian: después de instalar las
+  Herramientas de línea de comandos, pymobiledevice3 volvió a fallar
+  compilando `cryptography`, esta vez por no encontrar OpenSSL** (`cargo:
+  warning=Could not find directory of OpenSSL installation`). El patrón se
+  repetía: pip intentando compilar `cryptography` desde cero en vez de usar
+  un wheel ya armado, cuando `cryptography` sí publica wheels para Mac en
+  PyPI — no debería hacer falta compilar nada en una instalación estándar.
+  En vez de perseguir la próxima dependencia de compilación que falte
+  (después de Xcode y OpenSSL, podría seguir pidiendo Rust u otra cosa), se
+  ataca la raíz: `pip_install_binary_only()` nuevo en
+  `ojo_gps_mac_common.sh`, que instala con `--only-binary=:all:` para
+  pymobiledevice3 y Pillow — si no hay un wheel ya compilado para esa Mac
+  puntual, pip corta con un error claro de "no matching distribution" en
+  vez de arrastrar a Ojo GPS a compilar con Xcode+OpenSSL+Rust. La
+  instalación de `lzfse_stub` (el paquete propio, puro Python, sin
+  dependencias compiladas) sigue usando `pip_install` normal, porque ese sí
+  necesita compilarse localmente (trivial, sin compilador de por medio) al
+  no estar publicado en PyPI.
+  Pendiente real: no se pudo confirmar todavía si esta Mac en particular
+  tiene un wheel disponible para pymobiledevice3/cryptography — hay que
+  ver qué dice el próximo intento antes de saber si hace falta ir más allá
+  (por ejemplo, revisar la versión de macOS con `sw_vers` si el wheel
+  tampoco aparece con este cambio).
+
 ## Completado en 16.4.33
 
 - [x] **Segundo bug real encontrado probando en la Mac de Marian: sin las

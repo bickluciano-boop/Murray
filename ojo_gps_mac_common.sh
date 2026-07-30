@@ -58,6 +58,32 @@ pip_install() {
     return $status
 }
 
+# Igual que pip_install, pero exige que ya exista un paquete compilado
+# (wheel) para esta Mac en vez de dejar que pip compile desde cero si no lo
+# encuentra. pymobiledevice3 y Pillow dependen de paquetes con partes en C o
+# Rust (cryptography, entre otros); compilarlos a mano necesita Xcode +
+# OpenSSL + a veces Rust, una cadena larga y fragil que casi nunca hace
+# falta porque ya existen wheels para Mac en PyPI. Si de verdad no hubiera
+# ninguno para esta Mac puntual, preferimos el error claro y rapido de pip
+# ("no matching distribution") antes que dejarla intentar compilar y fallar
+# recien despues de varios minutos con un error de Rust/OpenSSL.
+pip_install_binary_only() {
+    local python_bin="$1"
+    shift
+    local err_file
+    err_file="$(mktemp)"
+    "$python_bin" -m pip install --upgrade --only-binary=:all: "$@" 2>"$err_file"
+    local status=$?
+    if [ $status -ne 0 ] && grep -qi "externally-managed-environment" "$err_file"; then
+        "$python_bin" -m pip install --upgrade --break-system-packages --only-binary=:all: "$@"
+        status=$?
+    elif [ $status -ne 0 ]; then
+        cat "$err_file" >&2
+    fi
+    rm -f "$err_file"
+    return $status
+}
+
 # Instala Python 3.13 (via Homebrew) y las dependencias de Ojo GPS si hace
 # falta, imprimiendo el progreso en pantalla. Al final imprime por stdout el
 # nombre del interprete listo para usar (para capturarlo con "$(...)"); todo
@@ -106,16 +132,18 @@ ensure_ojo_gps_ready() {
             return 1
         fi
         echo "Instalando pymobiledevice3..." >&2
-        if ! pip_install "$python_bin" pymobiledevice3; then
-            echo "La instalacion no pudo completarse." >&2
+        if ! pip_install_binary_only "$python_bin" pymobiledevice3; then
+            echo "La instalacion no pudo completarse (no se encontro un paquete ya" >&2
+            echo "compilado para esta Mac). Revisa el detalle de arriba." >&2
             return 1
         fi
     fi
 
     if ! "$python_bin" -c "import PIL" >/dev/null 2>&1; then
         echo "Instalando Pillow (necesario para Street View)..." >&2
-        if ! pip_install "$python_bin" pillow; then
-            echo "La instalacion no pudo completarse." >&2
+        if ! pip_install_binary_only "$python_bin" pillow; then
+            echo "La instalacion no pudo completarse (no se encontro un paquete ya" >&2
+            echo "compilado para esta Mac). Revisa el detalle de arriba." >&2
             return 1
         fi
     fi
