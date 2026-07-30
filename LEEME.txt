@@ -1,10 +1,24 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.30 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.31 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.31
+
+- Arreglado (encontrado probando en una Mac real): si abrís
+  Abrir-Ojo-GPS-Mac.command, Puente-WiFi-Administrador-Mac.command o
+  Generar-Codigo-Demo-Mac.command ANTES de correr
+  1-Instalar-Python-Mac.command, macOS trae de fábrica un "python3" falso
+  que no ejecuta nada de verdad — solo existe para ofrecerte instalar las
+  Herramientas de Xcode. Los tres scripts lo confundían con un Python real
+  y mostraban "no developer tools were found, requesting install." en vez
+  de avisar claramente que hace falta instalar Python primero. Ahora
+  confirman que el Python encontrado arranca de verdad antes de usarlo, y
+  si no hay ninguno avisan: "No se encontro Python. Ejecuta primero
+  1-Instalar-Python-Mac.command."
 
 NOVEDAD 16.4.30
 
@@ -412,13 +426,23 @@ COMO ABRIR EN MAC
 1. Extrae toda la carpeta del ZIP (o descomprimila con doble clic si Mac no
    lo hizo solo).
 2. La primera vez, hace doble clic en 1-Instalar-Python-Mac.command y esperá
-   INSTALACION COMPLETA. Si macOS dice que no puede abrirlo por venir de un
-   "desarrollador no identificado": click derecho (o Control+clic) sobre el
-   archivo, elegí Abrir, y confirmá Abrir en el cartel que aparece. Esto solo
-   hace falta la primera vez, para cada uno de los archivos .command.
+   INSTALACION COMPLETA. IMPORTANTE: hacé este paso antes de abrir cualquier
+   otro .command — si abrís Ojo GPS sin haber instalado Python primero, macOS
+   confunde el "python3" falso que trae de fábrica con uno de verdad y
+   aparece un error de Xcode que no tiene nada que ver; el mensaje correcto
+   ("No se encontro Python. Ejecuta primero 1-Instalar-Python-Mac.command")
+   solo aparece si seguís este orden.
+   Si macOS dice que "no se puede abrir porque proviene de un desarrollador
+   no identificado": primero probá click derecho (o Control+clic) sobre el
+   archivo → Abrir → confirmá Abrir en el cartel. Si ese cartel NO tiene
+   botón para abrir (solo OK): andá a Ajustes del Sistema > Privacidad y
+   Seguridad, bajá hasta el aviso de que ese archivo se bloqueó, y tocá
+   Abrir de todas formas (pide tu contraseña o Touch ID). Cualquiera de los
+   dos caminos solo hace falta la primera vez, una vez por cada uno de los
+   4 archivos .command.
 3. Conecta y desbloquea el iPhone.
-4. Hace doble clic en Abrir-Ojo-GPS-Mac.command (con el mismo paso de click
-   derecho > Abrir la primera vez, si hace falta).
+4. Hace doble clic en Abrir-Ojo-GPS-Mac.command (con el mismo paso de
+   Gatekeeper del punto 2 la primera vez, si hace falta).
 
 Nota sobre Mac: a diferencia de Windows, en Mac queda una ventana de Terminal
 abierta mientras Ojo GPS está abierto (Mac no tiene una forma de abrir la app

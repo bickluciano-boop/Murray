@@ -1,5 +1,34 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.31
+
+- [x] **Primer bug real encontrado probando en una Mac real (MacBook Air de
+  Marian): los scripts .command usaban un "python3" falso.** Abrió
+  `Abrir-Ojo-GPS-Mac.command` sin haber corrido antes
+  `1-Instalar-Python-Mac.command`. La detección de Python de los tres
+  scripts (`Abrir-Ojo-GPS-Mac.command`, `Puente-WiFi-Administrador-
+  Mac.command`, `Generar-Codigo-Demo-Mac.command`) era
+  `command -v python3.13 || PYTHON_BIN=python3` — en una Mac sin Python
+  propio instalado, `command -v python3` igual encuentra algo, porque
+  macOS trae de fábrica un stub en `/usr/bin/python3` que no ejecuta
+  Python: solo dispara "xcode-select: note: No developer tools were
+  found, requesting install." y falla. El script asumía que ese
+  `command -v` exitoso significaba un Python real disponible. Se
+  reemplazó por `find_python()`, que además de comprobar que el nombre
+  exista corre `"$candidate" -c "import sys"` para confirmar que arranca
+  de verdad antes de usarlo; si ninguno funciona, avisa con el mismo
+  mensaje que ya usaba `Abrir-Ojo-GPS-Mac.command` ("Ejecuta primero
+  1-Instalar-Python-Mac.command") en vez de fallar con un error de Xcode
+  que no tiene nada que ver. `1-Instalar-Python-Mac.command` no tenía este
+  bug porque nunca caía al fallback de "python3" a secas.
+- [x] Confirmado en la misma Mac: el bloqueo de Gatekeeper ("no se puede
+  abrir porque proviene de un desarrollador no identificado") en macOS
+  reciente no siempre ofrece "Abrir de todas formas" en el cartel del
+  doble clic ni en clic derecho > Abrir — hace falta ir a Ajustes del
+  Sistema > Privacidad y Seguridad y tocar "Abrir de todas formas" ahí,
+  una vez por archivo. Ya se probó y funciona; falta sumar este detalle
+  más claro al LEEME (hoy solo menciona clic derecho > Abrir).
+
 ## Completado en 16.4.30
 
 - [x] **Soporte para Mac, arrancando por iPhone (pedido de Lu: "terminar la
