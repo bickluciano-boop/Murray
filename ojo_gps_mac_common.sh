@@ -1,0 +1,99 @@
+#!/bin/bash
+# Funciones compartidas por los scripts .command de Ojo GPS para Mac.
+# Este archivo no se ejecuta solo: los demas scripts lo cargan con "source"
+# para no repetir la misma logica en cuatro lugares distintos.
+
+# command -v encuentra el "python3" de mentira que trae macOS de fabrica (solo
+# existe para ofrecer instalar las Herramientas de Xcode), asi que no alcanza
+# con que el nombre exista: hay que confirmar que ese Python arranca de verdad.
+find_python() {
+    for candidate in python3.13 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import sys" >/dev/null 2>&1; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+pip_install() {
+    local python_bin="$1"
+    shift
+    local err_file
+    err_file="$(mktemp)"
+    "$python_bin" -m pip install --upgrade "$@" 2>"$err_file"
+    local status=$?
+    if [ $status -ne 0 ] && grep -qi "externally-managed-environment" "$err_file"; then
+        # Python de Homebrew suele bloquear pip install directo; --break-system-packages
+        # es seguro aca porque instalamos en el Python dedicado de Ojo GPS, no en uno
+        # que uses para otra cosa.
+        "$python_bin" -m pip install --upgrade --break-system-packages "$@"
+        status=$?
+    elif [ $status -ne 0 ]; then
+        cat "$err_file" >&2
+    fi
+    rm -f "$err_file"
+    return $status
+}
+
+# Instala Python 3.13 (via Homebrew) y las dependencias de Ojo GPS si hace
+# falta, imprimiendo el progreso en pantalla. Al final imprime por stdout el
+# nombre del interprete listo para usar (para capturarlo con "$(...)"); todo
+# el resto de la salida informativa va a stderr para no mezclarse con eso.
+# Devuelve 1 si algo fallo (el motivo ya quedo impreso).
+ensure_ojo_gps_ready() {
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local python_bin
+    python_bin="$(find_python)"
+
+    if [ -z "$python_bin" ]; then
+        echo "No se encontro Python 3.13. Instalando..." >&2
+        if command -v brew >/dev/null 2>&1; then
+            echo "Instalando Python 3.13 con Homebrew (puede demorar varios minutos)..." >&2
+            if ! brew install python@3.13; then
+                echo "La instalacion con Homebrew fallo." >&2
+                return 1
+            fi
+        else
+            echo "No se encontro Homebrew, necesario para instalar Python 3.13 automaticamente." >&2
+            echo >&2
+            echo "1. Instalalo desde https://brew.sh (copia el comando de esa pagina en esta" >&2
+            echo "   misma Terminal) y volve a abrir Ojo GPS." >&2
+            echo "   Alternativa sin Homebrew: instala Python 3.13 manualmente desde" >&2
+            echo "   https://www.python.org/downloads/macos/ y volve a abrir Ojo GPS." >&2
+            return 1
+        fi
+        python_bin="$(find_python)"
+        if [ -z "$python_bin" ]; then
+            echo "Python se instalo pero no se pudo encontrar. Cerra esta ventana, abri" >&2
+            echo "una Terminal nueva y volve a intentar." >&2
+            return 1
+        fi
+    fi
+
+    if ! "$python_bin" -c "import pymobiledevice3" >/dev/null 2>&1; then
+        echo "Instalando el puente del iPhone (esto puede demorar varios minutos)..." >&2
+        echo "Instalando compatibilidad LZFSE para Ojo GPS..." >&2
+        if ! pip_install "$python_bin" --no-deps "$script_dir/lzfse_stub"; then
+            echo "La instalacion no pudo completarse." >&2
+            return 1
+        fi
+        echo "Instalando pymobiledevice3..." >&2
+        if ! pip_install "$python_bin" pymobiledevice3; then
+            echo "La instalacion no pudo completarse." >&2
+            return 1
+        fi
+    fi
+
+    if ! "$python_bin" -c "import PIL" >/dev/null 2>&1; then
+        echo "Instalando Pillow (necesario para Street View)..." >&2
+        if ! pip_install "$python_bin" pillow; then
+            echo "La instalacion no pudo completarse." >&2
+            return 1
+        fi
+    fi
+
+    echo "$python_bin"
+    return 0
+}

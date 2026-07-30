@@ -1,5 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
+source "./ojo_gps_mac_common.sh"
 
 echo "=============================================="
 echo "  OJO GPS - GENERAR CODIGO DE ACTIVACION"
@@ -12,22 +13,10 @@ echo
 read -r -p "Cuantos dias de acceso le das? " DIAS
 echo
 
-# command -v encuentra el "python3" de mentira que trae macOS de fabrica (solo
-# existe para ofrecer instalar las Herramientas de Xcode), asi que no alcanza
-# con que el nombre exista: hay que confirmar que ese Python arranca de verdad.
-find_python() {
-    for candidate in python3.13 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import sys" >/dev/null 2>&1; then
-            echo "$candidate"
-            return 0
-        fi
-    done
-    return 1
-}
-
-PYTHON_BIN="$(find_python)"
-if [ -z "$PYTHON_BIN" ]; then
-    echo "No se encontro Python. Ejecuta primero 1-Instalar-Python-Mac.command."
+PYTHON_BIN="$(ensure_ojo_gps_ready)"
+if [ $? -ne 0 ] || [ -z "$PYTHON_BIN" ]; then
+    echo
+    echo "No se pudo preparar Ojo GPS. Revisa el mensaje de arriba y volve a intentar."
     read -r -p "Presiona Enter para cerrar..." _
     exit 1
 fi

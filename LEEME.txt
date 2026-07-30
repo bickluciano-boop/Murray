@@ -1,10 +1,21 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.31 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.32 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.32
+
+- En Mac ya no hace falta abrir 1-Instalar-Python-Mac.command antes que los
+  demás archivos: si a Abrir-Ojo-GPS-Mac.command, Puente-WiFi-Administrador-
+  Mac.command o Generar-Codigo-Demo-Mac.command le falta Python o alguna
+  dependencia, la instala sola en el momento (mismo proceso que antes solo
+  hacía 1-Instalar-Python-Mac.command a mano) y recién después sigue. Se
+  puede abrir cualquiera de los cuatro archivos primero, en cualquier orden;
+  1-Instalar-Python-Mac.command sigue estando para quien prefiera dejarlo
+  todo listo de antemano.
 
 NOVEDAD 16.4.31
 
@@ -425,24 +436,22 @@ COMO ABRIR EN WINDOWS
 COMO ABRIR EN MAC
 1. Extrae toda la carpeta del ZIP (o descomprimila con doble clic si Mac no
    lo hizo solo).
-2. La primera vez, hace doble clic en 1-Instalar-Python-Mac.command y esperá
-   INSTALACION COMPLETA. IMPORTANTE: hacé este paso antes de abrir cualquier
-   otro .command — si abrís Ojo GPS sin haber instalado Python primero, macOS
-   confunde el "python3" falso que trae de fábrica con uno de verdad y
-   aparece un error de Xcode que no tiene nada que ver; el mensaje correcto
-   ("No se encontro Python. Ejecuta primero 1-Instalar-Python-Mac.command")
-   solo aparece si seguís este orden.
+2. Conecta y desbloquea el iPhone.
+3. Hace doble clic en Abrir-Ojo-GPS-Mac.command. Si todavía no tenés Python
+   instalado, lo instala solo la primera vez (puede demorar varios minutos;
+   vas a ver el progreso en la ventana de Terminal que se abre) y después
+   sigue directo a abrir la app — no hace falta ejecutar ningún otro archivo
+   antes.
    Si macOS dice que "no se puede abrir porque proviene de un desarrollador
    no identificado": primero probá click derecho (o Control+clic) sobre el
    archivo → Abrir → confirmá Abrir en el cartel. Si ese cartel NO tiene
    botón para abrir (solo OK): andá a Ajustes del Sistema > Privacidad y
    Seguridad, bajá hasta el aviso de que ese archivo se bloqueó, y tocá
-   Abrir de todas formas (pide tu contraseña o Touch ID). Cualquiera de los
-   dos caminos solo hace falta la primera vez, una vez por cada uno de los
-   4 archivos .command.
-3. Conecta y desbloquea el iPhone.
-4. Hace doble clic en Abrir-Ojo-GPS-Mac.command (con el mismo paso de
-   Gatekeeper del punto 2 la primera vez, si hace falta).
+   Abrir de todas formas (pide tu contraseña o Touch ID). Esto solo hace
+   falta la primera vez que abrís cada archivo .command.
+
+1-Instalar-Python-Mac.command sigue disponible por si preferís dejar todo
+instalado de antemano en vez de esperar a la primera apertura.
 
 Nota sobre Mac: a diferencia de Windows, en Mac queda una ventana de Terminal
 abierta mientras Ojo GPS está abierto (Mac no tiene una forma de abrir la app

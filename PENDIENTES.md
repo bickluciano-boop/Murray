@@ -1,5 +1,32 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.32
+
+- [x] **Ya no hace falta abrir 1-Instalar-Python-Mac.command en un orden
+  específico.** Pedido de Lu tras ver a Marian trabarse por el orden:
+  "¿se puede evitar que esto le pase a un usuario?". La lógica de
+  instalación de `1-Instalar-Python-Mac.command` se extrajo a un archivo
+  nuevo, `ojo_gps_mac_common.sh` (no ejecutable por sí solo, se carga con
+  `source`), en dos funciones: `find_python()` (ya existía, sin cambios) y
+  `ensure_ojo_gps_ready()`, que instala Python 3.13 con Homebrew si falta,
+  y pymobiledevice3/lzfse_stub/Pillow si el intérprete encontrado todavía
+  no los tiene (chequeando con un `import` antes de reinstalar, para no
+  repetir trabajo en cada apertura). Detalle no obvio: toda la salida
+  informativa de `ensure_ojo_gps_ready` va a stderr (`>&2`) y solo el
+  nombre del intérprete final se imprime por stdout — así los scripts que
+  la llaman como `PYTHON_BIN="$(ensure_ojo_gps_ready)"` capturan
+  únicamente el valor que necesitan sin perder el progreso en pantalla.
+  Verificado con un binario de Python simulado (fuera del proyecto): con
+  las dependencias ya presentes devuelve el intérprete sin mezclar texto
+  en la captura; sin Python ni Homebrew disponibles, devuelve estado de
+  error y el mensaje de instalación manual, sin intentar nada más.
+  `Abrir-Ojo-GPS-Mac.command`, `Puente-WiFi-Administrador-Mac.command` y
+  `Generar-Codigo-Demo-Mac.command` ahora llaman a
+  `ensure_ojo_gps_ready()` al principio en vez de solo avisar que falta
+  Python; `1-Instalar-Python-Mac.command` se mantiene como script
+  explícito para quien prefiera dejar todo instalado de antemano, pero ya
+  no es un paso obligatorio antes de los demás.
+
 ## Completado en 16.4.31
 
 - [x] **Primer bug real encontrado probando en una Mac real (MacBook Air de
@@ -473,6 +500,11 @@
 
 ## Validación de la próxima ronda
 
+- [ ] Probar Abrir-Ojo-GPS-Mac.command como primer archivo abierto en una Mac
+  recién formateada (sin Python, sin Homebrew, sin nada instalado todavía):
+  confirmar que instala todo solo y abre la app, sin pedir ejecutar
+  1-Instalar-Python-Mac.command antes. Repetirlo con Generar-Codigo-Demo-Mac
+  y con Puente-WiFi-Administrador-Mac como el primer archivo abierto.
 - [ ] **Prioridad: probar todo el soporte Mac en una Mac real**, no
   disponible en el entorno donde se escribió este código:
   - 1-Instalar-Python-Mac.command en una Mac sin Python 3.13 ni Homebrew
