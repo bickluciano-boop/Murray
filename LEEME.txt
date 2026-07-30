@@ -1,10 +1,18 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.32 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.33 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.33
+
+- En Mac, si todavía no tenés instaladas las "Herramientas de línea de
+  comandos" de Apple (necesarias para instalar pymobiledevice3 en algunas
+  Mac), ahora Ojo GPS lo detecta de entrada y te lo pide con un mensaje
+  claro. Antes, si faltaban, el intento de instalar pymobiledevice3 fallaba
+  con un error de compilación (Rust/cargo) que no explicaba la causa real.
 
 NOVEDAD 16.4.32
 

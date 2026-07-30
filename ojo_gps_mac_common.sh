@@ -16,6 +16,28 @@ find_python() {
     return 1
 }
 
+# Sin esto, instalar Python (Homebrew) o pymobiledevice3 (que a veces necesita
+# compilar su dependencia "cryptography" si no hay un paquete ya armado para
+# esta Mac) falla con un error de compilador/enlazador dificil de entender
+# ("linking with cc failed", errores de Rust/cargo) que no menciona nunca la
+# causa real. Chequearlo antes evita ese rodeo y va directo al cartel de Apple.
+ensure_command_line_tools() {
+    if xcode-select -p >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "Hace falta instalar las Herramientas de línea de comandos de Apple" >&2
+    echo "(un componente gratis de macOS, se usa para compilar; es un paso" >&2
+    echo "único, no tiene que ver con Ojo GPS en particular)." >&2
+    echo >&2
+    xcode-select --install >/dev/null 2>&1
+    echo "Te debería haber aparecido un cartel para instalarlas (revisá si" >&2
+    echo "quedó atrás de esta ventana, o en Ajustes del Sistema > General >" >&2
+    echo "Actualización de software si no aparece ningún cartel). Aceptalo," >&2
+    echo "esperá a que termine de instalar (puede demorar varios minutos)," >&2
+    echo "y volvé a abrir Ojo GPS." >&2
+    return 1
+}
+
 pip_install() {
     local python_bin="$1"
     shift
@@ -42,6 +64,10 @@ pip_install() {
 # el resto de la salida informativa va a stderr para no mezclarse con eso.
 # Devuelve 1 si algo fallo (el motivo ya quedo impreso).
 ensure_ojo_gps_ready() {
+    if ! ensure_command_line_tools; then
+        return 1
+    fi
+
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local python_bin

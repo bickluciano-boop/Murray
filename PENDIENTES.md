@@ -1,5 +1,33 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.33
+
+- [x] **Segundo bug real encontrado probando en la Mac de Marian: sin las
+  Herramientas de línea de comandos de Apple, `pymobiledevice3` fallaba con
+  un error de compilación ilegible.** Reproducido con fotos del error
+  completo: `pip install pymobiledevice3` necesitó compilar su dependencia
+  `cryptography` desde cero (maturin/cargo, un binding en Rust) porque no
+  había un paquete ya armado disponible para esa combinación exacta de
+  Mac/Python, y sin compilador (`cc`) el link fallaba con
+  `error: linking with 'cc' failed: exit status: 1`, arrastrando 50+
+  líneas de salida de cargo/rustc antes de mostrar la causa real: "xcode-
+  select: note: No developer tools were found". `ensure_ojo_gps_ready()`
+  no chequeaba esto para nada, dejaba que pip fallara y mostrara ese
+  quilombo. Se agregó `ensure_command_line_tools()`, que corre primero:
+  si `xcode-select -p` falla, dispara `xcode-select --install` (el cartel
+  nativo de Apple) y devuelve un mensaje claro en español explicando qué
+  es y qué hacer, en vez de dejar que la instalación de pymobiledevice3
+  llegue a fallar con el error de compilador. Verificado con un mock de
+  `xcode-select` (no hay Mac disponible en este entorno): con las
+  herramientas ausentes, corta antes de intentar nada más; con ellas
+  presentes, sigue el flujo normal sin cambios.
+  Nota para la próxima vuelta: en el caso real de Marian, después de
+  instalar las Herramientas de línea de comandos vía Ajustes del Sistema >
+  Actualización de software (el cartel de `xcode-select --install` no le
+  apareció como ventana, tuvo que buscarlo ahí), faltaba confirmar que
+  Abrir-Ojo-GPS-Mac.command terminó de instalar pymobiledevice3 y abrió la
+  app — quedó pendiente de confirmación en la conversación.
+
 ## Completado en 16.4.32
 
 - [x] **Ya no hace falta abrir 1-Instalar-Python-Mac.command en un orden
