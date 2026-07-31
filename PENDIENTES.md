@@ -686,12 +686,16 @@
 - [x] ~~Volver a probar el cable en la Mac de Marian con el pymobiledevice3
   correcto (16.4.36)~~ — confirmado: con el paquete correcto instalado el
   indicador se puso verde y Cambiar ubicación conectó por cable.
-- [ ] **Prioridad: probar la búsqueda de direcciones y Simular recorrido en
-  la Mac de Marian con el fix de certificados (16.4.37).** Antes fallaba
-  con "no encontramos ese lugar" al buscar cualquier calle (en realidad era
-  `CERTIFICATE_VERIFY_FAILED`, silenciado). Confirmar que al abrir Ojo GPS
-  se instala `certifi` solo, y que buscar una calle ahora sí devuelve
-  opciones para elegir.
+- [x] ~~Probar la búsqueda de direcciones en la Mac de Marian con el fix de
+  certificados (16.4.37)~~ — confirmado: buscar "cabildo 463" devolvió las
+  5 opciones esperadas para elegir (antes fallaba con "no encontramos ese
+  lugar", en realidad `CERTIFICATE_VERIFY_FAILED` silenciado). Nota: el
+  primer intento fue con una carpeta vieja (16.4.35, sin el fix); hubo que
+  bajar el ZIP actualizado y volver a autorizar Gatekeeper en la carpeta
+  nueva antes de que funcionara.
+- [ ] Falta probar **Simular recorrido** completo (partida + llegada) con
+  el fix de certificados — solo se probó la búsqueda simple en la pantalla
+  principal hasta ahora.
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
