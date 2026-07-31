@@ -1,5 +1,44 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.36
+
+- [x] **Bug grave encontrado probando el puente por cable en la Mac de
+  Marian: se instalaba un "pymobiledevice3" que no era el real.** Después
+  de validar que la app abría bien (16.4.35), el cable nunca ponía el
+  indicador en verde. Se probó `ojo_gps_bridge.py` directo en Terminal
+  (fuera de la app) para ver el error real: `ModuleNotFoundError: No
+  module named 'pymobiledevice3'`, a pesar de que `pip` decía que estaba
+  instalado. `python3.13 -m pip show pymobiledevice3` reveló la causa:
+  `Version: 1.0.0`, `Summary: Automation tool for locating symbols &
+  structs in binary (primarily IDA focused)` — un paquete completamente
+  distinto (de reversing de binarios, no de automatizar iPhones) que
+  casualmente comparte el nombre en PyPI con el pymobiledevice3 real (hoy
+  en la serie 4.x). La causa: `pip_install_binary_only()` (agregada en
+  16.4.34) usaba `--only-binary=:all:` para pymobiledevice3, y como las
+  versiones reales y actuales de pymobiledevice3 no publican wheels (solo
+  código fuente, al ser puro Python sin partes compiladas), pip aceptó en
+  silencio la única versión que sí tenía wheel: esa `1.0.0` de otro
+  paquete. Solo `cryptography` (una dependencia) necesita realmente forzarse
+  a un wheel para evitar la compilación con Xcode/OpenSSL/Rust.
+  Arreglado: `pip_install_binary_only()` ahora recibe qué paquete puntual
+  forzar a wheel (`cryptography`), dejando que `pymobiledevice3` en sí se
+  resuelva a su versión real y actual (Pillow, que sí publica wheels
+  reales para todas sus versiones, sigue usando `:all:` sin cambios). El
+  chequeo de "¿ya está instalado?" también se corrigió: antes probaba
+  `import pymobiledevice3` a secas (que el paquete viejo también satisface
+  sin error), ahora prueba el submódulo puntual que usa Ojo GPS
+  (`from pymobiledevice3.remote.userspace_tunnel import
+  UserspaceRsdTunnel`), así que en una Mac que ya tenga el paquete
+  incorrecto instalado (como la de Marian), Ojo GPS lo detecta como "no
+  instalado" y lo reemplaza solo la próxima vez que se abra.
+  Verificado con un Python simulado que expone exactamente este
+  escenario (el paquete viejo "importa" pero no tiene el submódulo real).
+  Lección para las próximas veces: "forzar solo paquetes ya compilados"
+  hay que aplicarlo a la dependencia puntual que lo necesita, nunca al
+  paquete completo, sobre todo si ese paquete no es de los que uno mismo
+  mantiene — más aún cuando además comparte nombre con un paquete no
+  relacionado en el mismo índice.
+
 ## Validado en una Mac real (16.4.35)
 
 - [x] **Confirmado con Marian, de punta a punta, en su MacBook Air real**:
@@ -617,10 +656,14 @@
   funcionó, y la interfaz con `Helvetica Neue` se ve completa (el recorte
   del badge visto en Linux/Xvfb en 16.4.29 era un artefacto de ese entorno
   de prueba, no un bug real).
-- [ ] **Todavía pendiente en Mac: el circuito completo con un iPhone real**
-  (Cambiar ubicación, Joystick, Fijar GPS) y Preparar Wi-Fi (confirmar que
-  abre una Terminal nueva, pide la contraseña con `sudo`, y el flujo de
-  retirar cable / Fijar GPS funciona igual que en Windows).
+- [ ] **Prioridad: volver a probar el cable en la Mac de Marian con el
+  pymobiledevice3 correcto (16.4.36).** El intento anterior (16.4.35) nunca
+  puso el indicador verde porque tenía instalado el paquete equivocado (ver
+  16.4.36 más arriba); no llegó a probarse el puente real todavía. Repetir
+  Cambiar ubicación con el iPhone conectado, y de ahí seguir con Joystick,
+  Fijar GPS y Preparar Wi-Fi (confirmar que abre una Terminal nueva, pide
+  la contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS
+  funciona igual que en Windows).
 - [ ] En el Panel de Administrador, generar un código y tocar Mail:
   confirmar que abre el cliente de correo con el código y los pasos ya
   escritos, sin destinatario fijo. Repetir con WhatsApp y confirmar que

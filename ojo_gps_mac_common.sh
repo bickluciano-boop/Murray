@@ -64,25 +64,35 @@ pip_install() {
 }
 
 # Igual que pip_install, pero exige que ya exista un paquete compilado
-# (wheel) para esta Mac en vez de dejar que pip compile desde cero si no lo
-# encuentra. pymobiledevice3 y Pillow dependen de paquetes con partes en C o
-# Rust (cryptography, entre otros); compilarlos a mano necesita Xcode +
-# OpenSSL + a veces Rust, una cadena larga y fragil que casi nunca hace
-# falta porque ya existen wheels para Mac en PyPI. Si de verdad no hubiera
-# ninguno para esta Mac puntual, preferimos el error claro y rapido de pip
-# ("no matching distribution") antes que dejarla intentar compilar y fallar
-# recien despues de varios minutos con un error de Rust/OpenSSL.
+# (wheel) para el/los paquetes indicados en only_binary_spec (por ejemplo
+# "cryptography", o ":all:" para todos los que se instalen en este comando)
+# en vez de dejar que pip compile desde cero si no lo encuentra. cryptography
+# (dependencia de pymobiledevice3) tiene partes en Rust; compilarla a mano
+# necesita Xcode + OpenSSL + a veces Rust, una cadena larga y fragil que casi
+# nunca hace falta porque ya existen wheels para Mac en PyPI.
+#
+# OJO: no usar ":all:" cuando el paquete principal que se instala (por
+# ejemplo pymobiledevice3) no publica wheels para versiones recientes — pip
+# terminaria aceptando la unica version vieja que sí tenga wheel, sin avisar,
+# en vez de la version real y actual (asi paso con pymobiledevice3 1.0.0, un
+# paquete de otro proposito completamente distinto que casualmente tenia
+# wheel). Por eso pymobiledevice3 se instala pidiendo el wheel solo para
+# "cryptography", dejando que pymobiledevice3 en si se resuelva a su version
+# real (aunque eso signifique compilarlo, ya que no tiene partes en C: es
+# puro Python, no necesita compilador). Pillow sí publica wheels reales para
+# todas sus versiones vigentes, asi que ahi ":all:" es seguro.
 pip_install_binary_only() {
     local python_bin="$1"
-    shift
+    local only_binary_spec="$2"
+    shift 2
     local err_file
     err_file="$(mktemp)"
     # Ver el comentario en pip_install sobre por que la salida normal de pip
     # va a la terminal (>&2) y no se deja mezclar con el stdout de esta función.
-    "$python_bin" -m pip install --upgrade --only-binary=:all: "$@" >&2 2>"$err_file"
+    "$python_bin" -m pip install --upgrade --only-binary="$only_binary_spec" "$@" >&2 2>"$err_file"
     local status=$?
     if [ $status -ne 0 ] && grep -qi "externally-managed-environment" "$err_file"; then
-        "$python_bin" -m pip install --upgrade --break-system-packages --only-binary=:all: "$@" >&2
+        "$python_bin" -m pip install --upgrade --break-system-packages --only-binary="$only_binary_spec" "$@" >&2
         status=$?
     elif [ $status -ne 0 ]; then
         cat "$err_file" >&2
@@ -131,7 +141,15 @@ ensure_ojo_gps_ready() {
         fi
     fi
 
-    if ! "$python_bin" -c "import pymobiledevice3" >/dev/null 2>&1; then
+    # Se chequea el submodulo puntual que usa Ojo GPS, no solo "import
+    # pymobiledevice3": existe en PyPI un paquete viejo, de otro autor y
+    # proposito (una herramienta de reversing de binarios, version 1.0.0),
+    # que casualmente se llama igual y SI importa con "import
+    # pymobiledevice3" sin tirar error. Si alguna vez terminó instalado ese
+    # en vez del real (nos paso, ver PENDIENTES.md), este chequeo mas
+    # especifico lo detecta igual como "no instalado" y fuerza a reinstalar
+    # el correcto.
+    if ! "$python_bin" -c "from pymobiledevice3.remote.userspace_tunnel import UserspaceRsdTunnel" >/dev/null 2>&1; then
         echo "Instalando el puente del iPhone (esto puede demorar varios minutos)..." >&2
         echo "Instalando compatibilidad LZFSE para Ojo GPS..." >&2
         if ! pip_install "$python_bin" --no-deps "$script_dir/lzfse_stub"; then
@@ -139,16 +157,21 @@ ensure_ojo_gps_ready() {
             return 1
         fi
         echo "Instalando pymobiledevice3..." >&2
-        if ! pip_install_binary_only "$python_bin" pymobiledevice3; then
-            echo "La instalacion no pudo completarse (no se encontro un paquete ya" >&2
-            echo "compilado para esta Mac). Revisa el detalle de arriba." >&2
+        # Solo "cryptography" (una dependencia) necesita forzarse a un wheel
+        # ya compilado; pymobiledevice3 en si no publica wheels para
+        # versiones recientes, asi que forzarlo tambien terminaria
+        # instalando una version vieja e incorrecta (ver comentario arriba
+        # de pip_install_binary_only). Es pura Python, no necesita
+        # compilador propio.
+        if ! pip_install_binary_only "$python_bin" cryptography pymobiledevice3; then
+            echo "La instalacion no pudo completarse. Revisa el detalle de arriba." >&2
             return 1
         fi
     fi
 
     if ! "$python_bin" -c "import PIL" >/dev/null 2>&1; then
         echo "Instalando Pillow (necesario para Street View)..." >&2
-        if ! pip_install_binary_only "$python_bin" pillow; then
+        if ! pip_install_binary_only "$python_bin" ":all:" pillow; then
             echo "La instalacion no pudo completarse (no se encontro un paquete ya" >&2
             echo "compilado para esta Mac). Revisa el detalle de arriba." >&2
             return 1

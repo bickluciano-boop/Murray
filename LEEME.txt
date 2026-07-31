@@ -1,10 +1,22 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.35 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.36 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.36
+
+- Arreglado un bug importante en Mac: por forzar "solo paquetes ya
+  compilados" para evitar la instalación larga con Xcode/OpenSSL, el
+  instalador terminaba bajando por error un paquete viejo de PyPI que
+  casualmente también se llama "pymobiledevice3" pero es de otro autor y
+  otro propósito (no tiene nada que ver con el puente del iPhone). Si
+  instalaste Ojo GPS en Mac antes de esta versión, es probable que el
+  puente por cable/Wi-Fi nunca haya funcionado de verdad aunque la app
+  abriera bien. Volvé a abrir Ojo GPS con esta versión: detecta el paquete
+  incorrecto solo y lo reemplaza por el real automáticamente.
 
 NOVEDAD 16.4.35
 
