@@ -178,6 +178,21 @@ ensure_ojo_gps_ready() {
         fi
     fi
 
+    # El Python de python.org (a diferencia de Windows y de Homebrew) no deja
+    # configurados los certificados raiz que necesita ssl para verificar
+    # HTTPS; sin esto, toda busqueda de direccion o ruta falla con
+    # "CERTIFICATE_VERIFY_FAILED". certifi trae su propio paquete de
+    # certificados; ojo_gps_app.py lo usa explicitamente si esta disponible.
+    # No alcanza con confiar en que venga como dependencia de otro paquete:
+    # se instala aparte para asegurarlo siempre.
+    if ! "$python_bin" -c "import certifi" >/dev/null 2>&1; then
+        echo "Instalando certificados de seguridad para las búsquedas por Internet..." >&2
+        if ! pip_install_binary_only "$python_bin" ":all:" certifi; then
+            echo "La instalacion no pudo completarse. Revisa el detalle de arriba." >&2
+            return 1
+        fi
+    fi
+
     echo "$python_bin"
     return 0
 }

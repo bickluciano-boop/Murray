@@ -7,6 +7,7 @@ import ctypes
 import base64
 import hashlib
 import hmac
+import ssl
 import subprocess
 import sys
 import threading
@@ -27,6 +28,24 @@ try:
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
+
+# El instalador de Python.org para Mac no deja configurados los certificados
+# raiz que necesita ssl para verificar HTTPS (a diferencia de Windows y de
+# Homebrew, que usan los del sistema). Sin esto, toda busqueda de direccion,
+# calculo de ruta o Street View falla con "CERTIFICATE_VERIFY_FAILED" — es la
+# causa real detras de "no aparecen opciones al buscar una calle" en Mac.
+# certifi trae su propio paquete de certificados y ya se instala como
+# dependencia de pymobiledevice3, asi que no hace falta un paso manual aparte
+# (el "Install Certificates.command" que Python.org deja en /Applications).
+try:
+    import certifi
+    _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    _SSL_CONTEXT = None
+
+
+def urlopen(request, timeout):
+    return urllib.request.urlopen(request, timeout=timeout, context=_SSL_CONTEXT)
 
 
 IS_WINDOWS = sys.platform == "win32"
@@ -68,7 +87,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.36"
+APP_VERSION = "16.4.37"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -269,7 +288,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.36 para iPhone en {PLATFORM_NAME}")
+        self.root.title(f"Ojo GPS 16.4.37 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -414,7 +433,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.36", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.37", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -1192,9 +1211,9 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.36"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.37"},
             )
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
             self.events.put(("SEARCH_OK", json.dumps(results)))
         except Exception as exc:
@@ -1587,8 +1606,8 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.36"})
-            with urllib.request.urlopen(req, timeout=8) as response:
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.37"})
+            with urlopen(req, 8) as response:
                 raw = response.read()
             try:
                 cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1889,9 +1908,9 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.36"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.37"},
             )
-            with urllib.request.urlopen(search_req, timeout=12) as response:
+            with urlopen(search_req, 12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
             if request_id != self.street_view_request_id:
                 return
@@ -1918,15 +1937,15 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.36"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.37"},
                 )
-                with urllib.request.urlopen(detail_req, timeout=12) as response:
+                with urlopen(detail_req, 12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.36"})
-                with urllib.request.urlopen(img_req, timeout=15) as response:
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.37"})
+                with urlopen(img_req, 15) as response:
                     raw = response.read()
                 try:
                     cache_file.write_bytes(raw)
@@ -1963,8 +1982,8 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.36"})
-            with urllib.request.urlopen(req, timeout=20) as response:
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.37"})
+            with urlopen(req, 20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
             item["lon"] = str(lon)
@@ -1999,8 +2018,8 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.36"})
-            with urllib.request.urlopen(req, timeout=10) as response:
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.37"})
+            with urlopen(req, 10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
             fallback_hour = int(clock.get("hour"))
@@ -2307,9 +2326,9 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.36"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.37"},
             )
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
             payload = {"field": field, "request_id": request_id, "results": results}
             self.events.put(("ROUTE_SUGGESTIONS", json.dumps(payload)))
@@ -2395,9 +2414,9 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.36"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.37"},
         )
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urlopen(request, 20) as response:
             results = json.loads(response.read().decode("utf-8"))
         if not results:
             raise RuntimeError(f"No encontramos esta dirección: {query}")
@@ -2441,8 +2460,8 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.36"})
-            with urllib.request.urlopen(request, timeout=25) as response:
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.37"})
+            with urlopen(request, 25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
             if not routes:

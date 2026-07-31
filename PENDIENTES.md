@@ -1,5 +1,32 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.37
+
+- [x] **Cuarto problema real en la Mac de Marian: "no aparecen opciones al
+  buscar una calle" en Simular recorrido.** Con el cable ya conectado en
+  verde (confirmado con el pymobiledevice3 correcto de 16.4.36), al buscar
+  una ruta apareció un cartel de error de Python sin capturar:
+  `<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify
+  failed: unable to get local issuer certificate (_ssl.c:1032)>`. Causa:
+  el instalador oficial de Python.org para Mac (a diferencia de Windows y
+  de Homebrew) no deja configurados los certificados raíz que `ssl` necesita
+  para verificar conexiones HTTPS — haría falta correr a mano el
+  "Install Certificates.command" que ese instalador deja en
+  `/Applications/Python 3.13/`, un paso que Ojo GPS nunca le pidió hacer.
+  Esto explica retroactivamente el reporte anterior de Marian ("cuando
+  ponés una calle, no te da la elección a diferentes, como que no están
+  cargadas las calles"): `_search_worker`/`_route_suggestions_worker`
+  atrapan la excepción y solo muestran "no encontramos ese lugar", sin
+  dejar ver que la causa real era esta. Arreglado sin depender de un paso
+  manual: se agrega un `urlopen()` propio en `ojo_gps_app.py` que arma un
+  `ssl.create_default_context(cafile=certifi.where())` si `certifi` está
+  disponible (con `_SSL_CONTEXT = None` como fallback si no, dejando el
+  comportamiento de siempre en Windows), y las 10 llamadas a
+  `urllib.request.urlopen(...)` del archivo pasan a usarlo. `certifi` se
+  agrega como dependencia instalada explícitamente en
+  `ensure_ojo_gps_ready()` (Mac) en vez de asumir que venga de arrastre por
+  otro paquete.
+
 ## Completado en 16.4.36
 
 - [x] **Bug grave encontrado probando el puente por cable en la Mac de
@@ -656,14 +683,19 @@
   funcionó, y la interfaz con `Helvetica Neue` se ve completa (el recorte
   del badge visto en Linux/Xvfb en 16.4.29 era un artefacto de ese entorno
   de prueba, no un bug real).
-- [ ] **Prioridad: volver a probar el cable en la Mac de Marian con el
-  pymobiledevice3 correcto (16.4.36).** El intento anterior (16.4.35) nunca
-  puso el indicador verde porque tenía instalado el paquete equivocado (ver
-  16.4.36 más arriba); no llegó a probarse el puente real todavía. Repetir
-  Cambiar ubicación con el iPhone conectado, y de ahí seguir con Joystick,
-  Fijar GPS y Preparar Wi-Fi (confirmar que abre una Terminal nueva, pide
-  la contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS
-  funciona igual que en Windows).
+- [x] ~~Volver a probar el cable en la Mac de Marian con el pymobiledevice3
+  correcto (16.4.36)~~ — confirmado: con el paquete correcto instalado el
+  indicador se puso verde y Cambiar ubicación conectó por cable.
+- [ ] **Prioridad: probar la búsqueda de direcciones y Simular recorrido en
+  la Mac de Marian con el fix de certificados (16.4.37).** Antes fallaba
+  con "no encontramos ese lugar" al buscar cualquier calle (en realidad era
+  `CERTIFICATE_VERIFY_FAILED`, silenciado). Confirmar que al abrir Ojo GPS
+  se instala `certifi` solo, y que buscar una calle ahora sí devuelve
+  opciones para elegir.
+- [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
+  (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
+  contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
+  igual que en Windows) — todavía no probado.
 - [ ] En el Panel de Administrador, generar un código y tocar Mail:
   confirmar que abre el cliente de correo con el código y los pasos ya
   escritos, sin destinatario fijo. Repetir con WhatsApp y confirmar que
