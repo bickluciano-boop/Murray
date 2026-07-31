@@ -1,10 +1,19 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.38 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.39 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.39
+
+- Arreglado: si durante un recorrido cambiabas de Caminar a Auto (o al
+  revés), el corrimiento hacia la vereda quedaba fijo con el modo que
+  estaba activo cuando arrancó el recorrido. Por eso pasar a Auto después
+  de Caminar seguía circulando por la vereda, pero a velocidad de auto.
+  Ahora, al cambiar de modo durante el recorrido, Auto y Bicicleta vuelven
+  al centro de la calle y Caminar se corre otra vez hacia la vereda.
 
 NOVEDAD 16.4.38
 

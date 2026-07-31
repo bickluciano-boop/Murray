@@ -1,5 +1,37 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.39
+
+- [x] **Sexto problema real en la Mac de Marian: cambiar a Auto durante
+  el recorrido seguía circulando por la vereda, a velocidad de auto.**
+  El bug de Mendoza (16.4.38) resultó ser error del usuario (no había
+  elegido "Avenida Cabildo, Palermo" de la lista de sugerencias); una vez
+  elegida bien, un recorrido corto y correcto en Buenos Aires (463,
+  Avenida Cabildo → Ugarteche 3157, 3.92 km) confirmó el efecto
+  secundario que había quedado anotado como sospecha en 16.4.38: al
+  arrancar en Caminar el punto se movía correctamente cerca de la vereda,
+  pero al cambiar a Auto sin detener el recorrido, seguía sobre la vereda
+  (no volvía al centro de la calle) y encima a 40 km/h — "una velocidad
+  que mata a la gente" en palabras de Marian.
+  Causa: `_offset_route_for_sidewalk()` se aplicaba una sola vez, dentro
+  de `_route_worker()`, según el perfil que estaba activo cuando se pidió
+  la ruta a OSRM. Cambiar de modo después con los botones Caminar/
+  Bicicleta/Auto solo actualizaba `self.route_profile` y la velocidad
+  (`_set_route_speed`), sin tocar los puntos ya calculados.
+  Arreglo: `_route_worker` ahora manda siempre los puntos "crudos" (el
+  centro de la calle, sin corrimiento). `_begin_route` guarda esos puntos
+  crudos en `self.route_points_base` y calcula `self.route_points` según
+  el modo activo al arrancar. `_set_route_speed` llama a la función nueva
+  `_apply_route_movement_offset()` cada vez que cambia el perfil de
+  movimiento (si hay un recorrido en marcha), que recalcula
+  `self.route_points` a partir de `self.route_points_base`: Caminar se
+  corre hacia la vereda, Bicicleta y Auto vuelven al centro de la calle.
+  `self.route_index` sigue siendo válido porque el corrimiento no cambia
+  la cantidad ni el orden de los puntos, solo los desplaza unos metros.
+  Verificado con una simulación aislada del corrimiento (sin Tkinter):
+  confirmando que Auto después de Caminar vuelve exactamente al punto
+  original de la calle, y que Caminar se mantiene corrido a la vereda.
+
 ## Completado en 16.4.38
 
 - [x] **Quinto problema real en la Mac de Marian: el GPS terminó en Mendoza
@@ -29,19 +61,10 @@
      "Cabildo 463" a secas), para que un resultado en la provincia
      equivocada se note de un vistazo.
   Nota: no se pudo probar contra la API real de Nominatim desde este
-  entorno (el proxy de red del sandbox bloquea ese dominio), así que
-  falta confirmar en la Mac de Marian que buscar "cabildo 463" ahora
-  devuelve la Avenida Cabildo de Buenos Aires.
-- [ ] Efecto secundario visto en la misma prueba, no arreglado todavía:
-  cambiar el modo de movimiento (ej. de Bicicleta a Caminar) **durante**
-  un recorrido ya iniciado no vuelve a calcular el corrimiento hacia la
-  vereda (`_offset_route_for_sidewalk`), porque ese corrimiento se aplica
-  una sola vez al pedir la ruta con el perfil de OSRM que estaba activo
-  en ese momento. Por eso al cambiar a Caminar a mitad de camino se vio
-  "caminando por el medio de la calle". Puede haber quedado disimulado
-  por lo grave del bug de Mendoza (995 km, probablemente por rutas/
-  autopistas); repetir la prueba con una ruta corta y correcta dentro de
-  Buenos Aires antes de decidir si hace falta un arreglo aparte.
+  entorno (el proxy de red del sandbox bloquea ese dominio); resultó no
+  hacer falta porque el caso real fue error del usuario (ver 16.4.39),
+  pero el sesgo geográfico sigue siendo una mejora real para casos
+  ambiguos genuinos.
 
 ## Completado en 16.4.37
 
@@ -740,15 +763,17 @@
   de certificados~~ — probado con "cabildo 463" → "Ugarteche 3157"; reveló
   el bug nuevo de geocodificación (ver "Completado en 16.4.38" arriba),
   no un problema de certificados.
-- [ ] **Prioridad: repetir en la Mac de Marian la prueba de Simular
-  recorrido con "cabildo 463" (con el fix de sesgo geográfico de
-  16.4.38) y confirmar que ahora resuelve a la Avenida Cabildo de Buenos
-  Aires** (Zona: no debería decir Mendoza, San Rafael) y que la distancia
-  restante da un número acorde a una ruta dentro de la ciudad, no
-  ~995 km. De paso, con una ruta corta y correcta, probar cambiar de
-  Bicicleta a Caminar a mitad de recorrido y ver si el corrimiento hacia
-  la vereda se ve bien o si aparece de nuevo el efecto "camina por el
-  medio de la calle" (ver punto sin resolver en 16.4.38).
+- [x] ~~Repetir la prueba de Simular recorrido con "cabildo 463"~~ — el
+  problema fue error del usuario (no había elegido "Avenida Cabildo,
+  Palermo" de la lista); ya usando la sugerencia correcta resolvió bien
+  en Buenos Aires (463, Avenida Cabildo → Ugarteche 3157, 3.92 km).
+- [ ] **Prioridad: probar en la Mac de Marian el fix de 16.4.39 (cambiar
+  de modo de movimiento durante un recorrido en marcha).** Repetir el
+  recorrido corto de Avenida Cabildo → Ugarteche, arrancar en Caminar,
+  confirmar que se ve corrido hacia la vereda, y después cambiar a Auto
+  sin detener el recorrido: confirmar que ahora sí vuelve al centro de la
+  calle (y no sigue en la vereda a 40 km/h como antes). Repetir también
+  Auto → Caminar para confirmar que ahí sí se corre hacia la vereda.
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
