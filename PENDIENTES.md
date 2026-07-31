@@ -1,5 +1,36 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.40
+
+- [x] **Séptimo pedido real de Marian: Detener y volver a iniciar debía
+  continuar desde donde quedó, no repetir el recorrido desde el
+  principio.** Antes, `_stop_route()` reseteaba `route_points`,
+  `route_points_base` y `route_index` sin guardar nada; tocar "Buscar
+  ruta e iniciar" de nuevo con las mismas direcciones volvía a
+  geocodificar y siempre arrancaba desde `route_points[0]` (el origen
+  original), sin importar dónde había quedado el punto real.
+  Arreglo: `_stop_route()` ahora guarda en `self.route_stopped_state`
+  (direcciones, puntos base, índice alcanzado y las etiquetas cortas) si
+  el recorrido tenía progreso real al detenerse. `start_route()` revisa
+  primero si las direcciones de partida/llegada son exactamente las
+  mismas que las del último Detener; si es así, llama a la función nueva
+  `_resume_stopped_route()` en vez de recalcular la ruta desde cero: esta
+  reconstruye `route_points` con el modo de movimiento actual y retoma
+  `_route_tick()` desde el índice guardado, sin volver a mandar un MOVE
+  al origen (el iPhone ya está físicamente ahí). Si cambiás cualquiera de
+  las dos direcciones, se ignora el estado guardado y arranca un
+  recorrido nuevo como siempre. El cartel de "Recorrido detenido" ahora
+  avisa que tocar Buscar ruta e iniciar de nuevo (sin cambiar las
+  direcciones) continúa desde ahí.
+- [ ] Sigue pendiente de confirmar con una prueba clara: si "camina por
+  el medio de la calle" en Caminar pasa en cualquier tramo del recorrido,
+  o solo justo al arrancar cerca de una bocacalle/intersección (donde el
+  cálculo de rumbo para el corrimiento hacia la vereda es menos preciso,
+  ver comentario en `_offset_route_for_sidewalk`). El corrimiento es de
+  2.5 metros a propósito (para no terminar en un edificio en calles
+  angostas); si el problema es general y no solo en intersecciones, puede
+  hacer falta aumentarlo.
+
 ## Completado en 16.4.39
 
 - [x] **Sexto problema real en la Mac de Marian: cambiar a Auto durante
@@ -767,13 +798,24 @@
   problema fue error del usuario (no había elegido "Avenida Cabildo,
   Palermo" de la lista); ya usando la sugerencia correcta resolvió bien
   en Buenos Aires (463, Avenida Cabildo → Ugarteche 3157, 3.92 km).
-- [ ] **Prioridad: probar en la Mac de Marian el fix de 16.4.39 (cambiar
-  de modo de movimiento durante un recorrido en marcha).** Repetir el
-  recorrido corto de Avenida Cabildo → Ugarteche, arrancar en Caminar,
-  confirmar que se ve corrido hacia la vereda, y después cambiar a Auto
-  sin detener el recorrido: confirmar que ahora sí vuelve al centro de la
-  calle (y no sigue en la vereda a 40 km/h como antes). Repetir también
-  Auto → Caminar para confirmar que ahí sí se corre hacia la vereda.
+- [x] ~~Probar recorrido corto y correcto dentro de Buenos Aires en
+  Caminar~~ — probado con Charcas 4188 → Ugarteche 3157 (1.95 km,
+  Palermo/CABA); la dirección de avance (contramano en una calle) se
+  entiende bien. Falta todavía la parte de cambiar a Auto/Bicicleta a
+  mitad de recorrido sin detenerlo (fix de 16.4.39) — no se probó ese
+  paso puntual en esta ronda.
+- [ ] **Prioridad: probar el fix de 16.4.40 (Detener y volver a iniciar
+  continúa desde donde quedó).** Iniciar un recorrido, tocar Detener a
+  mitad de camino, y sin tocar los campos de partida/llegada, tocar de
+  nuevo Buscar ruta e iniciar: confirmar que sigue desde el punto donde
+  se detuvo (no vuelve al origen) y que el cartel avisó cómo continuar.
+  De paso, probar cambiar a Auto sin detener el recorrido (fix de
+  16.4.39, todavía no confirmado) para ver si vuelve al centro de la
+  calle.
+- [ ] Confirmar si "camina por el medio de la calle" en Caminar pasa en
+  cualquier tramo, o solo cerca de una bocacalle al arrancar (ver nota en
+  "Completado en 16.4.40" sobre aumentar el corrimiento de 2.5 m si hace
+  falta).
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona

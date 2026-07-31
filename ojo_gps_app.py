@@ -87,7 +87,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.39"
+APP_VERSION = "16.4.40"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -294,7 +294,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.39 para iPhone en {PLATFORM_NAME}")
+        self.root.title(f"Ojo GPS 16.4.40 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -350,6 +350,7 @@ class OjoGPSApp:
         self.route_profile = "bike"
         self.route_origin_short = ""
         self.route_destination_short = ""
+        self.route_stopped_state: dict | None = None
         self.route_info_text = tk.StringVar(value="Escribí la partida y la llegada")
         self.route_origin_address = tk.StringVar(value="")
         self.route_destination_address = tk.StringVar(value="")
@@ -440,7 +441,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.39", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.40", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -1220,7 +1221,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.39"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.40"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -1615,7 +1616,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.39"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.40"})
             with urlopen(req, 8) as response:
                 raw = response.read()
             try:
@@ -1917,7 +1918,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.39"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.40"},
             )
             with urlopen(search_req, 12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -1946,14 +1947,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.39"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.40"},
                 )
                 with urlopen(detail_req, 12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.39"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.40"})
                 with urlopen(img_req, 15) as response:
                     raw = response.read()
                 try:
@@ -1991,7 +1992,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.39"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.40"})
             with urlopen(req, 20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -2027,7 +2028,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.39"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.40"})
             with urlopen(req, 10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2337,7 +2338,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.39"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.40"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2379,6 +2380,14 @@ class OjoGPSApp:
             return
         if not destination_query:
             messagebox.showinfo("Simular recorrido", "Escribí la dirección de llegada en el segundo campo.")
+            return
+        stopped = self.route_stopped_state
+        if (
+            stopped is not None
+            and stopped["origin_query"] == origin_query
+            and stopped["destination_query"] == destination_query
+        ):
+            self._resume_stopped_route(stopped)
             return
         self.route_request_id += 1
         request_id = self.route_request_id
@@ -2428,7 +2437,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.39"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.40"},
         )
         with urlopen(request, 20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2474,7 +2483,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.39"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.40"})
             with urlopen(request, 25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
@@ -2512,6 +2521,27 @@ class OjoGPSApp:
             return
         self.route_points = self._points_for_current_profile(self.route_points_base)
         self._update_route_info_text()
+
+    def _resume_stopped_route(self, stopped: dict) -> None:
+        # Sin esto, tocar Detener y después Buscar ruta e iniciar (con las
+        # mismas direcciones) volvía a arrancar desde el origen, en vez de
+        # seguir desde donde había quedado el recorrido.
+        self.route_stopped_state = None
+        self._close_joystick()
+        self.joystick_button.configure(state="disabled")
+        self.route_points_base = stopped["points_base"]
+        self.route_points = self._points_for_current_profile(self.route_points_base)
+        self.route_index = min(stopped["index"], max(1, len(self.route_points) - 1))
+        self.route_origin_short = stopped["origin_short"]
+        self.route_destination_short = stopped["destination_short"]
+        self.route_active = True
+        self.route_paused = False
+        self.route_start_button.configure(state="disabled")
+        self.route_pause_button.configure(state="normal", text="Pausar")
+        self.route_stop_button.configure(state="normal")
+        self._update_route_info_text()
+        self.set_status("Continuando el recorrido desde donde quedó", GREEN)
+        self._route_tick()
 
     def _begin_route(
         self,
@@ -2631,6 +2661,7 @@ class OjoGPSApp:
         self.route_points_base = []
         self.route_index = 0
         self.route_job = None
+        self.route_stopped_state = None
         self.route_info_text.set("Destino alcanzado. La ubicación permanece activa.")
         self.route_start_button.configure(state="normal")
         self.route_pause_button.configure(state="disabled", text="Pausar")
@@ -2647,6 +2678,15 @@ class OjoGPSApp:
                 pass
         self.route_job = None
         was_active = self.route_active
+        if was_active and self.route_points_base and self.route_index < len(self.route_points):
+            self.route_stopped_state = {
+                "origin_query": self.route_origin_address.get().strip(),
+                "destination_query": self.route_destination_address.get().strip(),
+                "points_base": self.route_points_base,
+                "index": self.route_index,
+                "origin_short": self.route_origin_short,
+                "destination_short": self.route_destination_short,
+            }
         self.route_active = False
         self.route_paused = False
         self.route_points = []
@@ -2655,7 +2695,13 @@ class OjoGPSApp:
         self.route_start_button.configure(state="normal")
         self.route_pause_button.configure(state="disabled", text="Pausar")
         self.route_stop_button.configure(state="disabled")
-        self.route_info_text.set("Recorrido detenido; la ubicación actual permanece activa.")
+        if self.route_stopped_state is not None:
+            self.route_info_text.set(
+                "Recorrido detenido; la ubicación actual permanece activa.\n"
+                "Tocá Buscar ruta e iniciar de nuevo (sin cambiar las direcciones) para continuar desde acá."
+            )
+        else:
+            self.route_info_text.set("Recorrido detenido; la ubicación actual permanece activa.")
         if close_window:
             self.route_panel.pack_forget()
             self.main_panel.pack(fill="both", expand=True)
