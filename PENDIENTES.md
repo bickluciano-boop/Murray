@@ -1,5 +1,19 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.41
+
+- [x] **Marian probó "en el medio de la calle" ya avanzado el recorrido
+  (no solo cerca de una esquina) y confirmó "no la veo" — el corrimiento
+  hacia la vereda no se notaba en ningún tramo.** Causa más probable: 2.5
+  metros queda completamente adentro del círculo de precisión de GPS que
+  Google/Apple Maps dibuja alrededor del punto azul (ese círculo suele
+  ser bastante más grande que 2.5 m en la práctica), así que a simple
+  vista el corrimiento quedaba invisible aunque el código lo estuviera
+  aplicando bien. Arreglo: se sube `offset_m` de 2.5 a 5.0 metros en
+  `_offset_route_for_sidewalk()`. Sigue siendo un valor conservador para
+  no terminar cruzando a la vereda de enfrente en una calle angosta, pero
+  debería notarse mejor por fuera del círculo de precisión.
+
 ## Completado en 16.4.40
 
 - [x] **Séptimo pedido real de Marian: Detener y volver a iniciar debía
@@ -812,10 +826,15 @@
   De paso, probar cambiar a Auto sin detener el recorrido (fix de
   16.4.39, todavía no confirmado) para ver si vuelve al centro de la
   calle.
-- [ ] Confirmar si "camina por el medio de la calle" en Caminar pasa en
-  cualquier tramo, o solo cerca de una bocacalle al arrancar (ver nota en
-  "Completado en 16.4.40" sobre aumentar el corrimiento de 2.5 m si hace
-  falta).
+- [x] ~~Confirmar si "camina por el medio de la calle" pasa en cualquier
+  tramo~~ — confirmado por Marian ("no la veo"): pasaba en cualquier
+  tramo, no solo cerca de una esquina. Arreglado en 16.4.41 subiendo el
+  corrimiento de 2.5 a 5 metros.
+- [ ] **Prioridad: confirmar en la Mac de Marian que con 16.4.41 el
+  corrimiento hacia la vereda en Caminar ya se nota** (el punto debería
+  verse claramente a un costado de la calle, no en el centro ni sobre el
+  círculo de precisión de GPS). Si con 5 m todavía no se nota, puede
+  hacer falta subirlo más.
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
