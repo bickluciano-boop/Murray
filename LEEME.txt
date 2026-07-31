@@ -1,10 +1,22 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.37 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.38 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.38
+
+- Arreglado: buscar una calle con un nombre repetido en varias provincias
+  (por ejemplo "Cabildo", que existe en Buenos Aires y también en Mendoza)
+  podía terminar eligiendo la dirección equivocada, en otra ciudad, sin
+  ningún aviso — pasó probando "Simular recorrido" con "Cabildo 463" y el
+  GPS terminó en San Rafael, Mendoza en vez de Buenos Aires. Ahora las
+  búsquedas de dirección priorizan resultados de Buenos Aires, y el nombre
+  del lugar elegido siempre muestra el barrio/ciudad (por ejemplo "Cabildo
+  463, San Rafael, Mendoza") para poder notar un error así antes de iniciar
+  el recorrido.
 
 NOVEDAD 16.4.37
 

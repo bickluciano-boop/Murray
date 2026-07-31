@@ -1,5 +1,48 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.38
+
+- [x] **Quinto problema real en la Mac de Marian: el GPS terminó en Mendoza
+  en vez de Buenos Aires.** Con el fix de certificados (16.4.37) ya
+  validado, se probó Simular recorrido con partida "cabildo 463" (sin
+  elegirla de la lista de sugerencias, solo tipeada) y llegada "Ugarteche
+  3157" (elegida de la lista). El recorrido calculado mostró "Distancia
+  restante: 995.60 km" (evidencia clara de que algo estaba mal) y el
+  iPhone terminó ubicado en "Gutiérrez 1102, San Rafael, Mendoza".
+  Causa: `_geocode_route_location()` (usada cuando el usuario tipea una
+  dirección sin elegirla de la lista de sugerencias) buscaba en Nominatim
+  con `limit=1` y sin ningún sesgo geográfico, así que "Cabildo" (una
+  calle que también existe en San Rafael, Mendoza) le ganó a la
+  conocidísima Avenida Cabildo de Buenos Aires. Encima, `_short_place_label()`
+  siempre recortaba el resultado a solo "calle + altura", así que aunque
+  la dirección resuelta fuera de Mendoza, en pantalla se seguía viendo
+  igual ("Cabildo 463"), sin ninguna pista de que el lugar era otro.
+  Arreglo (dos partes):
+  1. Se agregó `NOMINATIM_VIEWBOX` (un cuadro que cubre Ciudad de Buenos
+     Aires + GBA) y `countrycodes=ar` a las 3 búsquedas de Nominatim
+     (búsqueda principal, sugerencias de Simular recorrido, y
+     `_geocode_route_location`). Es un sesgo suave (Nominatim no descarta
+     resultados fuera del cuadro, solo los prioriza), así que direcciones
+     genuinamente fuera de Buenos Aires todavía se pueden buscar.
+  2. `_short_place_label()` ahora agrega el barrio/ciudad y la provincia
+     al resultado (ej. "Cabildo 463, San Rafael, Mendoza" en vez de
+     "Cabildo 463" a secas), para que un resultado en la provincia
+     equivocada se note de un vistazo.
+  Nota: no se pudo probar contra la API real de Nominatim desde este
+  entorno (el proxy de red del sandbox bloquea ese dominio), así que
+  falta confirmar en la Mac de Marian que buscar "cabildo 463" ahora
+  devuelve la Avenida Cabildo de Buenos Aires.
+- [ ] Efecto secundario visto en la misma prueba, no arreglado todavía:
+  cambiar el modo de movimiento (ej. de Bicicleta a Caminar) **durante**
+  un recorrido ya iniciado no vuelve a calcular el corrimiento hacia la
+  vereda (`_offset_route_for_sidewalk`), porque ese corrimiento se aplica
+  una sola vez al pedir la ruta con el perfil de OSRM que estaba activo
+  en ese momento. Por eso al cambiar a Caminar a mitad de camino se vio
+  "caminando por el medio de la calle". Puede haber quedado disimulado
+  por lo grave del bug de Mendoza (995 km, probablemente por rutas/
+  autopistas); repetir la prueba con una ruta corta y correcta dentro de
+  Buenos Aires antes de decidir si hace falta un arreglo aparte.
+
 ## Completado en 16.4.37
 
 - [x] **Cuarto problema real en la Mac de Marian: "no aparecen opciones al
@@ -693,9 +736,19 @@
   primer intento fue con una carpeta vieja (16.4.35, sin el fix); hubo que
   bajar el ZIP actualizado y volver a autorizar Gatekeeper en la carpeta
   nueva antes de que funcionara.
-- [ ] Falta probar **Simular recorrido** completo (partida + llegada) con
-  el fix de certificados — solo se probó la búsqueda simple en la pantalla
-  principal hasta ahora.
+- [x] ~~Probar Simular recorrido completo (partida + llegada) con el fix
+  de certificados~~ — probado con "cabildo 463" → "Ugarteche 3157"; reveló
+  el bug nuevo de geocodificación (ver "Completado en 16.4.38" arriba),
+  no un problema de certificados.
+- [ ] **Prioridad: repetir en la Mac de Marian la prueba de Simular
+  recorrido con "cabildo 463" (con el fix de sesgo geográfico de
+  16.4.38) y confirmar que ahora resuelve a la Avenida Cabildo de Buenos
+  Aires** (Zona: no debería decir Mendoza, San Rafael) y que la distancia
+  restante da un número acorde a una ruta dentro de la ciudad, no
+  ~995 km. De paso, con una ruta corta y correcta, probar cambiar de
+  Bicicleta a Caminar a mitad de recorrido y ver si el corrimiento hacia
+  la vereda se ve bien o si aparece de nuevo el efecto "camina por el
+  medio de la calle" (ver punto sin resolver en 16.4.38).
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
