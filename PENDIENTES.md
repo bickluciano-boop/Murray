@@ -1,5 +1,29 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.43
+
+- [x] **Pedido de Lu: ver el recorrido en vivo dentro del mismo programa,
+  sin tener que mirar el iPhone ni sacar capturas para mostrarlo.**
+  Comparó con "AnyGo" (una app parecida) y pidió algo similar: un mapa
+  en vivo, para todas las opciones (Cambiar ubicación, Joystick, Simular
+  recorrido), aprobado explícitamente ("me parece ok que pongamos la
+  opción ver en vivo").
+  Implementado: botón "Ver en vivo" en el encabezado (visible en
+  cualquier pantalla). Abre una ventana de solo lectura (sin clic para
+  editar, a diferencia de "Ver y editar en el mapa") que se centra en
+  `self.latitude`/`self.longitude` actuales y se refresca sola cada
+  segundo (`_live_map_tick` vía `root.after`) solo si la posición
+  cambió, sin importar qué función la esté moviendo. Reutiliza la
+  descarga/caché de tiles de OpenStreetMap ya existente (`_load_map_tile`)
+  en un worker aparte (`_live_map_tiles_worker`) para no bloquear la
+  interfaz. Se puede dejar abierta mientras se sigue usando el resto del
+  programa.
+  Probado con Xvfb (sin Internet real en este entorno): la ventana abre,
+  el punto se dibuja centrado, y si no hay tiles disponibles no rompe
+  nada (fondo vacío en vez de crashear). Falta confirmar en la Mac de
+  Marian que las imágenes del mapa cargan bien con Internet real y que
+  se actualiza siguiendo un recorrido real.
+
 ## Completado en 16.4.42 (a confirmar en la Mac de Marian)
 
 - [x] **Octavo problema real: el rodeo de Caminar en calles de mano única
@@ -881,6 +905,15 @@ este cambio a menos que el usuario lo pida de nuevo explícitamente.**
   verse claramente a un costado de la calle, no en el centro ni sobre el
   círculo de precisión de GPS). Si con 5 m todavía no se nota, puede
   hacer falta subirlo más.
+- [ ] Confirmar en la Mac de Marian que el servidor de rutas para
+  peatones nuevo (16.4.42, `routing.openstreetmap.de/routed-foot`)
+  responde bien y ya no da vueltas en las calles de mano única
+  (Miñones 1907→1997, Artilleros 1963→1883, Mendoza→Artilleros).
+- [ ] **Probar el botón "Ver en vivo" (16.4.43) en la Mac de Marian**:
+  confirmar que abre la ventana, que las imágenes del mapa cargan (con
+  Internet real), y que el punto se mueve/actualiza siguiendo Cambiar
+  ubicación, Joystick y Simular recorrido sin tener que cerrarla y
+  reabrirla.
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona

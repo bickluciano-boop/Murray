@@ -1,10 +1,19 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.42 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.43 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.43
+
+- Nuevo: botón "Ver en vivo" arriba de todo, al lado de Soporte y Ayuda.
+  Abre una ventana con un mapa que se centra solo en la posición actual y
+  se va actualizando mientras usás Cambiar ubicación, Joystick o Simular
+  recorrido — así no hace falta mirar el iPhone (ni sacar capturas) para
+  ver el recorrido en marcha. Se puede dejar abierta y seguir usando el
+  resto del programa normalmente.
 
 NOVEDAD 16.4.42
 

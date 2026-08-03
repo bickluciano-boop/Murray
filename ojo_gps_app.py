@@ -87,7 +87,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.42"
+APP_VERSION = "16.4.43"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -294,7 +294,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.42 para iPhone en {PLATFORM_NAME}")
+        self.root.title(f"Ojo GPS 16.4.43 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("940x710")
         self.root.minsize(860, 650)
         self.root.configure(bg=BG)
@@ -378,6 +378,13 @@ class OjoGPSApp:
         self.map_selected_address_details: dict = {}
         self.map_target = "main"
         self.map_route_edit_target = "origin"
+        self.live_map_window: tk.Toplevel | None = None
+        self.live_map_canvas: tk.Canvas | None = None
+        self.live_map_images: list[tk.PhotoImage] = []
+        self.live_map_zoom = 17
+        self.live_map_render_id = 0
+        self.live_map_last_coords: tuple[float, float] | None = None
+        self.live_map_job: str | None = None
         self.map_drag_start: tuple[float, float] | None = None
         self.map_drag_last: tuple[float, float] | None = None
         self.map_drag_center: tuple[float, float] | None = None
@@ -441,7 +448,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.42", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.43", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -451,6 +458,10 @@ class OjoGPSApp:
         self.support_button = ttk.Button(header, text="Soporte", style="Secondary.TButton", command=self._open_support_panel)
         self.support_button.pack(side="right", padx=(10, 0))
         ToolTip(self.support_button, "Escribinos por mail, WhatsApp, o pedile ayuda a una IA.")
+
+        self.live_map_button = ttk.Button(header, text="Ver en vivo", style="Secondary.TButton", command=self._open_live_map)
+        self.live_map_button.pack(side="right", padx=(10, 0))
+        ToolTip(self.live_map_button, "Ver el punto azul moviéndose en un mapa, sin mirar el iPhone.")
 
         traffic = tk.Frame(header, bg="white", padx=14, pady=9, highlightthickness=1, highlightbackground="#dbe7e5")
         traffic.pack(side="right", padx=(18, 0))
@@ -1221,7 +1232,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.42"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.43"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -1616,7 +1627,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.42"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.43"})
             with urlopen(req, 8) as response:
                 raw = response.read()
             try:
@@ -1674,6 +1685,159 @@ class OjoGPSApp:
         except Exception as exc:
             if request_id == self.map_render_id:
                 self.events.put(("MAP_ERROR", str(exc)))
+
+    def _current_known_position(self) -> tuple[float, float] | None:
+        try:
+            return float(self.latitude.get()), float(self.longitude.get())
+        except (ValueError, TypeError):
+            return None
+
+    def _open_live_map(self) -> None:
+        # Ventana aparte, de solo lectura, que se centra sola en la posición
+        # actual y se refresca mientras avanza Cambiar ubicación, Joystick o
+        # Simular recorrido. Así no hace falta mirar el iPhone (ni sacar
+        # capturas) para ver el recorrido en marcha.
+        position = self._current_known_position()
+        if position is None:
+            messagebox.showinfo(
+                "Ver en vivo",
+                "Todavía no hay una ubicación para mostrar. Elegí un destino o iniciá un recorrido primero.",
+            )
+            return
+        if self.live_map_window is not None:
+            try:
+                if self.live_map_window.winfo_exists():
+                    self.live_map_window.deiconify()
+                    self.live_map_window.lift()
+                    self.live_map_window.focus_force()
+                    return
+            except tk.TclError:
+                pass
+        self.live_map_last_coords = None
+        win = tk.Toplevel(self.root)
+        self.live_map_window = win
+        win.title("Ojo GPS - Ver en vivo")
+        win.protocol("WM_DELETE_WINDOW", self._close_live_map)
+        screen_width = win.winfo_screenwidth()
+        screen_height = win.winfo_screenheight()
+        window_width = max(560, min(820, screen_width - 70))
+        window_height = max(480, min(700, screen_height - 90))
+        pos_x = max(0, (screen_width - window_width) // 2)
+        pos_y = max(0, (screen_height - window_height) // 2)
+        win.geometry(f"{window_width}x{window_height}+{pos_x}+{pos_y}")
+        win.minsize(480, 420)
+        head = ttk.Frame(win, padding=(16, 12))
+        head.pack(fill="x")
+        ttk.Label(
+            head,
+            text="Se actualiza solo mientras te movés. Cerrá esta ventana cuando no la necesites.",
+            style="Section.TLabel",
+        ).pack(side="left")
+        canvas = tk.Canvas(win, bg="#dce8e6", highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
+        self.live_map_canvas = canvas
+        canvas.bind("<Configure>", lambda _event: self._render_live_map(force=True))
+        self._render_live_map(force=True)
+        self._schedule_live_map_tick()
+
+    def _close_live_map(self) -> None:
+        if self.live_map_job is not None:
+            try:
+                self.root.after_cancel(self.live_map_job)
+            except tk.TclError:
+                pass
+            self.live_map_job = None
+        if self.live_map_window is not None:
+            try:
+                self.live_map_window.destroy()
+            except tk.TclError:
+                pass
+        self.live_map_window = None
+        self.live_map_canvas = None
+        self.live_map_images = []
+
+    def _schedule_live_map_tick(self) -> None:
+        self.live_map_job = self.root.after(1000, self._live_map_tick)
+
+    def _live_map_tick(self) -> None:
+        self.live_map_job = None
+        if self.live_map_window is None:
+            return
+        try:
+            if not self.live_map_window.winfo_exists():
+                self.live_map_window = None
+                self.live_map_canvas = None
+                return
+        except tk.TclError:
+            self.live_map_window = None
+            self.live_map_canvas = None
+            return
+        self._render_live_map()
+        self._schedule_live_map_tick()
+
+    def _render_live_map(self, force: bool = False) -> None:
+        if self.live_map_canvas is None:
+            return
+        position = self._current_known_position()
+        if position is None:
+            return
+        if not force and position == self.live_map_last_coords:
+            return
+        self.live_map_last_coords = position
+        self.live_map_render_id += 1
+        request_id = self.live_map_render_id
+        width = max(480, self.live_map_canvas.winfo_width() or 700)
+        height = max(360, self.live_map_canvas.winfo_height() or 500)
+        threading.Thread(
+            target=self._live_map_tiles_worker,
+            args=(request_id, position, self.live_map_zoom, width, height),
+            daemon=True,
+        ).start()
+
+    def _live_map_tiles_worker(
+        self, request_id: int, center: tuple[float, float], zoom: int, width: int, height: int
+    ) -> None:
+        try:
+            cx, cy = self._world_pixels(center[0], center[1], zoom)
+            first_x = math.floor((cx - width / 2) / 256)
+            last_x = math.floor((cx + width / 2) / 256)
+            first_y = math.floor((cy - height / 2) / 256)
+            last_y = math.floor((cy + height / 2) / 256)
+            limit = 2 ** zoom
+            needed = []
+            for ty in range(first_y, last_y + 1):
+                for tx in range(first_x, last_x + 1):
+                    if request_id != self.live_map_render_id:
+                        return
+                    if not 0 <= ty < limit:
+                        continue
+                    needed.append((tx, ty, tx % limit))
+            tiles = []
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {
+                    executor.submit(self._load_map_tile, zoom, tile_x, ty): (tx, ty)
+                    for tx, ty, tile_x in needed
+                }
+                for future in as_completed(futures):
+                    if request_id != self.live_map_render_id:
+                        return
+                    tx, ty = futures[future]
+                    try:
+                        tile_data = future.result()
+                    except Exception:
+                        continue
+                    tiles.append({
+                        "x": tx * 256 - (cx - width / 2),
+                        "y": ty * 256 - (cy - height / 2),
+                        "data": tile_data,
+                    })
+            if request_id != self.live_map_render_id:
+                return
+            payload = {"id": request_id, "width": width, "height": height, "tiles": tiles}
+            self.events.put(("LIVE_MAP_TILES", json.dumps(payload)))
+        except Exception as exc:
+            if request_id == self.live_map_render_id:
+                self.events.put(("LIVE_MAP_ERROR", str(exc)))
 
     def _map_click(self, event) -> None:
         if self.map_canvas is None:
@@ -1918,7 +2082,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.42"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.43"},
             )
             with urlopen(search_req, 12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -1947,14 +2111,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.42"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.43"},
                 )
                 with urlopen(detail_req, 12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.42"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.43"})
                 with urlopen(img_req, 15) as response:
                     raw = response.read()
                 try:
@@ -1992,7 +2156,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.42"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.43"})
             with urlopen(req, 20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -2028,7 +2192,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.42"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.43"})
             with urlopen(req, 10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2338,7 +2502,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.42"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.43"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2437,7 +2601,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.42"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.43"},
         )
         with urlopen(request, 20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2494,7 +2658,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.42"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.43"})
             with urlopen(request, 25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
@@ -3346,6 +3510,33 @@ class OjoGPSApp:
                         self.map_canvas.create_text(
                             self.map_canvas.winfo_width() / 2,
                             self.map_canvas.winfo_height() / 2,
+                            text="No se pudo cargar el mapa. Revisá Internet y volvé a intentar.",
+                            fill="#c45a4a",
+                            font=ui_font(12, semibold=True),
+                        )
+                elif kind == "LIVE_MAP_TILES":
+                    payload = json.loads(value)
+                    if payload.get("id") != self.live_map_render_id or self.live_map_canvas is None:
+                        continue
+                    self.live_map_canvas.delete("all")
+                    self.live_map_images = []
+                    for tile in payload.get("tiles", []):
+                        image = tk.PhotoImage(data=tile["data"])
+                        self.live_map_images.append(image)
+                        self.live_map_canvas.create_image(tile["x"], tile["y"], image=image, anchor="nw")
+                    self.live_map_canvas.create_text(
+                        8, 8, text="© OpenStreetMap", anchor="nw", fill="#173230", font=ui_font(8)
+                    )
+                    cx = payload["width"] / 2
+                    cy = payload["height"] / 2
+                    self.live_map_canvas.create_oval(cx - 22, cy - 22, cx + 22, cy + 22, outline="#2f7d6b", width=2)
+                    self.live_map_canvas.create_oval(cx - 10, cy - 10, cx + 10, cy + 10, fill="#2f7d6b", outline="white", width=3)
+                elif kind == "LIVE_MAP_ERROR":
+                    if self.live_map_canvas is not None:
+                        self.live_map_canvas.delete("all")
+                        self.live_map_canvas.create_text(
+                            self.live_map_canvas.winfo_width() / 2,
+                            self.live_map_canvas.winfo_height() / 2,
                             text="No se pudo cargar el mapa. Revisá Internet y volvé a intentar.",
                             fill="#c45a4a",
                             font=ui_font(12, semibold=True),
