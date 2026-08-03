@@ -1,5 +1,33 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.42 (a confirmar en la Mac de Marian)
+
+- [x] **Octavo problema real: el rodeo de Caminar en calles de mano única
+  pasaba incluso en recorridos entre calles distintas, no solo en el
+  mismo tramo de calle.** Con Mendoza 991 → Artilleros 2050 (calles
+  distintas, varias cuadras), Marian notó que en un tramo caminó
+  "contramano" de una forma que sugería que el sistema evitaba ir en
+  contra de la mano única — y señaló, correctamente, que un peatón no
+  tiene por qué respetar esa regla, y que la solución no era una
+  diagonal (ya rechazada) sino que el recorrido más corto respetando las
+  calles reales tendría que poder ir contra la mano en Caminar.
+  Causa probable: el demo público de `router.project-osrm.org` que
+  usábamos no tiene un perfil de peatón realmente distinto del de auto,
+  así que en la práctica Caminar terminaba respetando las manos únicas
+  como si fuera un auto.
+  Arreglo: Caminar ahora pide la ruta a
+  `https://routing.openstreetmap.de/routed-foot/route/v1/foot/...` (un
+  servidor OSRM público mantenido específicamente con un perfil de
+  peatón, que sí permite cruzar en cualquier sentido una calle de mano
+  única) en vez de `router.project-osrm.org`. Bicicleta y Auto siguen
+  usando `router.project-osrm.org` sin cambios.
+  **Sin confirmar todavía**: no se pudo probar contra el servidor real
+  desde este entorno (el proxy de red del sandbox lo bloquea, mismo
+  motivo que con Nominatim en 16.4.37/16.4.38). Falta validar en la Mac
+  de Marian que este servidor responde bien y que el rodeo desaparece
+  con los mismos casos que fallaban antes (Miñones 1907→1997, Artilleros
+  1963→1883, Mendoza 991→Artilleros 2050).
+
 ## Decisión de producto: NO arreglar el "rodeo" de Caminar en calles de mano única
 
 Probando en la Mac de Marian, se repitió dos veces (Miñones 1907→1997,

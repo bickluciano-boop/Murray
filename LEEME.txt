@@ -1,10 +1,19 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.41 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.42 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.42
+
+- Arreglado (a confirmar): en Caminar, el recorrido a veces daba toda la
+  vuelta a la manzana en calles de mano única, porque el servicio de
+  rutas gratuito que usábamos trata a los peatones como si fueran autos
+  (respetando la mano única, que un peatón puede ignorar). Ahora Caminar
+  usa un servicio de rutas específico para peatones, que sí permite
+  cruzar una calle de mano única caminando.
 
 NOVEDAD 16.4.41
 
