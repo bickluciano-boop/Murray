@@ -1,10 +1,18 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.43 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.44 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.44
+
+- Arreglado (a confirmar): el cartel de ⚙ ADMINISTRADOR (o "Vence en N
+  días") se veía recortado, mostrando solo un pedacito, porque el
+  encabezado quedó muy lleno al agregar el botón "Ver en vivo". Se
+  agrandó un poco la ventana principal y se acortó ese botón a "En
+  vivo" para que todo entre bien.
 
 NOVEDAD 16.4.43
 

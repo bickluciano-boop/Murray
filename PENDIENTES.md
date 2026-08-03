@@ -1,5 +1,29 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.44 (a confirmar en la Mac de Marian)
+
+- [x] **Noveno problema real: el cartel de ⚙ ADMINISTRADOR quedó
+  recortado, mostrando solo "IS'" (un pedacito de la palabra
+  "ADMINISTRADOR")** después de agregar el botón "Ver en vivo" en
+  16.4.43. Causa: la ventana principal tiene ancho fijo (`geometry`
+  940x710) y el encabezado (título, Ayuda, Soporte, Ver en vivo, CABLE
+  CONECTADO, y el badge de administrador/vencimiento) ya estaba
+  bastante justo de espacio; sumar un botón más lo hizo desbordar en la
+  fuente real de una Mac (más ancha que en el entorno de prueba Linux/
+  Xvfb usado acá, donde no se pudo reproducir el mismo recorte —mismo
+  patrón que ya se vio con otro recorte de badge en 16.4.29/16.4.37,
+  que tampoco era reproducible en una Mac real, aunque en este caso el
+  reporte sí vino de la Mac real de Marian).
+  Arreglo: se agrandó la ventana principal de 940x710 a 1080x710 (y el
+  mínimo de 860x650 a 980x650), y se acortó el texto del botón de "Ver
+  en vivo" a "En vivo" para reducir la demanda de ancho del encabezado.
+  **Sin confirmar todavía**: no se pudo verificar de forma concluyente
+  en este entorno (el mismo recorte de fuente que afecta a Xvfb hizo
+  que apareciera otro elemento distinto recortado —el cartel de CABLE
+  CONECTADO— en vez de reproducir exactamente el bug reportado, así que
+  la prueba local no es garantía). Falta confirmar en la Mac de Marian
+  que el cartel de administrador ahora se ve completo.
+
 ## Completado en 16.4.43
 
 - [x] **Pedido de Lu: ver el recorrido en vivo dentro del mismo programa,
