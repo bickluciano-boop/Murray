@@ -1,5 +1,26 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.45
+
+- [x] **Confirmado: "Ver en vivo" (16.4.43) funciona con Internet real
+  en la Mac de Marian** — mostró el mapa cargado con edificios/calles
+  reales (9 de Julio y Carlos Pellegrini) y el punto centrado
+  correctamente.
+- [x] **Pedido de Lu: poder acercar/alejar el mapa de "Ver en vivo" con
+  el trackpad (touch) o con el mouse.** Se agregó zoom con la rueda del
+  mouse (en Mac, el scroll de dos dedos en el trackpad genera el mismo
+  evento `<MouseWheel>`) y botones +/− en la ventana, con el mismo
+  patrón ya usado en "Ver y editar en el mapa". El gesto de pellizcar
+  con los dedos (pinch) no se ofrece porque Tkinter no lo puede capturar
+  de forma confiable multiplataforma.
+  Al probarlo con Xvfb se encontró y arregló en el momento un bug real:
+  el texto del encabezado de la ventana ("Se actualiza solo mientras te
+  movés. Cerrá esta ventana...") era demasiado largo y el botón "+"
+  quedaba recortado fuera de la ventana al agregar los dos botones de
+  zoom. Se acortó el texto a "Se actualiza sola con tu posición." y se
+  agrandó un poco la ventana (820→880 de ancho máximo). Confirmado con
+  captura en Xvfb que ahora los dos botones (+/−) se ven completos.
+
 ## Completado en 16.4.44 (a confirmar en la Mac de Marian)
 
 - [x] **Noveno problema real: el cartel de ⚙ ADMINISTRADOR quedó
@@ -933,11 +954,16 @@ este cambio a menos que el usuario lo pida de nuevo explícitamente.**
   peatones nuevo (16.4.42, `routing.openstreetmap.de/routed-foot`)
   responde bien y ya no da vueltas en las calles de mano única
   (Miñones 1907→1997, Artilleros 1963→1883, Mendoza→Artilleros).
-- [ ] **Probar el botón "Ver en vivo" (16.4.43) en la Mac de Marian**:
-  confirmar que abre la ventana, que las imágenes del mapa cargan (con
-  Internet real), y que el punto se mueve/actualiza siguiendo Cambiar
-  ubicación, Joystick y Simular recorrido sin tener que cerrarla y
-  reabrirla.
+- [x] ~~Probar el botón "Ver en vivo" en la Mac de Marian~~ — confirmado:
+  abre bien y el mapa carga con Internet real, con el punto centrado
+  correctamente.
+- [ ] **Probar el zoom de "Ver en vivo" (16.4.45) en la Mac de Marian**:
+  confirmar que los botones +/− se ven completos (no como el "+"
+  recortado que se encontró en Xvfb) y que el scroll del mouse o del
+  trackpad (dos dedos) también acerca/aleja el mapa.
+- [ ] Falta confirmar que "Ver en vivo" se actualiza sola siguiendo
+  Cambiar ubicación, Joystick y Simular recorrido sin tener que cerrarla
+  y reabrirla (solo se probó con un punto fijo hasta ahora).
 - [ ] Seguir con Joystick, Fijar GPS y Preparar Wi-Fi en la Mac de Marian
   (confirmar que Preparar Wi-Fi abre una Terminal nueva, pide la
   contraseña con `sudo`, y el flujo de retirar cable / Fijar GPS funciona
