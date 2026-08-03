@@ -1,5 +1,23 @@
 # Pendientes de Ojo GPS
 
+## Decisión de producto: NO arreglar el "rodeo" de Caminar en calles de mano única
+
+Probando en la Mac de Marian, se repitió dos veces (Miñones 1907→1997,
+después Artilleros 1963→1883) que Simular recorrido en Caminar, entre dos
+direcciones muy cercanas de la misma calle, da un rodeo grande (0.05 km y
+0.50 km respectivamente) en vez de una caminata corta y directa. Causa
+probable: OSRM (el servicio gratuito de rutas que usamos) trata esas
+calles como de mano única también para peatones, cuando en la realidad
+se puede caminar por la vereda en cualquier sentido.
+
+Se propuso arreglarlo con un camino directo (en línea recta) cuando la
+partida y la llegada están cerca pero el rodeo es desproporcionado.
+Lu lo rechazó explícitamente: prefiere el rodeo real (aunque sea más
+largo de lo necesario) antes que una diagonal que corte en línea recta
+por el medio de una manzana/edificios, porque eso se vería mucho peor en
+una demo ("como que el hombre biónico rompe paredes"). **No implementar
+este cambio a menos que el usuario lo pida de nuevo explícitamente.**
+
 ## Completado en 16.4.41
 
 - [x] **Marian probó "en el medio de la calle" ya avanzado el recorrido
