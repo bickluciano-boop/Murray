@@ -1,10 +1,19 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.45 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.46 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.46
+
+- Arreglado: en notebooks con pantalla chica, "Simular recorrido" podia
+  necesitar mas alto del que entraba en la ventana y el boton "Buscar ruta
+  e iniciar" quedaba tapado, sin forma de llegar a el (ni agrandando la
+  ventana). Ahora todo el panel tiene una barra de scroll a la derecha y
+  tambien se puede desplazar con la rueda del mouse o dos dedos en el
+  trackpad (Mac).
 
 NOVEDAD 16.4.45
 
