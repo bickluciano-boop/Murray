@@ -105,24 +105,53 @@
         padding-top: 120px;
       }
       #s2-eyebrow {
-        font-size: 22px;
-        letter-spacing: 3.5px;
+        font-weight: 500;
+        font-size: 26px;
+        letter-spacing: 2.8px;
         color: #8fa0ac;
         text-transform: uppercase;
-        margin-bottom: 40px;
+        margin-bottom: 36px;
         opacity: 0;
       }
       #s2-device {
         position: relative;
-        width: 640px;
+        width: 720px;
         aspect-ratio: 1000 / 795;
         opacity: 0;
         transform: scale(0.9);
+        perspective: 1800px;
       }
-      #s2-device img {
+      #s2-flip {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+      }
+      #s2-face-front,
+      #s2-face-back {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+      }
+      #s2-face-back {
+        transform: rotateY(180deg);
+      }
+      #s2-face-front img,
+      #s2-face-back img {
         width: 100%;
         height: 100%;
         object-fit: contain;
+      }
+      #s2-sensor-highlight {
+        position: absolute;
+        left: 62%;
+        top: 51%;
+        width: 8.5%;
+        aspect-ratio: 1;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 2px solid #ffb400;
+        box-shadow: 0 0 18px rgba(255, 180, 0, 0.55);
+        opacity: 0;
       }
       #s2-screen {
         position: absolute;
@@ -230,8 +259,8 @@
       }
       #s3-line {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 19px;
-        letter-spacing: 1.5px;
+        font-size: 22px;
+        letter-spacing: 1.2px;
         color: #8fa0ac;
         margin-top: 36px;
         text-align: center;
@@ -260,13 +289,13 @@
       id="root"
       data-composition-id="ojo-guard-promo"
       data-start="0"
-      data-duration="22"
+      data-duration="25"
       data-width="1080"
       data-height="1440"
       data-fps="30"
     >
       <!-- Persistent brand mark — visible during scenes 1 and 2, then scene 3 takes over with the full wordmark -->
-      <div id="brand-mark" class="clip" data-start="0" data-duration="16" data-track-index="1">ojo guard</div>
+      <div id="brand-mark" class="clip" data-start="0" data-duration="19" data-track-index="1">ojo guard</div>
 
       <!-- Scene 1: lifestyle — 0s to 7s -->
       <section id="scene1" class="clip" data-start="0" data-duration="7" data-track-index="0">
@@ -281,37 +310,45 @@
         </div>
       </section>
 
-      <!-- Scene 2: device — 7s to 16s -->
-      <section id="scene2" class="clip" data-start="7" data-duration="9" data-track-index="0">
+      <!-- Scene 2: device — 7s to 19s -->
+      <section id="scene2" class="clip" data-start="7" data-duration="12" data-track-index="0">
         <div id="s2-glow"></div>
         <div id="s2-content">
           <div id="s2-eyebrow">el reloj</div>
           <div id="s2-device">
-            <img src="assets/watch-hero.png" alt="" />
-            <div id="s2-screen">
-              <svg id="s2-heart" viewBox="0 0 32 29">
-                <path
-                  d="M16 28.5C8 22.8 1 17 1 9.8 1 4.9 4.9 1 9.7 1c2.8 0 5.4 1.4 6.9 3.6C18.1 2.4 20.7 1 23.5 1 28.3 1 32.2 4.9 32.2 9.8 32.2 17 25.2 22.8 17.2 28.5z"
-                  fill="none"
-                  stroke="#FFB400"
-                  stroke-width="2"
-                />
-              </svg>
-              <svg id="s2-pulse" viewBox="0 0 240 40">
-                <polyline
-                  id="s2-pulse-line"
-                  points="0,20 40,20 55,4 70,36 85,20 240,20"
-                  fill="none"
-                  stroke="#FFB400"
-                  stroke-width="2.5"
-                  stroke-linejoin="round"
-                  stroke-linecap="round"
-                  stroke-dasharray="240"
-                  stroke-dashoffset="240"
-                  opacity="0.9"
-                />
-              </svg>
-              <div id="s2-monitoreo">monitoreo</div>
+            <div id="s2-flip">
+              <div id="s2-face-front">
+                <img src="assets/watch-hero.png" alt="" />
+                <div id="s2-screen">
+                  <svg id="s2-heart" viewBox="0 0 32 29">
+                    <path
+                      d="M16 28.5C8 22.8 1 17 1 9.8 1 4.9 4.9 1 9.7 1c2.8 0 5.4 1.4 6.9 3.6C18.1 2.4 20.7 1 23.5 1 28.3 1 32.2 4.9 32.2 9.8 32.2 17 25.2 22.8 17.2 28.5z"
+                      fill="none"
+                      stroke="#FFB400"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <svg id="s2-pulse" viewBox="0 0 240 40">
+                    <polyline
+                      id="s2-pulse-line"
+                      points="0,20 40,20 55,4 70,36 85,20 240,20"
+                      fill="none"
+                      stroke="#FFB400"
+                      stroke-width="2.5"
+                      stroke-linejoin="round"
+                      stroke-linecap="round"
+                      stroke-dasharray="240"
+                      stroke-dashoffset="240"
+                      opacity="0.9"
+                    />
+                  </svg>
+                  <div id="s2-monitoreo">monitoreo</div>
+                </div>
+              </div>
+              <div id="s2-face-back">
+                <img src="assets/watch-back.png" alt="" />
+                <div id="s2-sensor-highlight"></div>
+              </div>
             </div>
           </div>
           <div id="s2-tag">
@@ -325,8 +362,8 @@
         </div>
       </section>
 
-      <!-- Scene 3: closing — 16s to 22s -->
-      <section id="scene3" class="clip" data-start="16" data-duration="6" data-track-index="0">
+      <!-- Scene 3: closing — 19s to 25s -->
+      <section id="scene3" class="clip" data-start="19" data-duration="6" data-track-index="0">
         <div id="s3-glow"></div>
         <div id="s3-content">
           <div id="s3-wordmark">ojo guard</div>
@@ -360,7 +397,7 @@
       );
       /* both lines hold on screen from 3.4s to 7s (3.6s of reading time) */
 
-      /* ---------- Scene 2 (offset 7s, 9s total — hold to 9s for reading) ---------- */
+      /* ---------- Scene 2 (offset 7s, 12s total) ---------- */
       const S2 = 7;
       tl.fromTo("#s2-glow", { opacity: 0 }, { opacity: 1, duration: 1.1, ease: "none" }, S2 + 0.6);
       tl.fromTo("#s2-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, S2 + 0);
@@ -370,25 +407,46 @@
         { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.2)" },
         S2 + 0.2
       );
-      tl.fromTo("#s2-screen", { opacity: 0 }, { opacity: 1, duration: 1, ease: "none" }, S2 + 2);
+      tl.fromTo("#s2-screen", { opacity: 0 }, { opacity: 1, duration: 1, ease: "none" }, S2 + 1);
       tl.fromTo(
         "#s2-pulse-line",
         { strokeDashoffset: 240 },
         { strokeDashoffset: 0, duration: 3, ease: "none", repeat: 1 },
-        S2 + 2
+        S2 + 1
       );
-      tl.fromTo("#s2-tag", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S2 + 3.6);
-      tl.to("#s2-tag-dot", { opacity: 0.65, duration: 0.95, ease: "sine.inOut", yoyo: true, repeat: 4 }, S2 + 3.6);
+      tl.fromTo("#s2-tag", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S2 + 2.6);
+      tl.to("#s2-tag-dot", { opacity: 0.65, duration: 0.95, ease: "sine.inOut", yoyo: true, repeat: 4 }, S2 + 2.6);
       tl.fromTo(
         "#s2-caption",
         { opacity: 0, y: 14 },
         { opacity: 1, y: 0, duration: 0.9, ease: "none" },
-        S2 + 4.5
+        S2 + 3.4
       );
-      /* caption holds on screen from 4.5s to 9s (4.5s of reading time) */
+      /* caption holds from 3.4s; device keeps its own beat below */
 
-      /* ---------- Scene 3 (offset 16s, 6s total) ---------- */
-      const S3 = 16;
+      /* turn the watch: reveal the back (pulse sensor), hold, then turn back to front */
+      tl.fromTo(
+        "#s2-flip",
+        { rotationY: 0 },
+        { rotationY: 180, duration: 1.3, ease: "power2.inOut" },
+        S2 + 7.0
+      );
+      tl.fromTo("#s2-sensor-highlight", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, S2 + 8.3);
+      tl.to(
+        "#s2-sensor-highlight",
+        { opacity: 0.55, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: 1 },
+        S2 + 8.9
+      );
+      tl.fromTo(
+        "#s2-flip",
+        { rotationY: 180 },
+        { rotationY: 360, duration: 1.3, ease: "power2.inOut" },
+        S2 + 10.4
+      );
+      /* holds front-facing to the end of the scene at 12s */
+
+      /* ---------- Scene 3 (offset 19s, 6s total) ---------- */
+      const S3 = 19;
       tl.fromTo(
         "#s3-wordmark",
         { opacity: 0, y: 12 },
