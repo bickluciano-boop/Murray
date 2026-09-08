@@ -119,8 +119,16 @@
         aspect-ratio: 1000 / 795;
         opacity: 0;
         transform: scale(0.9);
-        perspective: 1800px;
         filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+      }
+      /* perspective + the 3D subtree live on a SEPARATE element from the
+         filter above — filter and perspective on the same element makes
+         Chrome's software renderer flatten the rotated back face into an
+         opaque black box instead of hiding it. */
+      #s2-3d {
+        position: absolute;
+        inset: 0;
+        perspective: 1800px;
       }
       #s2-rim {
         position: absolute;
@@ -326,6 +334,7 @@
         <div id="s2-content">
           <div id="s2-eyebrow">el reloj</div>
           <div id="s2-device">
+            <div id="s2-3d">
             <div id="s2-rim"></div>
             <div id="s2-flip">
               <div id="s2-face-front">
@@ -360,6 +369,7 @@
                 <img src="assets/watch-back.png" alt="" />
                 <div id="s2-sensor-highlight"></div>
               </div>
+            </div>
             </div>
           </div>
           <div id="s2-tag">
