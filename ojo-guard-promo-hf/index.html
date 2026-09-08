@@ -256,16 +256,16 @@
       id="root"
       data-composition-id="ojo-guard-promo"
       data-start="0"
-      data-duration="15.333"
+      data-duration="22"
       data-width="1080"
       data-height="1920"
       data-fps="30"
     >
       <!-- Persistent brand mark — visible during scenes 1 and 2, then scene 3 takes over with the full wordmark -->
-      <div id="brand-mark" class="clip" data-start="0" data-duration="11.333" data-track-index="1">ojo guard</div>
+      <div id="brand-mark" class="clip" data-start="0" data-duration="16" data-track-index="1">ojo guard</div>
 
-      <!-- Scene 1: lifestyle — 0s to 5s -->
-      <section id="scene1" class="clip" data-start="0" data-duration="5" data-track-index="0">
+      <!-- Scene 1: lifestyle — 0s to 7s -->
+      <section id="scene1" class="clip" data-start="0" data-duration="7" data-track-index="0">
         <div id="s1-bg-wrap">
           <img id="s1-bg" src="assets/lifestyle-scene.jpg" alt="" />
           <div id="s1-overlay"></div>
@@ -277,8 +277,8 @@
         </div>
       </section>
 
-      <!-- Scene 2: device — 5s to 11.333s -->
-      <section id="scene2" class="clip" data-start="5" data-duration="6.333" data-track-index="0">
+      <!-- Scene 2: device — 7s to 16s -->
+      <section id="scene2" class="clip" data-start="7" data-duration="9" data-track-index="0">
         <div id="s2-glow"></div>
         <div id="s2-content">
           <div id="s2-eyebrow">el reloj</div>
@@ -321,8 +321,8 @@
         </div>
       </section>
 
-      <!-- Scene 3: closing — 11.333s to 15.333s -->
-      <section id="scene3" class="clip" data-start="11.333" data-duration="4" data-track-index="0">
+      <!-- Scene 3: closing — 16s to 22s -->
+      <section id="scene3" class="clip" data-start="16" data-duration="6" data-track-index="0">
         <div id="s3-glow"></div>
         <div id="s3-content">
           <div id="s3-wordmark">ojo guard</div>
@@ -337,60 +337,63 @@
       const tl = gsap.timeline({ paused: true });
 
       /* ---------- Persistent brand mark ---------- */
-      tl.fromTo("#brand-mark", { opacity: 0 }, { opacity: 0.9, duration: 0.6, ease: "none" }, 0.3);
+      tl.fromTo("#brand-mark", { opacity: 0 }, { opacity: 0.9, duration: 0.8, ease: "none" }, 0.4);
 
-      /* ---------- Scene 1 (offset 0s) ---------- */
-      tl.fromTo("#s1-bg-wrap", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, 0);
-      tl.fromTo("#s1-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.533, ease: "none" }, 0.4);
+      /* ---------- Scene 1 (offset 0s, 7s total — hold to 7s for reading) ---------- */
+      tl.fromTo("#s1-bg-wrap", { opacity: 0 }, { opacity: 1, duration: 0.9, ease: "none" }, 0);
+      tl.fromTo("#s1-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "none" }, 0.6);
       tl.fromTo(
         "#s1-line-es",
         { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 0.667, ease: "none" },
-        1.133
+        { opacity: 1, y: 0, duration: 0.9, ease: "none" },
+        1.7
       );
       tl.fromTo(
         "#s1-line-en",
         { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 0.667, ease: "none" },
-        2.2
+        { opacity: 1, y: 0, duration: 0.9, ease: "none" },
+        3.4
       );
+      /* both lines hold on screen from 3.4s to 7s (3.6s of reading time) */
 
-      /* ---------- Scene 2 (offset 5s) ---------- */
-      const S2 = 5;
-      tl.fromTo("#s2-glow", { opacity: 0 }, { opacity: 1, duration: 0.833, ease: "none" }, S2 + 0.5);
-      tl.fromTo("#s2-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.001, ease: "none" }, S2 + 0);
+      /* ---------- Scene 2 (offset 7s, 9s total — hold to 9s for reading) ---------- */
+      const S2 = 7;
+      tl.fromTo("#s2-glow", { opacity: 0 }, { opacity: 1, duration: 1.1, ease: "none" }, S2 + 0.6);
+      tl.fromTo("#s2-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, S2 + 0);
       tl.fromTo(
         "#s2-device",
         { opacity: 0, scale: 0.9 },
-        { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.2)" },
-        S2 + 0
+        { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.2)" },
+        S2 + 0.2
       );
-      tl.fromTo("#s2-screen", { opacity: 0 }, { opacity: 1, duration: 0.767, ease: "none" }, S2 + 1.5);
+      tl.fromTo("#s2-screen", { opacity: 0 }, { opacity: 1, duration: 1, ease: "none" }, S2 + 2);
       tl.fromTo(
         "#s2-pulse-line",
         { strokeDashoffset: 240 },
         { strokeDashoffset: 0, duration: 3, ease: "none", repeat: 1 },
-        S2 + 1.5
+        S2 + 2
       );
-      tl.fromTo("#s2-tag", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, S2 + 2.733);
-      tl.to("#s2-tag-dot", { opacity: 0.65, duration: 0.95, ease: "sine.inOut", yoyo: true, repeat: 3 }, S2 + 2.733);
+      tl.fromTo("#s2-tag", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S2 + 3.6);
+      tl.to("#s2-tag-dot", { opacity: 0.65, duration: 0.95, ease: "sine.inOut", yoyo: true, repeat: 4 }, S2 + 3.6);
       tl.fromTo(
         "#s2-caption",
         { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.733, ease: "none" },
-        S2 + 3.333
+        { opacity: 1, y: 0, duration: 0.9, ease: "none" },
+        S2 + 4.5
       );
+      /* caption holds on screen from 4.5s to 9s (4.5s of reading time) */
 
-      /* ---------- Scene 3 (offset 11.333s) ---------- */
-      const S3 = 11.333;
+      /* ---------- Scene 3 (offset 16s, 6s total) ---------- */
+      const S3 = 16;
       tl.fromTo(
         "#s3-wordmark",
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.733, ease: "none" },
-        S3 + 0
+        { opacity: 1, y: 0, duration: 0.9, ease: "none" },
+        S3 + 0.3
       );
-      tl.fromTo("#s3-tagline", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, S3 + 0.867);
-      tl.fromTo("#s3-line", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, S3 + 1.867);
+      tl.fromTo("#s3-tagline", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S3 + 1.4);
+      tl.fromTo("#s3-line", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S3 + 2.6);
+      /* holds to close, 6s total */
 
       window.__timelines["ojo-guard-promo"] = tl;
     </script>
