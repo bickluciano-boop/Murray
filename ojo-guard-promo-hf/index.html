@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="es" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Ojo Guard — Promo</title>
+    <script src="assets/gsap.min.js"></script>
+    <link rel="stylesheet" href="assets/fonts.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0a0a0b;
+      }
+      body {
+        font-family: "Poppins", sans-serif;
+      }
+      .mono {
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---------- Scene 1: lifestyle ---------- */
+      #s1-bg-wrap {
+        position: absolute;
+        inset: 0;
+      }
+      #s1-bg {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 20%;
+        filter: saturate(0.85) brightness(0.85);
+      }
+      #s1-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(5, 5, 5, 0.35) 0%,
+          rgba(5, 5, 5, 0.15) 38%,
+          rgba(5, 5, 5, 0.75) 78%,
+          rgba(5, 5, 5, 0.96) 100%
+        );
+      }
+      #s1-text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 0 88px 160px 88px;
+      }
+      #s1-eyebrow {
+        font-size: 17px;
+        letter-spacing: 3px;
+        color: #ffb400;
+        text-transform: uppercase;
+        margin-bottom: 28px;
+        opacity: 0;
+      }
+      #s1-line-es {
+        font-weight: 400;
+        font-size: 52px;
+        line-height: 1.32;
+        color: #f5f0e6;
+        margin-bottom: 22px;
+        opacity: 0;
+      }
+      #s1-line-en {
+        font-weight: 300;
+        font-size: 30px;
+        line-height: 1.4;
+        color: #e8f7ff;
+        opacity: 0;
+      }
+
+      /* ---------- Scene 2: device ---------- */
+      #s2-glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(60% 42% at 50% 34%, rgba(244, 160, 80, 0.16) 0%, rgba(10, 10, 11, 0) 70%);
+        opacity: 0;
+      }
+      #s2-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 210px;
+      }
+      #s2-eyebrow {
+        font-size: 16px;
+        letter-spacing: 3px;
+        color: #8fa0ac;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+        opacity: 0;
+      }
+      #s2-device {
+        position: relative;
+        width: 640px;
+        aspect-ratio: 1000 / 795;
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      #s2-device img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      #s2-screen {
+        position: absolute;
+        left: 30%;
+        top: 18.24%;
+        width: 34.5%;
+        height: 55.97%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+      }
+      #s2-heart {
+        width: 19%;
+        margin-bottom: 6%;
+      }
+      #s2-pulse {
+        width: 70%;
+        height: 14%;
+        overflow: visible;
+      }
+      #s2-monitoreo {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        color: #e8f7ff;
+        margin-top: 8%;
+        opacity: 0.85;
+      }
+      #s2-tag {
+        margin-top: 56px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+      }
+      #s2-tag-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ffb400;
+        box-shadow: 0 0 8px #ffb400;
+      }
+      #s2-tag-text {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 15px;
+        letter-spacing: 1.5px;
+        color: #ffb400;
+        font-weight: 500;
+      }
+      #s2-caption {
+        margin-top: 26px;
+        padding: 0 110px;
+        text-align: center;
+        opacity: 0;
+      }
+      #s2-caption-es {
+        font-weight: 400;
+        font-size: 27px;
+        line-height: 1.45;
+        color: #f5f0e6;
+      }
+      #s2-caption-en {
+        font-weight: 300;
+        font-size: 19px;
+        line-height: 1.4;
+        color: #e8f7ff;
+        margin-top: 14px;
+        opacity: 0.85;
+      }
+
+      /* ---------- Scene 3: closing ---------- */
+      #s3-glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(48% 32% at 50% 46%, rgba(255, 180, 0, 0.08) 0%, rgba(5, 5, 5, 0) 70%);
+      }
+      #s3-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      #s3-wordmark {
+        font-weight: 300;
+        font-size: 74px;
+        letter-spacing: 2px;
+        color: #e8f7ff;
+        opacity: 0;
+      }
+      #s3-tagline {
+        font-weight: 400;
+        font-size: 30px;
+        color: #f5f0e6;
+        margin-top: 26px;
+        text-align: center;
+        opacity: 0;
+      }
+      #s3-tagline span {
+        color: #e8f7ff;
+        font-weight: 300;
+      }
+      #s3-line {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 15px;
+        letter-spacing: 1.5px;
+        color: #8fa0ac;
+        margin-top: 34px;
+        text-align: center;
+        text-transform: uppercase;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="ojo-guard-promo"
+      data-start="0"
+      data-duration="15.333"
+      data-width="1080"
+      data-height="1920"
+      data-fps="30"
+    >
+      <!-- Scene 1: lifestyle — 0s to 5s -->
+      <section id="scene1" class="clip" data-start="0" data-duration="5" data-track-index="0">
+        <div id="s1-bg-wrap">
+          <img id="s1-bg" src="assets/lifestyle-scene.jpg" alt="" />
+          <div id="s1-overlay"></div>
+        </div>
+        <div id="s1-text">
+          <div id="s1-eyebrow">ojo guard · presentación</div>
+          <div id="s1-line-es">no venimos a prometer<br />que nunca vas a estar solo.</div>
+          <div id="s1-line-en">we're not here to promise<br />you'll never be alone.</div>
+        </div>
+      </section>
+
+      <!-- Scene 2: device — 5s to 11.333s -->
+      <section id="scene2" class="clip" data-start="5" data-duration="6.333" data-track-index="0">
+        <div id="s2-glow"></div>
+        <div id="s2-content">
+          <div id="s2-eyebrow">el reloj</div>
+          <div id="s2-device">
+            <img src="assets/watch-hero.png" alt="" />
+            <div id="s2-screen">
+              <svg id="s2-heart" viewBox="0 0 32 29">
+                <path
+                  d="M16 28.5C8 22.8 1 17 1 9.8 1 4.9 4.9 1 9.7 1c2.8 0 5.4 1.4 6.9 3.6C18.1 2.4 20.7 1 23.5 1 28.3 1 32.2 4.9 32.2 9.8 32.2 17 25.2 22.8 17.2 28.5z"
+                  fill="none"
+                  stroke="#FFB400"
+                  stroke-width="2"
+                />
+              </svg>
+              <svg id="s2-pulse" viewBox="0 0 240 40">
+                <polyline
+                  id="s2-pulse-line"
+                  points="0,20 40,20 55,4 70,36 85,20 240,20"
+                  fill="none"
+                  stroke="#FFB400"
+                  stroke-width="2.5"
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                  stroke-dasharray="240"
+                  stroke-dashoffset="240"
+                  opacity="0.9"
+                />
+              </svg>
+              <div id="s2-monitoreo">monitoreo</div>
+            </div>
+          </div>
+          <div id="s2-tag">
+            <div id="s2-tag-dot"></div>
+            <span id="s2-tag-text">NÚCLEO · EN VALIDACIÓN</span>
+          </div>
+          <div id="s2-caption">
+            <div id="s2-caption-es">detección de caídas: implementada en código,<br />todavía no probada en cada caso real.</div>
+            <div id="s2-caption-en">built into the code. not yet proven on every real fall.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 3: closing — 11.333s to 15.333s -->
+      <section id="scene3" class="clip" data-start="11.333" data-duration="4" data-track-index="0">
+        <div id="s3-glow"></div>
+        <div id="s3-content">
+          <div id="s3-wordmark">ojo guard</div>
+          <div id="s3-tagline">algo cambió. <span>/ something changed.</span></div>
+          <div id="s3-line">seguimos construyendo, no imaginando.</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* ---------- Scene 1 (offset 0s) ---------- */
+      tl.fromTo("#s1-bg-wrap", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, 0);
+      tl.fromTo("#s1-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.533, ease: "none" }, 0.4);
+      tl.fromTo(
+        "#s1-line-es",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.667, ease: "none" },
+        1.133
+      );
+      tl.fromTo(
+        "#s1-line-en",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.667, ease: "none" },
+        2.2
+      );
+
+      /* ---------- Scene 2 (offset 5s) ---------- */
+      const S2 = 5;
+      tl.fromTo("#s2-glow", { opacity: 0 }, { opacity: 1, duration: 0.833, ease: "none" }, S2 + 0.5);
+      tl.fromTo("#s2-eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.001, ease: "none" }, S2 + 0);
+      tl.fromTo(
+        "#s2-device",
+        { opacity: 0, scale: 0.9 },
+        { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.2)" },
+        S2 + 0
+      );
+      tl.fromTo("#s2-screen", { opacity: 0 }, { opacity: 1, duration: 0.767, ease: "none" }, S2 + 1.5);
+      tl.fromTo(
+        "#s2-pulse-line",
+        { strokeDashoffset: 240 },
+        { strokeDashoffset: 0, duration: 3, ease: "none", repeat: 1 },
+        S2 + 1.5
+      );
+      tl.fromTo("#s2-tag", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, S2 + 2.733);
+      tl.to("#s2-tag-dot", { opacity: 0.65, duration: 0.95, ease: "sine.inOut", yoyo: true, repeat: 3 }, S2 + 2.733);
+      tl.fromTo(
+        "#s2-caption",
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.733, ease: "none" },
+        S2 + 3.333
+      );
+
+      /* ---------- Scene 3 (offset 11.333s) ---------- */
+      const S3 = 11.333;
+      tl.fromTo(
+        "#s3-wordmark",
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.733, ease: "none" },
+        S3 + 0
+      );
+      tl.fromTo("#s3-tagline", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, S3 + 0.867);
+      tl.fromTo("#s3-line", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, S3 + 1.867);
+
+      window.__timelines["ojo-guard-promo"] = tl;
+    </script>
+  </body>
+</html>
