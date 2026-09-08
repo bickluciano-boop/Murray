@@ -62,25 +62,25 @@
         padding: 0 88px 160px 88px;
       }
       #s1-eyebrow {
-        font-size: 17px;
-        letter-spacing: 3px;
+        font-size: 24px;
+        letter-spacing: 3.5px;
         color: #ffb400;
         text-transform: uppercase;
-        margin-bottom: 28px;
+        margin-bottom: 32px;
         opacity: 0;
       }
       #s1-line-es {
         font-weight: 400;
-        font-size: 52px;
-        line-height: 1.32;
+        font-size: 68px;
+        line-height: 1.28;
         color: #f5f0e6;
-        margin-bottom: 22px;
+        margin-bottom: 26px;
         opacity: 0;
       }
       #s1-line-en {
         font-weight: 300;
-        font-size: 30px;
-        line-height: 1.4;
+        font-size: 40px;
+        line-height: 1.35;
         color: #e8f7ff;
         opacity: 0;
       }
@@ -101,8 +101,8 @@
         padding-top: 210px;
       }
       #s2-eyebrow {
-        font-size: 16px;
-        letter-spacing: 3px;
+        font-size: 22px;
+        letter-spacing: 3.5px;
         color: #8fa0ac;
         text-transform: uppercase;
         margin-bottom: 40px;
@@ -143,7 +143,7 @@
       }
       #s2-monitoreo {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 13px;
+        font-size: 17px;
         letter-spacing: 1.5px;
         color: #e8f7ff;
         margin-top: 8%;
@@ -153,41 +153,41 @@
         margin-top: 56px;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         opacity: 0;
       }
       #s2-tag-dot {
-        width: 6px;
-        height: 6px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         background: #ffb400;
         box-shadow: 0 0 8px #ffb400;
       }
       #s2-tag-text {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 15px;
+        font-size: 19px;
         letter-spacing: 1.5px;
         color: #ffb400;
         font-weight: 500;
       }
       #s2-caption {
-        margin-top: 26px;
-        padding: 0 110px;
+        margin-top: 30px;
+        padding: 0 90px;
         text-align: center;
         opacity: 0;
       }
       #s2-caption-es {
         font-weight: 400;
-        font-size: 27px;
-        line-height: 1.45;
+        font-size: 34px;
+        line-height: 1.42;
         color: #f5f0e6;
       }
       #s2-caption-en {
         font-weight: 300;
-        font-size: 19px;
+        font-size: 24px;
         line-height: 1.4;
         color: #e8f7ff;
-        margin-top: 14px;
+        margin-top: 16px;
         opacity: 0.85;
       }
 
@@ -207,16 +207,16 @@
       }
       #s3-wordmark {
         font-weight: 300;
-        font-size: 74px;
+        font-size: 92px;
         letter-spacing: 2px;
         color: #e8f7ff;
         opacity: 0;
       }
       #s3-tagline {
         font-weight: 400;
-        font-size: 30px;
+        font-size: 38px;
         color: #f5f0e6;
-        margin-top: 26px;
+        margin-top: 28px;
         text-align: center;
         opacity: 0;
       }
@@ -226,13 +226,28 @@
       }
       #s3-line {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 15px;
+        font-size: 19px;
         letter-spacing: 1.5px;
         color: #8fa0ac;
-        margin-top: 34px;
+        margin-top: 36px;
         text-align: center;
         text-transform: uppercase;
         opacity: 0;
+      }
+
+      /* ---------- Persistent brand mark ---------- */
+      #brand-mark {
+        position: absolute;
+        top: 64px;
+        left: 88px;
+        right: auto;
+        bottom: auto;
+        font-weight: 400;
+        font-size: 26px;
+        letter-spacing: 1px;
+        color: #e8f7ff;
+        opacity: 0;
+        z-index: 10;
       }
     </style>
   </head>
@@ -246,6 +261,9 @@
       data-height="1920"
       data-fps="30"
     >
+      <!-- Persistent brand mark — visible during scenes 1 and 2, then scene 3 takes over with the full wordmark -->
+      <div id="brand-mark" class="clip" data-start="0" data-duration="11.333" data-track-index="1">ojo guard</div>
+
       <!-- Scene 1: lifestyle — 0s to 5s -->
       <section id="scene1" class="clip" data-start="0" data-duration="5" data-track-index="0">
         <div id="s1-bg-wrap">
@@ -317,6 +335,9 @@
     <script>
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
+
+      /* ---------- Persistent brand mark ---------- */
+      tl.fromTo("#brand-mark", { opacity: 0 }, { opacity: 0.9, duration: 0.6, ease: "none" }, 0.3);
 
       /* ---------- Scene 1 (offset 0s) ---------- */
       tl.fromTo("#s1-bg-wrap", { opacity: 0 }, { opacity: 1, duration: 0.667, ease: "none" }, 0);
