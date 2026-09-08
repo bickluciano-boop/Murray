@@ -382,6 +382,15 @@
           <div id="s3-line">seguimos construyendo, no imaginando.</div>
         </div>
       </section>
+
+      <audio
+        id="bgm"
+        src="assets/bgm-chill.m4a"
+        data-start="0"
+        data-duration="25"
+        data-track-index="20"
+        data-volume="1"
+      ></audio>
     </div>
 
     <script>
@@ -473,6 +482,10 @@
       tl.fromTo("#s3-tagline", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S3 + 1.4);
       tl.fromTo("#s3-line", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "none" }, S3 + 2.6);
       /* holds to close, 6s total */
+
+      /* ---------- Background music (chill, low under the whole piece) ---------- */
+      tl.fromTo("#bgm", { volume: 0 }, { volume: 0.32, duration: 1.6, ease: "sine.out" }, 0);
+      tl.to("#bgm", { volume: 0, duration: 1.8, ease: "sine.in" }, 23.2);
 
       window.__timelines["ojo-guard-promo"] = tl;
     </script>
