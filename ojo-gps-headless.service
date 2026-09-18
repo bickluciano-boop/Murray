@@ -1,0 +1,17 @@
+[Unit]
+Description=Ojo GPS - control remoto sin pantalla (Raspberry Pi)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/ojo-gps
+# Cambiá "tu-contrasena-aca" antes de copiar este archivo a la Raspberry.
+# Sin --password, arranca con una contraseña al azar distinta cada vez que
+# se prende, lo que obliga a conectar un teclado/monitor para leerla.
+ExecStart=/usr/bin/python3 /home/pi/ojo-gps/ojo_gps_headless.py --password tu-contrasena-aca
+Restart=on-failure
+RestartSec=3
+User=pi
+
+[Install]
+WantedBy=multi-user.target

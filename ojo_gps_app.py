@@ -8,7 +8,6 @@ import ctypes
 import base64
 import hashlib
 import hmac
-import ssl
 import subprocess
 import sys
 import threading
@@ -24,32 +23,20 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from zoneinfo import ZoneInfo
 
+import ojo_gps_geo
 import ojo_gps_remote
+from ojo_gps_geo import (
+    NOMINATIM_VIEWBOX,
+    nominatim_search,
+    osrm_route,
+    urlopen,
+)
 
 try:
     from PIL import Image
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-
-# El instalador de Python.org para Mac no deja configurados los certificados
-# raiz que necesita ssl para verificar HTTPS (a diferencia de Windows y de
-# Homebrew, que usan los del sistema). Sin esto, toda busqueda de direccion,
-# calculo de ruta o Street View falla con "CERTIFICATE_VERIFY_FAILED" — es la
-# causa real detras de "no aparecen opciones al buscar una calle" en Mac.
-# certifi trae su propio paquete de certificados y ya se instala como
-# dependencia de pymobiledevice3, asi que no hace falta un paso manual aparte
-# (el "Install Certificates.command" que Python.org deja en /Applications).
-try:
-    import certifi
-    _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
-except ImportError:
-    _SSL_CONTEXT = None
-
-
-def urlopen(request, timeout):
-    return urllib.request.urlopen(request, timeout=timeout, context=_SSL_CONTEXT)
-
 
 IS_WINDOWS = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
@@ -90,7 +77,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.46"
+APP_VERSION = "16.4.47"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -173,29 +160,9 @@ class ToolTip:
             self.window = None
 
 
-# Sesgo suave (no excluyente) hacia Buenos Aires para las búsquedas de
-# direcciones: sin esto, un nombre de calle repetido en otra provincia (por
-# ejemplo "Cabildo", que también existe en Mendoza) puede ganarle al de
-# Buenos Aires, que es donde se usa Ojo GPS en la enorme mayoría de los casos.
-NOMINATIM_VIEWBOX = "-58.75,-34.35,-58.20,-34.85"
-
-
-def nominatim_search(query: str, limit: int = 5) -> list:
-    params = urllib.parse.urlencode({
-        "q": query,
-        "format": "jsonv2",
-        "limit": limit,
-        "accept-language": "es",
-        "addressdetails": 1,
-        "countrycodes": "ar",
-        "viewbox": NOMINATIM_VIEWBOX,
-    })
-    request = urllib.request.Request(
-        "https://nominatim.openstreetmap.org/search?" + params,
-        headers={"User-Agent": f"OjoGPS-Windows/{APP_VERSION}"},
-    )
-    with urlopen(request, 20) as response:
-        return json.loads(response.read().decode("utf-8"))
+# NOMINATIM_VIEWBOX, nominatim_search y osrm_route ahora viven en
+# ojo_gps_geo.py (importados arriba) para que el motor sin pantalla de la
+# Raspberry Pi (ojo_gps_headless.py) los pueda usar sin necesitar tkinter.
 
 
 MAX_ACTIVATION_DAYS = 9999
@@ -316,7 +283,7 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.46 para iPhone en {PLATFORM_NAME}")
+        self.root.title(f"Ojo GPS 16.4.47 para iPhone en {PLATFORM_NAME}")
         self.root.geometry("1180x710")
         self.root.minsize(1060, 650)
         self.root.configure(bg=BG)
@@ -475,7 +442,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.46", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.47", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -1690,7 +1657,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.47"})
             with urlopen(req, 8) as response:
                 raw = response.read()
             try:
@@ -2254,7 +2221,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.47"},
             )
             with urlopen(search_req, 12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -2283,14 +2250,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.47"},
                 )
                 with urlopen(detail_req, 12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.47"})
                 with urlopen(img_req, 15) as response:
                     raw = response.read()
                 try:
@@ -2328,7 +2295,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.47"})
             with urlopen(req, 20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -2364,7 +2331,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.47"})
             with urlopen(req, 10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2674,7 +2641,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.47"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2746,16 +2713,7 @@ class OjoGPSApp:
 
     @staticmethod
     def _parse_route_coordinates(value: str) -> tuple[float, float] | None:
-        try:
-            pieces = [piece.strip() for piece in value.split(",")]
-            if len(pieces) != 2:
-                return None
-            lat, lon = float(pieces[0]), float(pieces[1])
-            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-                return None
-            return lat, lon
-        except ValueError:
-            return None
+        return ojo_gps_geo.parse_route_coordinates(value)
 
     def _geocode_route_location(self, query: str) -> tuple[tuple[float, float], dict]:
         coordinates = self._parse_route_coordinates(query)
@@ -2773,7 +2731,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.47"},
         )
         with urlopen(request, 20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2811,35 +2769,7 @@ class OjoGPSApp:
         profile: str = "driving",
     ) -> None:
         try:
-            origin_lat, origin_lon = origin
-            destination_lat, destination_lon = destination
-            osrm_profile = profile if profile in ("foot", "bike", "driving") else "driving"
-            # El demo público de router.project-osrm.org trata "foot" como si
-            # fuera "driving" (respeta las manos únicas de auto), así que en
-            # Caminar podía mandar a dar toda la vuelta a la manzana en vez de
-            # cruzar la calle derecho. routing.openstreetmap.de sí tiene un
-            # perfil de peatón bien configurado (ignora la mano única de
-            # autos), así que Caminar usa ese servidor en vez del genérico.
-            base_url = (
-                "https://routing.openstreetmap.de/routed-foot/route/v1/foot/"
-                if osrm_profile == "foot"
-                else f"https://router.project-osrm.org/route/v1/{osrm_profile}/"
-            )
-            url = (
-                f"{base_url}"
-                f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
-                "?overview=full&geometries=geojson&steps=false"
-            )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
-            with urlopen(request, 25) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-            routes = payload.get("routes") or []
-            if not routes:
-                raise RuntimeError("No se encontró un camino entre los dos puntos")
-            coordinates = routes[0]["geometry"]["coordinates"]
-            points = [(float(lat), float(lon)) for lon, lat in coordinates]
-            if len(points) < 2:
-                raise RuntimeError("El servicio devolvió un recorrido vacío")
+            points, distance = osrm_route(origin, destination, profile)
             # El corrimiento hacia la vereda (si corresponde) se aplica en
             # _begin_route/_apply_route_movement_offset, no acá: así, si
             # cambiás el modo de movimiento durante el recorrido, se puede
@@ -2847,7 +2777,7 @@ class OjoGPSApp:
             result = {
                 "request_id": request_id,
                 "points": points,
-                "distance": float(routes[0].get("distance", 0.0)),
+                "distance": distance,
                 "origin_short": origin_short,
                 "destination_short": destination_short,
             }
@@ -3059,71 +2989,23 @@ class OjoGPSApp:
 
     @staticmethod
     def _distance_m(first: tuple[float, float], second: tuple[float, float]) -> float:
-        lat1, lon1 = map(math.radians, first)
-        lat2, lon2 = map(math.radians, second)
-        delta_lat = lat2 - lat1
-        delta_lon = lon2 - lon1
-        value = math.sin(delta_lat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
-        return 6_371_000.0 * 2 * math.atan2(math.sqrt(value), math.sqrt(max(0.0, 1 - value)))
+        return ojo_gps_geo.distance_m(first, second)
 
     @staticmethod
     def _bearing_deg(origin: tuple[float, float], target: tuple[float, float]) -> float:
-        lat1, lon1 = math.radians(origin[0]), math.radians(origin[1])
-        lat2, lon2 = math.radians(target[0]), math.radians(target[1])
-        delta_lon = lon2 - lon1
-        x = math.sin(delta_lon) * math.cos(lat2)
-        y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(delta_lon)
-        return (math.degrees(math.atan2(x, y)) + 360.0) % 360.0
+        return ojo_gps_geo.bearing_deg(origin, target)
 
     @staticmethod
     def _angle_diff_deg(first: float, second: float) -> float:
-        diff = abs(first - second) % 360.0
-        return diff if diff <= 180.0 else 360.0 - diff
+        return ojo_gps_geo.angle_diff_deg(first, second)
 
     @staticmethod
     def _offset_point(origin: tuple[float, float], bearing_deg: float, distance_m: float) -> tuple[float, float]:
-        radius = 6_371_000.0
-        lat1 = math.radians(origin[0])
-        lon1 = math.radians(origin[1])
-        brng = math.radians(bearing_deg)
-        d_over_r = distance_m / radius
-        lat2 = math.asin(
-            math.sin(lat1) * math.cos(d_over_r) + math.cos(lat1) * math.sin(d_over_r) * math.cos(brng)
-        )
-        lon2 = lon1 + math.atan2(
-            math.sin(brng) * math.sin(d_over_r) * math.cos(lat1),
-            math.cos(d_over_r) - math.sin(lat1) * math.sin(lat2),
-        )
-        return (math.degrees(lat2), (math.degrees(lon2) + 540.0) % 360.0 - 180.0)
+        return ojo_gps_geo.offset_point(origin, bearing_deg, distance_m)
 
-    def _offset_route_for_sidewalk(self, points: list[tuple[float, float]], offset_m: float = 5.0) -> list[tuple[float, float]]:
-        # Corre cada punto de la ruta unos metros hacia el costado derecho de
-        # la dirección de avance, para que Caminar se vea al borde de la
-        # calle en vez de pisando el medio. Es una aproximación visual: no
-        # sabe dónde está la vereda real, así que siempre corre para el
-        # mismo lado y puede no coincidir con la vereda en calles muy
-        # anchas o en curvas muy cerradas.
-        # Con 2.5 m (probado en la Mac de Marian, 16.4.39) el corrimiento
-        # quedaba adentro del círculo de precisión de GPS que Google/Apple
-        # Maps dibuja alrededor del punto azul, así que a simple vista no se
-        # notaba ningún corrimiento. 5 m sigue siendo razonable para no
-        # terminar cruzando a la vereda de enfrente en una calle angosta.
-        if len(points) < 2:
-            return points
-        offset_points = []
-        for index, point in enumerate(points):
-            if index == 0:
-                heading = self._bearing_deg(points[0], points[1])
-            elif index == len(points) - 1:
-                heading = self._bearing_deg(points[-2], points[-1])
-            else:
-                bearing_in = math.radians(self._bearing_deg(points[index - 1], point))
-                bearing_out = math.radians(self._bearing_deg(point, points[index + 1]))
-                vector_x = math.sin(bearing_in) + math.sin(bearing_out)
-                vector_y = math.cos(bearing_in) + math.cos(bearing_out)
-                heading = math.degrees(math.atan2(vector_x, vector_y)) % 360.0
-            offset_points.append(self._offset_point(point, (heading + 90.0) % 360.0, offset_m))
-        return offset_points
+    @staticmethod
+    def _offset_route_for_sidewalk(points: list[tuple[float, float]], offset_m: float = 5.0) -> list[tuple[float, float]]:
+        return ojo_gps_geo.offset_route_for_sidewalk(points, offset_m)
 
     @staticmethod
     def _format_duration(minutes: float) -> str:
@@ -3133,23 +3015,7 @@ class OjoGPSApp:
 
     @staticmethod
     def _short_place_label(item: dict) -> str:
-        address = item.get("address") or {}
-        road = address.get("road") or address.get("pedestrian")
-        number = address.get("house_number")
-        base = (
-            (f"{road} {number}" if road and number else road)
-            or address.get("pedestrian")
-            or address.get("suburb")
-            or address.get("city")
-            or item.get("display_name", "Punto elegido").split(",")[0]
-        )
-        # Sin la localidad, una calle homónima en otra provincia (ej. "Cabildo"
-        # también existe en Mendoza) se mostraba idéntica a la de Buenos Aires,
-        # sin forma de notar el error antes de iniciar el recorrido.
-        locality = address.get("suburb") or address.get("city") or address.get("town")
-        state = address.get("state")
-        context = ", ".join(part for part in (locality, state) if part and part not in base)
-        return f"{base}, {context}" if context else base
+        return ojo_gps_geo.short_place_label(item)
 
     @staticmethod
     def _load_help_seen() -> bool:

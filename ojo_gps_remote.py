@@ -37,7 +37,14 @@ def call_on_main_thread(root, func, *args, **kwargs):
     mainloop) — root.after() encola la llamada ahi y esperamos el
     resultado con una cola, el mismo patrón que ya usa el resto de Ojo
     GPS para pasar datos de hilos de red a la interfaz.
+
+    Si root es None (motor sin pantalla, por ejemplo ojo_gps_headless.py
+    corriendo en una Raspberry Pi sin Tkinter), no hay ningún hilo
+    principal que proteger: se llama a func directo, sin encolar nada.
     """
+    if root is None:
+        return func(*args, **kwargs)
+
     result: "queue.Queue" = queue.Queue(maxsize=1)
 
     def _run():

@@ -1,5 +1,149 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.47 — Motor sin pantalla para Raspberry Pi
+
+- [x] **Decisión final tras varias vueltas con Lu: nada de escritorio
+  remoto ni de "controlar la notebook a distancia" — eso no sacaba el
+  problema real (caminar con una notebook abierta, con cable, dependiendo
+  de que no se corte Internet ni se apague la compu; exactamente lo que
+  ya hace hace 5 años con iAnyGo y quiere dejar de hacer).** También se
+  descartó "el celular solo, para siempre, sin nada más" (solo posible
+  con jailbreak, y Lu lo rechazó por la fragilidad de tener que fijar un
+  modelo/iOS específico que no se pueda actualizar nunca). La solución
+  elegida: reemplazar la notebook por una **Raspberry Pi Zero 2 W** —
+  del tamaño de una tarjeta, sin pantalla, en un bolsillo, con batería
+  portátil — controlada desde el mismo iPhone por Wi-Fi local (el
+  Hotspot Personal del propio iPhone, no la red de la Raspberry, para
+  evitar que iOS "abandone" una red sin Internet buscando una mejor).
+  **Refactor previo (sin cambiar ningún comportamiento)**: se extrajeron
+  a un módulo nuevo `ojo_gps_geo.py` (sin tkinter, para que la Raspberry
+  no necesite instalar ninguna librería gráfica) las funciones puras que
+  antes vivían en `ojo_gps_app.py`: `nominatim_search`, `osrm_route`,
+  `distance_m`, `bearing_deg`, `angle_diff_deg`, `offset_point`,
+  `offset_route_for_sidewalk`, `short_place_label`,
+  `parse_route_coordinates`, y el `urlopen`/contexto SSL con certifi. Los
+  métodos estáticos de `OjoGPSApp` (`_distance_m`, `_bearing_deg`, etc.)
+  quedaron como delegadores de una línea a `ojo_gps_geo`, así que ningún
+  llamado existente (`self._distance_m(...)`, etc.) tuvo que cambiar.
+  Verificado que la app de escritorio sigue funcionando igual (Xvfb) y
+  que los resultados de `ojo_gps_app.OjoGPSApp._offset_route_for_sidewalk`
+  coinciden exactamente con `ojo_gps_geo.offset_route_for_sidewalk`.
+  **`ojo_gps_headless.py` (nuevo, pensado para correr en la Raspberry)**:
+  una clase `HeadlessEngine` que reimplementa en Python puro (sin
+  tkinter, con `threading.Timer` en vez de `root.after`) el mismo motor
+  de `ojo_gps_app.py`: conexión con `ojo_gps_bridge.py` (igual protocolo
+  `OJO_STATUS:`/`MOVE:`/`RESTORE`), joystick por vector, Simular
+  recorrido completo (geocodificar, pedir ruta a OSRM, avanzar tick a
+  tick, corrimiento a la vereda en Caminar, Detener→continuar igual que
+  16.4.40). Expone la misma interfaz que espera
+  `ojo_gps_remote.RemoteControlServer` (`_remote_status`,
+  `_remote_select_place`, `_remote_joystick`, `_remote_set_route_mode`,
+  `_remote_start_route`, `activate`, `fix_location`, `toggle_route_pause`,
+  `_stop_route`), con `HeadlessEngine.root = None` — se cambió
+  `ojo_gps_remote.call_on_main_thread` para que, si `root is None`,
+  llame directo en vez de encolar en un hilo principal de Tkinter que acá
+  no existe. Resultado: **la misma página web y el mismo servidor HTTP
+  de 16.4.46 controlan tanto la versión de escritorio como la Raspberry,
+  sin duplicar ni una línea de la interfaz de control remoto.**
+  `fix_location()` (Fijar GPS) no está implementado en esta versión
+  (necesita una confirmación interactiva en el momento exacto de
+  desactivar Modo Desarrollador en el iPhone, que no tiene sentido sin
+  alguien mirando una pantalla) — se puede sumar después si hace falta.
+  **Probado de punta a punta en este entorno** con un `ojo_gps_bridge.py`
+  falso que simula las respuestas reales del puente (sin hardware real):
+  login, seleccionar lugar, activar (conectar), joystick moviendo la
+  posición real y deteniéndose al soltar, cambio de modo Caminar/
+  Bicicleta/Auto, e inicio de recorrido con coordenadas crudas
+  (confirmado que llega hasta el pedido real a OSRM, bloqueado ahí solo
+  por la política de red del sandbox, no por un bug). Confirmado también
+  que `ojo_gps_headless.py` importa sin ningún error incluso con un
+  Python que no tiene tkinter instalado — exactamente el entorno de una
+  Raspberry Pi Lite.
+  Se agregó `ojo-gps-headless.service`, un archivo de systemd listo para
+  copiar a la Raspberry (con instrucciones abajo) para que el motor
+  arranque solo al prender la Raspberry, sin que nadie tenga que loguear
+  ni escribir un comando.
+  **No se pudo probar en hardware real** (no hay una Raspberry Pi en
+  este entorno) — falta validar con Lu: conexión USB real Raspberry↔
+  iPhone, unirse al Hotspot Personal del iPhone, y una demo real
+  caminando en la calle.
+
+### Guía de armado de la Raspberry Pi (para Lu)
+
+**Comprar**: Raspberry Pi Zero 2 W, una tarjeta microSD (16 GB alcanza),
+un cable USB-C a USB (o USB-A a USB, según el iPhone), una batería
+portátil chica (10.000 mAh).
+
+**Paso 1 — Preparar la tarjeta**: instalar "Raspberry Pi Imager" (gratis,
+de raspberrypi.com) en cualquier compu. Elegir "Raspberry Pi OS Lite (64
+bits)" — sin escritorio, no hace falta. En las opciones avanzadas (el
+ícono de tuerca antes de grabar):
+  - Activar SSH, con usuario y contraseña a elección.
+  - Configurar la red Wi-Fi con el nombre y la contraseña del Hotspot
+    Personal del iPhone (Ajustes → Hotspot Personal, en el iPhone que se
+    va a usar para las demos). Así la Raspberry se conecta sola a esa
+    red cada vez que prende, sin que nadie tenga que hacer nada.
+  - Grabar la tarjeta y ponerla en la Raspberry.
+
+**Paso 2 — Conectarse por SSH**: con la Raspberry prendida y el iPhone
+con el Hotspot Personal activo cerca, conectarse desde otra compu con
+`ssh usuario@raspberrypi.local` (la contraseña es la que se puso en el
+Imager).
+
+**Paso 3 — Instalar lo necesario** (una sola vez):
+```
+sudo apt update && sudo apt install -y python3-pip
+pip3 install --break-system-packages pymobiledevice3 certifi
+mkdir -p ~/ojo-gps
+```
+Después copiar a `~/ojo-gps/` (por ejemplo con `scp`, desde la carpeta de
+Ojo GPS en la compu) estos 4 archivos: `ojo_gps_bridge.py`,
+`ojo_gps_geo.py`, `ojo_gps_remote.py`, `ojo_gps_headless.py`. No hace
+falta ningún otro archivo (ni `ojo_gps_app.py`, que sí necesita tkinter).
+
+**Paso 4 — Probarlo a mano primero**:
+```
+cd ~/ojo-gps
+python3 ojo_gps_headless.py --password loquesea
+```
+Va a imprimir una dirección (`http://192.168.x.x:8765` o similar) y la
+contraseña. Conectar el iPhone por cable a la Raspberry, aceptar
+"Confiar en este dispositivo" y activar Modo Desarrollador (mismo paso
+único de siempre, la primera vez). Desde el navegador del iPhone (con su
+propio Hotspot Personal activo y conectado a la vez, o mirando la propia
+red si aplica), entrar a esa dirección y probar buscar una dirección,
+Cambiar ubicación y el Joystick.
+
+**Paso 5 — Que arranque solo al prender la Raspberry**: copiar
+`ojo-gps-headless.service` (en la carpeta del proyecto) a
+`/etc/systemd/system/`, después de editarlo para poner la contraseña
+elegida y confirmar que `WorkingDirectory`/`ExecStart` apunten a
+`~/ojo-gps` del usuario real (`pi` es el nombre de usuario de ejemplo,
+cambiarlo si se usó otro). Después:
+```
+sudo systemctl daemon-reload
+sudo systemctl enable ojo-gps-headless
+sudo systemctl start ojo-gps-headless
+```
+Desde ese momento, cada vez que la Raspberry se prenda (conectada a una
+batería, por ejemplo), el control remoto va a estar listo solo, sin
+loguearse a nada.
+
+### Pendiente de validar con hardware real
+
+- [ ] Probar la conexión USB real Raspberry↔iPhone (Modo Desarrollador,
+  "Confiar en este dispositivo") — hasta ahora solo probado con un
+  `ojo_gps_bridge.py` de mentira que simula las respuestas.
+- [ ] Confirmar que el iPhone no "abandona" la conexión a su propio
+  Hotspot Personal mientras la Raspberry está conectada (la preocupación
+  de cortes que charlamos).
+- [ ] Probar el consumo real de batería de la Raspberry en una demo larga
+  (una hora o más), y cuánto dura con la batería portátil elegida.
+- [ ] Simular recorrido y Joystick completos con Internet real (acá solo
+  se probó hasta el punto donde el sandbox bloquea la red).
+- [ ] Decidir si hace falta sumar Fijar GPS a la versión headless, una
+  vez que se probó el resto.
+
 ## Completado en 16.4.46 — Control remoto (v1, misma red Wi-Fi)
 
 - [x] **Pedido de Lu: manejar Ojo GPS desde el celular sin depender de un

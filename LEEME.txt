@@ -1,10 +1,19 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.46 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.47 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.47
+
+- Nuevo (para Lu, no afecta el uso normal de Windows/Mac): motor de Ojo
+  GPS sin pantalla, para correr en una Raspberry Pi Zero chiquita en vez
+  de la notebook. Se controla igual, por el botón "Remoto" y la misma
+  página web, pero ya no hace falta caminar con la notebook abierta —
+  la Raspberry va escondida en un bolsillo, conectada por cable al
+  iPhone. Ver PENDIENTES.md para la guía de armado completa.
 
 NOVEDAD 16.4.46
 
