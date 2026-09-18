@@ -1,5 +1,71 @@
 # Pendientes de Ojo GPS
 
+## Completado en 16.4.46 — Control remoto (v1, misma red Wi-Fi)
+
+- [x] **Pedido de Lu: manejar Ojo GPS desde el celular sin depender de un
+  escritorio remoto genérico (TeamViewer/Chrome Remote Desktop).** El
+  problema de esos programas: transmiten video de toda la pantalla, con
+  mala señal se traba y hay que acertarle a botones chicos con el dedo.
+  Se construyó un control a medida que manda solo la orden (no video),
+  respondiendo al instante, con una interfaz pensada para el celular.
+  Arquitectura elegida (nuevo archivo `ojo_gps_remote.py`, sin agregar
+  ninguna dependencia nueva — todo con la librería estándar de Python):
+  - `RemoteControlServer`: un `http.server.ThreadingHTTPServer` que corre
+    en un hilo aparte dentro del mismo proceso de Ojo GPS.
+  - Como Tkinter solo se puede tocar desde su propio hilo, cada pedido
+    HTTP que necesita cambiar algo en la app se manda al hilo principal
+    con `root.after(0, ...)` y se espera el resultado con una
+    `queue.Queue` (`call_on_main_thread`) — mismo patrón que ya usa el
+    resto de Ojo GPS para pasar datos de hilos de red a la interfaz.
+  - Nuevos métodos "puente" en `OjoGPSApp` (`_remote_status`,
+    `_remote_select_place`, `_remote_joystick`, `_remote_set_route_mode`,
+    `_remote_start_route`) que reusan toda la lógica ya existente
+    (`activate`, `_start_vector_move`, `start_route`,
+    `toggle_route_pause`, `_stop_route`, `fix_location`) — no se duplicó
+    ninguna lógica de negocio, solo se la hizo invocable por HTTP.
+  - Se extrajo `nominatim_search()` (antes duplicado dentro de
+    `_search_worker`) a una función de módulo, así la usan tanto la app
+    de escritorio como el endpoint remoto de búsqueda.
+  - Seguridad: contraseña generada al azar (`secrets.token_hex`),
+    sesiones con token aleatorio (`secrets.token_urlsafe`, comparación
+    con `secrets.compare_digest`), y bloqueo de 5 minutos tras 5 intentos
+    fallidos de contraseña por IP.
+  - Página web (una sola, sin build ni frameworks): mapa en vivo con
+    Leaflet + tiles de OpenStreetMap (el celular los descarga directo de
+    Internet, no hace falta pasarlos por la Mac), buscador de
+    direcciones, botón Cambiar ubicación, joystick táctil (mismo cálculo
+    de vector que el joystick de mouse de escritorio), Simular recorrido
+    (partida/llegada + Iniciar/Pausar/Detener + modo), y Fijar GPS.
+  - Botón "Remoto" nuevo en el encabezado (al lado de "En vivo"); se
+    volvió a agrandar la ventana principal (1080→1180 de ancho) para que
+    no se repita el recorte de badges que pasó en 16.4.44 al sumar un
+    botón más.
+  Probado de punta a punta en este entorno (Xvfb + curl simulando el
+  celular): login, bloqueo por fuerza bruta, `/api/select` y
+  `/api/route/mode` cambiando de verdad el estado de la app de
+  escritorio (confirmado visualmente), y apagado correcto del servidor.
+  **Por ahora solo funciona dentro de la misma red Wi-Fi que la Mac/PC**
+  — controlarlo desde cualquier red (3G, otro Wi-Fi) es el paso
+  siguiente, ver más abajo.
+
+## Pendiente: control remoto por Internet (no solo la misma red Wi-Fi)
+
+- [ ] Instalar `cloudflared` (Cloudflare Tunnel, gratis) en la Mac/PC que
+  corre Ojo GPS, y usarlo para exponer el puerto del control remoto
+  (8765) a una dirección https pública, sin abrir puertos en el router.
+  Con un Tunnel "rápido" (`cloudflared tunnel --url http://localhost:8765`)
+  alcanza para probarlo ya mismo, aunque la dirección cambia cada vez que
+  se reinicia; para una dirección fija hace falta una cuenta gratis de
+  Cloudflare (Lu ya tiene cuenta de desarrollador de Apple paga, pero
+  esto es una cuenta distinta, de Cloudflare, también gratis).
+- [ ] Falta decidir si el botón "Remoto" del programa arranca el túnel
+  solo (ejecutando `cloudflared` como subproceso) o si por ahora se arma
+  a mano en una Terminal aparte mientras se prueba.
+- [ ] Validar en la práctica el escenario real que pidió Lu: la Mac (o
+  una notebook chica) viajando en una mochila junto con el iPhone,
+  conectados por cable, con Internet propio (hotspot del celular), y
+  alguien controlando desde otro celular en otra red bien lejos.
+
 ## Completado en 16.4.45
 
 - [x] **Confirmado: "Ver en vivo" (16.4.43) funciona con Internet real

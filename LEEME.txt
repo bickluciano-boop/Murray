@@ -1,10 +1,20 @@
-OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.45 - DIAS RESTANTES PARA COPIAS DE PRUEBA
+OJO GPS PARA WINDOWS Y MAC - VERSION 16.4.46 - DIAS RESTANTES PARA COPIAS DE PRUEBA
 
 SOLO PARA IPHONE / IOS. NO ES COMPATIBLE CON ANDROID.
 
 TU CODIGO DE ADMINISTRADOR (PARA VOS, LU)
 
     3650-8698-4882
+
+NOVEDAD 16.4.46
+
+- Nuevo: botón "Remoto" arriba de todo, al lado de "En vivo". Abre un
+  panel para prender un control remoto: te da una dirección web y una
+  contraseña para manejar Ojo GPS (buscar, Cambiar ubicación, Joystick,
+  Simular recorrido, Fijar GPS) desde el navegador del celular, sin
+  tocar la compu. Por ahora funciona dentro de la misma red Wi-Fi que
+  la Mac/PC; para usarlo desde cualquier red (3G, otro Wi-Fi) hace falta
+  además un túnel de Internet (Cloudflare Tunnel), que se arma aparte.
 
 NOVEDAD 16.4.45
 

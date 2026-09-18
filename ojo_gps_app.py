@@ -3,6 +3,7 @@ import json
 import math
 import os
 import queue
+import secrets
 import ctypes
 import base64
 import hashlib
@@ -22,6 +23,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk
 from zoneinfo import ZoneInfo
+
+import ojo_gps_remote
 
 try:
     from PIL import Image
@@ -87,7 +90,7 @@ STREET_VIEW_MAX_SIZE = (760, 540)
 # se pueda inventar a mano; ver PENDIENTES.md para el detalle del limite.
 ACTIVATION_SECRET = b"OjoGPS-Activacion-2026-Lu-v1"
 ACTIVATION_FILE = APP_DATA_DIR / "activacion.json"
-APP_VERSION = "16.4.45"
+APP_VERSION = "16.4.46"
 SUPPORT_EMAIL = "soporte@ojoguard.app"
 SUPPORT_WHATSAPP = "5491168468495"
 
@@ -175,6 +178,25 @@ class ToolTip:
 # ejemplo "Cabildo", que también existe en Mendoza) puede ganarle al de
 # Buenos Aires, que es donde se usa Ojo GPS en la enorme mayoría de los casos.
 NOMINATIM_VIEWBOX = "-58.75,-34.35,-58.20,-34.85"
+
+
+def nominatim_search(query: str, limit: int = 5) -> list:
+    params = urllib.parse.urlencode({
+        "q": query,
+        "format": "jsonv2",
+        "limit": limit,
+        "accept-language": "es",
+        "addressdetails": 1,
+        "countrycodes": "ar",
+        "viewbox": NOMINATIM_VIEWBOX,
+    })
+    request = urllib.request.Request(
+        "https://nominatim.openstreetmap.org/search?" + params,
+        headers={"User-Agent": f"OjoGPS-Windows/{APP_VERSION}"},
+    )
+    with urlopen(request, 20) as response:
+        return json.loads(response.read().decode("utf-8"))
+
 
 MAX_ACTIVATION_DAYS = 9999
 
@@ -294,9 +316,9 @@ class OjoGPSApp:
         self.root = root
         self.is_admin = is_admin
         self.activation_expires = expires
-        self.root.title(f"Ojo GPS 16.4.45 para iPhone en {PLATFORM_NAME}")
-        self.root.geometry("1080x710")
-        self.root.minsize(980, 650)
+        self.root.title(f"Ojo GPS 16.4.46 para iPhone en {PLATFORM_NAME}")
+        self.root.geometry("1180x710")
+        self.root.minsize(1060, 650)
         self.root.configure(bg=BG)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
@@ -385,6 +407,11 @@ class OjoGPSApp:
         self.live_map_render_id = 0
         self.live_map_last_coords: tuple[float, float] | None = None
         self.live_map_job: str | None = None
+        self.remote_server: ojo_gps_remote.RemoteControlServer | None = None
+        self.remote_password: str | None = None
+        self.remote_window: tk.Toplevel | None = None
+        self.remote_url_var = tk.StringVar(value="")
+        self.remote_status_var = tk.StringVar(value="Apagado")
         self.map_drag_start: tuple[float, float] | None = None
         self.map_drag_last: tuple[float, float] | None = None
         self.map_drag_center: tuple[float, float] | None = None
@@ -448,7 +475,7 @@ class OjoGPSApp:
         header.pack(fill="x", pady=(0, 18))
         header_left = ttk.Frame(header)
         header_left.pack(side="left", fill="x", expand=True)
-        ttk.Label(header_left, text="Ojo GPS 16.4.45", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header_left, text="Ojo GPS 16.4.46", style="Title.TLabel").pack(anchor="w")
         ttk.Label(header_left, text=f"Ubicación para iPhone desde {PLATFORM_NAME}. No compatible con Android.", style="Subtitle.TLabel").pack(anchor="w")
 
         self.help_button = ttk.Button(header, text="Ayuda", style="Secondary.TButton", command=self.open_help)
@@ -462,6 +489,10 @@ class OjoGPSApp:
         self.live_map_button = ttk.Button(header, text="En vivo", style="Secondary.TButton", command=self._open_live_map)
         self.live_map_button.pack(side="right", padx=(10, 0))
         ToolTip(self.live_map_button, "Ver el punto azul moviéndose en un mapa, sin mirar el iPhone.")
+
+        self.remote_button = ttk.Button(header, text="Remoto", style="Secondary.TButton", command=self._open_remote_panel)
+        self.remote_button.pack(side="right", padx=(10, 0))
+        ToolTip(self.remote_button, "Controlar Ojo GPS desde el celular, sin tocar esta compu.")
 
         traffic = tk.Frame(header, bg="white", padx=14, pady=9, highlightthickness=1, highlightbackground="#dbe7e5")
         traffic.pack(side="right", padx=(18, 0))
@@ -1221,21 +1252,7 @@ class OjoGPSApp:
 
     def _search_worker(self, query: str) -> None:
         try:
-            params = urllib.parse.urlencode({
-                "q": query,
-                "format": "jsonv2",
-                "limit": 5,
-                "accept-language": "es",
-                "addressdetails": 1,
-                "countrycodes": "ar",
-                "viewbox": NOMINATIM_VIEWBOX,
-            })
-            request = urllib.request.Request(
-                "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.45"},
-            )
-            with urlopen(request, 20) as response:
-                results = json.loads(response.read().decode("utf-8"))
+            results = nominatim_search(query)
             self.events.put(("SEARCH_OK", json.dumps(results)))
         except Exception as exc:
             self.events.put(("SEARCH_ERROR", str(exc)))
@@ -1250,6 +1267,52 @@ class OjoGPSApp:
         self.selected_name.set(self._short_place_label(item))
         self.set_status("Destino seleccionado", GREEN)
         self._request_place_context(float(item["lat"]), float(item["lon"]), item)
+
+    def _remote_select_place(self, item: dict) -> None:
+        # Igual que select_result, pero recibe el lugar directo (lo usa el
+        # control remoto, que no tiene un Listbox de Tkinter del otro lado).
+        self.latitude.set(item["lat"])
+        self.longitude.set(item["lon"])
+        self.selected_name.set(self._short_place_label(item))
+        self.set_status("Destino seleccionado", GREEN)
+        self._request_place_context(float(item["lat"]), float(item["lon"]), item)
+
+    def _remote_status(self) -> dict:
+        lat = lon = None
+        if self.current_coords is not None:
+            lat, lon = self.current_coords
+        return {
+            "latitude": lat if lat is not None else self.latitude.get(),
+            "longitude": lon if lon is not None else self.longitude.get(),
+            "selected_name": self.selected_name.get(),
+            "connection": self.connection_text.get(),
+            "status": self.status_text.get(),
+            "active": self.active,
+            "route_active": self.route_active,
+            "route_info": self.route_info_text.get(),
+            "movement_mode": self.movement_mode.get(),
+        }
+
+    def _remote_joystick(self, north: float, east: float) -> None:
+        if not self.active:
+            raise RuntimeError("Todavía no hay una ubicación activa.")
+        if north == 0.0 and east == 0.0:
+            self._joystick_release()
+        else:
+            self._start_vector_move(north, east)
+
+    def _remote_start_route(self, origin: str, destination: str) -> None:
+        self.route_origin_address.set(origin)
+        self.route_destination_address.set(destination)
+        self.start_route()
+
+    def _remote_set_route_mode(self, mode: str) -> None:
+        presets = {"Caminar": (5.0, "foot"), "Bicicleta": (15.0, "bike"), "Auto": (40.0, "driving")}
+        if mode not in presets:
+            raise ValueError("Modo de movimiento inválido.")
+        self.movement_mode.set(mode)
+        speed, profile = presets[mode]
+        self._set_route_speed(speed, profile)
 
     def _toggle_coordinates(self) -> None:
         """Keep coordinates available without making them the main experience."""
@@ -1627,7 +1690,7 @@ class OjoGPSApp:
             raw = cache_file.read_bytes()
         except OSError:
             url = f"https://tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
-            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.45"})
+            req = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
             with urlopen(req, 8) as response:
                 raw = response.read()
             try:
@@ -1790,6 +1853,83 @@ class OjoGPSApp:
 
     def _schedule_live_map_tick(self) -> None:
         self.live_map_job = self.root.after(1000, self._live_map_tick)
+
+    def _open_remote_panel(self) -> None:
+        if self.remote_window is not None:
+            try:
+                if self.remote_window.winfo_exists():
+                    self.remote_window.deiconify()
+                    self.remote_window.lift()
+                    self.remote_window.focus_force()
+                    return
+            except tk.TclError:
+                pass
+        win = tk.Toplevel(self.root)
+        self.remote_window = win
+        win.title("Ojo GPS - Control remoto")
+        win.geometry("480x420")
+        win.minsize(440, 380)
+        win.protocol("WM_DELETE_WINDOW", win.withdraw)
+
+        body = ttk.Frame(win, padding=18)
+        body.pack(fill="both", expand=True)
+        ttk.Label(
+            body,
+            text="Maneja Ojo GPS desde el celular (buscar, Cambiar ubicación, Joystick,\n"
+            "Simular recorrido) sin tocar esta compu.\n\n"
+            "Por ahora funciona dentro de la misma red Wi-Fi que esta Mac/PC.",
+            style="Section.TLabel",
+            justify="left",
+        ).pack(anchor="w", pady=(0, 12))
+
+        ttk.Label(body, textvariable=self.remote_status_var, style="Status.TLabel").pack(anchor="w")
+
+        toggle_button = ttk.Button(body, text="Iniciar", style="Primary.TButton")
+        toggle_button.pack(anchor="w", pady=(8, 14))
+
+        url_row = ttk.Frame(body)
+        url_row.pack(fill="x", pady=(0, 8))
+        ttk.Label(url_row, text="Dirección:").pack(side="left")
+        url_entry = ttk.Entry(url_row, textvariable=self.remote_url_var, state="readonly")
+        url_entry.pack(side="left", fill="x", expand=True, padx=(8, 8))
+        ttk.Button(url_row, text="Copiar", command=lambda: self._copy_to_clipboard(self.remote_url_var.get())).pack(side="right")
+
+        password_var = tk.StringVar(value="")
+        password_row = ttk.Frame(body)
+        password_row.pack(fill="x", pady=(0, 8))
+        ttk.Label(password_row, text="Contraseña:").pack(side="left")
+        password_entry = ttk.Entry(password_row, textvariable=password_var, state="readonly")
+        password_entry.pack(side="left", fill="x", expand=True, padx=(8, 8))
+        ttk.Button(password_row, text="Copiar", command=lambda: self._copy_to_clipboard(password_var.get())).pack(side="right")
+
+        def refresh_ui() -> None:
+            running = self.remote_server is not None and self.remote_server.running
+            toggle_button.configure(text="Detener" if running else "Iniciar")
+            self.remote_status_var.set("Encendido" if running else "Apagado")
+            self.remote_url_var.set(self.remote_server.local_url() if running else "")
+            password_var.set(self.remote_password or "" if running else "")
+
+        def on_toggle() -> None:
+            if self.remote_server is not None and self.remote_server.running:
+                self.remote_server.stop()
+            else:
+                self.remote_password = self.remote_password or secrets.token_hex(3)
+                self.remote_server = ojo_gps_remote.RemoteControlServer(self)
+                try:
+                    self.remote_server.start(self.remote_password)
+                except OSError as exc:
+                    messagebox.showerror("Control remoto", f"No se pudo iniciar el servidor: {exc}")
+                    self.remote_server = None
+            refresh_ui()
+
+        toggle_button.configure(command=on_toggle)
+        refresh_ui()
+
+    def _copy_to_clipboard(self, value: str) -> None:
+        if not value:
+            return
+        self.root.clipboard_clear()
+        self.root.clipboard_append(value)
 
     def _live_map_tick(self) -> None:
         self.live_map_job = None
@@ -2114,7 +2254,7 @@ class OjoGPSApp:
             })
             search_req = urllib.request.Request(
                 f"{MAPILLARY_API}/images?" + search_params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.45"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
             )
             with urlopen(search_req, 12) as response:
                 found = json.loads(response.read().decode("utf-8")).get("data", [])
@@ -2143,14 +2283,14 @@ class OjoGPSApp:
                 detail_params = urllib.parse.urlencode({"access_token": token, "fields": "thumb_1024_url"})
                 detail_req = urllib.request.Request(
                     f"{MAPILLARY_API}/{image_id}?" + detail_params,
-                    headers={"User-Agent": "OjoGPS-Windows/16.4.45"},
+                    headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
                 )
                 with urlopen(detail_req, 12) as response:
                     photo_url = json.loads(response.read().decode("utf-8")).get("thumb_1024_url")
                 if not photo_url:
                     self.events.put(("STREET_VIEW_EMPTY", json.dumps({"id": request_id})))
                     return
-                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.45"})
+                img_req = urllib.request.Request(photo_url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
                 with urlopen(img_req, 15) as response:
                     raw = response.read()
                 try:
@@ -2188,7 +2328,7 @@ class OjoGPSApp:
     ) -> None:
         try:
             params = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "accept-language": "es", "addressdetails": 1})
-            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.45"})
+            req = urllib.request.Request("https://nominatim.openstreetmap.org/reverse?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
             with urlopen(req, 20) as response:
                 item = json.loads(response.read().decode("utf-8"))
             item["lat"] = str(lat)
@@ -2224,7 +2364,7 @@ class OjoGPSApp:
         fallback_minute = None
         try:
             params = urllib.parse.urlencode({"latitude": lat, "longitude": lon})
-            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.45"})
+            req = urllib.request.Request("https://timeapi.io/api/time/current/coordinate?" + params, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
             with urlopen(req, 10) as response:
                 clock = json.loads(response.read().decode("utf-8"))
             timezone_name = str(clock.get("timeZone") or "")
@@ -2534,7 +2674,7 @@ class OjoGPSApp:
             })
             request = urllib.request.Request(
                 "https://nominatim.openstreetmap.org/search?" + params,
-                headers={"User-Agent": "OjoGPS-Windows/16.4.45"},
+                headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
             )
             with urlopen(request, 20) as response:
                 results = json.loads(response.read().decode("utf-8"))
@@ -2633,7 +2773,7 @@ class OjoGPSApp:
         })
         request = urllib.request.Request(
             "https://nominatim.openstreetmap.org/search?" + params,
-            headers={"User-Agent": "OjoGPS-Windows/16.4.45"},
+            headers={"User-Agent": "OjoGPS-Windows/16.4.46"},
         )
         with urlopen(request, 20) as response:
             results = json.loads(response.read().decode("utf-8"))
@@ -2690,7 +2830,7 @@ class OjoGPSApp:
                 f"{origin_lon:.7f},{origin_lat:.7f};{destination_lon:.7f},{destination_lat:.7f}"
                 "?overview=full&geometries=geojson&steps=false"
             )
-            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.45"})
+            request = urllib.request.Request(url, headers={"User-Agent": "OjoGPS-Windows/16.4.46"})
             with urlopen(request, 25) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             routes = payload.get("routes") or []
@@ -3932,6 +4072,8 @@ class OjoGPSApp:
             self.footer_text.set("Uso normal por cable: conectá y desbloqueá el iPhone con Modo de desarrollador activo.")
 
     def close(self) -> None:
+        if self.remote_server is not None and self.remote_server.running:
+            self.remote_server.stop()
         if self.place_clock_job is not None:
             try:
                 self.root.after_cancel(self.place_clock_job)
