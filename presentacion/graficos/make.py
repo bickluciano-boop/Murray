@@ -16,7 +16,7 @@ def pt(px): return px*S*72/DPI  # px (slide units) -> points
 fig,ax=canvas()
 ax.text(0,235,"877.078",fontsize=pt(170),fontweight="bold",color=GOLD,va="baseline")
 ax.text(4,305,"celulares denunciados por robo, hurto",fontsize=pt(40),color=DARK,va="baseline")
-ax.text(4,358,"o extravío en Argentina durante 2024",fontsize=pt(40),color=DARK,va="baseline")
+ax.text(4,358,"o extravío en Argentina en un año",fontsize=pt(40),color=DARK,va="baseline")
 ax.plot([980,980],[30,450],color=PALE,lw=pt(3))
 stats=[("2.400","por día"),("100","por hora"),("1 cada 36 s","todo el año")]
 for i,(n,l) in enumerate(stats):
@@ -56,3 +56,32 @@ ax.text(1210,340,"1 de cada 10",fontsize=pt(60),fontweight="bold",color=GOLD,va=
 ax.text(1212,395,"la más frecuente es la motora",fontsize=pt(30),color=DARK,va="baseline")
 fig.savefig("cuidado.png",transparent=True); plt.close(fig)
 print("ok")
+
+# ---------- Imagen 3: uso de la inversión ----------
+W2,H2=1708,400
+fig=plt.figure(figsize=(W2*S/DPI,H2*S/DPI),dpi=DPI); fig.patch.set_alpha(0)
+ax=fig.add_axes([0,0,1,1]); ax.set_xlim(0,W2); ax.set_ylim(H2,0); ax.axis("off")
+rows=[("Un programador",22000),("Marketing y primeros usuarios",15000),("Estructura: servidores, legales, tiendas",9000),("Pulsera SOS y autos: equipos y pruebas",8000),("Reserva para imprevistos",6000)]
+x0=760; maxw=620
+for i,(lab,v) in enumerate(rows):
+    y=20+i*76
+    ax.text(0,y+42,lab,fontsize=pt(32),color=DARK,va="baseline")
+    w=v/22000*maxw
+    ax.add_patch(FancyBboxPatch((x0,y+6),w,46,boxstyle="round,pad=0,rounding_size=6",fc=GOLD if i==0 else LIGHT,ec="none"))
+    ax.text(x0+w+18,y+42,f"USD {v:,}".replace(",","."),fontsize=pt(32),fontweight="bold",color=DARK,va="baseline")
+fig.savefig("inversion.png",transparent=True); plt.close(fig)
+
+# ---------- Imagen 4: planes ----------
+W3,H3=1708,330
+fig=plt.figure(figsize=(W3*S/DPI,H3*S/DPI),dpi=DPI); fig.patch.set_alpha(0)
+ax=fig.add_axes([0,0,1,1]); ax.set_xlim(0,W3); ax.set_ylim(H3,0); ax.axis("off")
+cards=[(0,"Plan mensual","USD 9,90","por mes",None,False),(880,"Plan anual","USD 75","por año · USD 6,25 por mes","37% menos",True)]
+for x,t,p,sub,badge,hi in cards:
+    ax.add_patch(FancyBboxPatch((x+3,3),822,318,boxstyle="round,pad=0,rounding_size=18",fc="#fbf9f2",ec=GOLD if hi else PALE,lw=pt(4 if hi else 3)))
+    ax.text(x+50,80,t,fontsize=pt(36),fontweight="bold",color=GRAY,va="baseline")
+    ax.text(x+50,200,p,fontsize=pt(100),fontweight="bold",color=GOLD if hi else DARK,va="baseline")
+    ax.text(x+52,270,sub,fontsize=pt(32),color=GRAY,va="baseline")
+    if badge:
+        ax.add_patch(FancyBboxPatch((x+560,40),220,58,boxstyle="round,pad=0,rounding_size=29",fc=GOLD,ec="none"))
+        ax.text(x+670,80,badge,ha="center",fontsize=pt(30),fontweight="bold",color="#ffffff",va="baseline")
+fig.savefig("planes.png",transparent=True); plt.close(fig)
