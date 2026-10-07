@@ -489,6 +489,12 @@ function agregarPestana() {
   boton.addEventListener("click", () => (estado.abierto ? null : abrir()));
   // Cualquier otra pestaña cierra el mapa (app-v9.js se encarga de mostrar su sección).
   barra.querySelectorAll("[data-view]").forEach((otra) => otra.addEventListener("click", cerrar));
+  // app-v9.js vuelve a marcar su pestaña cada vez que refresca el panel (cada 15 s):
+  // con el mapa abierto, la única pestaña marcada tiene que ser Mapa.
+  new MutationObserver(() => {
+    if (!estado.abierto) return;
+    barra.querySelectorAll("[data-view].active").forEach((otra) => { otra.classList.remove("active"); otra.setAttribute("aria-current", "false"); });
+  }).observe(barra, { subtree: true, attributes: true, attributeFilter: ["class"] });
   document.querySelectorAll("[data-open-view]").forEach((otra) => otra.addEventListener("click", cerrar));
 }
 
