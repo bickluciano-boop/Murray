@@ -131,7 +131,7 @@ body.og-mapa-abierto { overflow: hidden; }
 .ogm-cab small { color: var(--ogm-suave); font-size: 0.8rem; }
 #og-mapa .ogm-foto { border-radius: 50%; position: relative; }
 #og-mapa .ogm-foto:not(:disabled)::after { content: "✎"; position: absolute; right: -2px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--ogm-oro); color: #111; font-size: 0.65rem; display: grid; place-items: center; }
-#og-mapa .ogm-foto:disabled { cursor: default; }
+#og-mapa .ogm-foto:disabled { cursor: default; opacity: 1; }
 .ogm-direc { margin: 12px 0 10px; font-size: 0.9rem; color: var(--ogm-texto); opacity: 0.9; }
 .ogm-datos { display: flex; gap: 22px; margin-bottom: 12px; }
 .ogm-datos span { display: flex; flex-direction: column; font-weight: 600; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
@@ -157,8 +157,14 @@ body.og-mapa-abierto { overflow: hidden; }
   .ogm-capas { top: calc(max(12px, env(safe-area-inset-top)) + 54px); right: 12px; bottom: auto; flex-direction: column; }
   .ogm-aviso { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
   .ogm-tarjeta { left: 8px; right: 8px; width: auto; bottom: 84px; max-height: 52vh; border-radius: 22px; padding: 8px 16px 14px; }
-  #og-mapa .ogm-asa { display: block; width: 44px; height: 5px; border-radius: 3px; background: var(--ogm-linea); margin: 0 auto 10px; }
-  #og-mapa.ogm-plegada .ogm-tarjeta > :not(.ogm-asa):not(.ogm-cab) { display: none; }
+  /* Manija grande (todo el ancho, 28px de alto) con la rayita dibujada adentro */
+  #og-mapa .ogm-asa { display: block; position: relative; width: calc(100% + 32px); height: 28px; margin: -8px -16px 4px; touch-action: none; }
+  #og-mapa .ogm-asa::before { content: ""; position: absolute; left: 50%; top: 11px; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: var(--ogm-suave); opacity: 0.55; }
+  .ogm-tarjeta { transition: transform 0.2s ease; overscroll-behavior: contain; }
+  .ogm-cab, .ogm-direc { touch-action: none; cursor: pointer; }
+  #og-mapa.ogm-plegada .ogm-tarjeta { overflow: hidden; }
+  #og-mapa.ogm-plegada .ogm-tarjeta > :not(.ogm-asa):not(.ogm-cab):not(.ogm-direc) { display: none; }
+  #og-mapa.ogm-plegada .ogm-direc { margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #og-mapa .ogm-botones button { flex: 1 1 auto; }
   .ogm-otros { display: block; list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--ogm-linea); }
   .ogm-otros li { display: flex; align-items: center; gap: 10px; padding: 10px 0 0; font-size: 0.88rem; font-weight: 500; cursor: pointer; }

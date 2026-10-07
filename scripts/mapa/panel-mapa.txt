@@ -382,6 +382,7 @@ async function proveedorGoogle(contenedor, temaInicial) {
     capa(nombre) { mapa.setMapTypeId(nombre === "satelite" ? "hybrid" : "roadmap"); },
     tema(nombre) { mapa.setOptions({ styles: nombre === "claro" ? ESTILO_CLARO : ESTILO_OSCURO, backgroundColor: nombre === "claro" ? "#eeeae0" : "#121316" }); },
     redibujar() { g.event.trigger(mapa, "resize"); },
+    alTocarMapa(accion) { mapa.addListener("click", accion); },
   };
 }
 
@@ -441,7 +442,10 @@ function construir() {
 
   raiz.addEventListener("click", (evento) => {
     const boton = evento.target.closest("button, li[data-id]");
-    if (!boton) return;
+    if (!boton) {
+      if (esCelular() && evento.target.closest(".ogm-cab, .ogm-direc")) plegar(!raiz.classList.contains("ogm-plegada"));
+      return;
+    }
     if (boton.dataset.rango) return elegirRango(boton.dataset.rango);
     if (boton.dataset.capa) {
       raiz.querySelectorAll("[data-capa]").forEach((b) => b.classList.toggle("on", b === boton));
@@ -455,8 +459,9 @@ function construir() {
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
     if (accion === "locate" || accion === "alarm") return ordenar(accion, boton);
-    if (accion === "cerrar-tarjeta") return raiz.classList.toggle("ogm-plegada");
+    if (accion === "cerrar-tarjeta") return plegar(!raiz.classList.contains("ogm-plegada"));
   });
+  activarArrastre(raiz);
   $('[data-ogm="archivo"]', raiz).addEventListener("change", async (evento) => {
     const archivo = evento.target.files?.[0];
     evento.target.value = "";
@@ -473,6 +478,44 @@ function construir() {
     }
   });
   return raiz;
+}
+
+const esCelular = () => window.innerWidth < 900;
+
+/** Tarjeta de abajo en el celular: plegada muestra solo nombre, hora y dirección. */
+function plegar(si) {
+  $("#og-mapa")?.classList.toggle("ogm-plegada", Boolean(si));
+}
+
+/** Deslizar la tarjeta hacia abajo la pliega y hacia arriba la despliega (como en Buscar de Apple). */
+function activarArrastre(raiz) {
+  const tarjeta = $('[data-ogm="tarjeta"]', raiz);
+  let inicioY = null, delta = 0;
+  tarjeta.addEventListener("touchstart", (evento) => {
+    if (!esCelular()) return;
+    const enManija = evento.target.closest(".ogm-asa, .ogm-cab, .ogm-direc");
+    if (!enManija && (tarjeta.scrollTop > 0 || evento.target.closest("button, li[data-id]"))) return;
+    inicioY = evento.touches[0].clientY;
+    delta = 0;
+    tarjeta.style.transition = "none";
+  }, { passive: true });
+  tarjeta.addEventListener("touchmove", (evento) => {
+    if (inicioY === null) return;
+    delta = evento.touches[0].clientY - inicioY;
+    const plegada = raiz.classList.contains("ogm-plegada");
+    const mover = plegada ? Math.min(0, delta) * 0.35 : Math.max(0, delta);
+    tarjeta.style.transform = `translateY(${mover}px)`;
+  }, { passive: true });
+  const soltar = () => {
+    if (inicioY === null) return;
+    tarjeta.style.transition = "";
+    tarjeta.style.transform = "";
+    if (delta > 45) plegar(true);
+    else if (delta < -45) plegar(false);
+    inicioY = null;
+  };
+  tarjeta.addEventListener("touchend", soltar);
+  tarjeta.addEventListener("touchcancel", soltar);
 }
 
 function agregarPestana() {
@@ -502,6 +545,7 @@ async function abrir() {
   const raiz = $("#og-mapa") || construir();
   estado.abierto = true;
   raiz.classList.remove("hidden");
+  if (esCelular()) plegar(true);
   document.body.classList.add("og-mapa-abierto");
   document.querySelectorAll(".bottom-tabs .bottom-tab").forEach((b) => {
     const esMapa = b.hasAttribute("data-mapa-tab");
@@ -511,6 +555,7 @@ async function abrir() {
   if (!estado.proveedor) {
     try {
       estado.proveedor = await proveedorGoogle($('[data-ogm="lienzo"]', raiz), temaActual());
+      estado.proveedor.alTocarMapa(() => { if (esCelular()) plegar(true); });
     } catch {
       aviso("No se pudo cargar Google Maps. Revisá la conexión y volvé a abrir el mapa.");
     }
@@ -591,7 +636,7 @@ function elegirRango(rango) {
 // Margen para que los dispositivos no queden debajo de la tarjeta ni de la barra de abajo.
 const margenMapa = () => (window.innerWidth >= 900
   ? { top: 80, right: 80, bottom: 130, left: 430 }
-  : { top: 80, right: 50, bottom: Math.round(window.innerHeight * 0.45), left: 50 });
+  : { top: 80, right: 50, bottom: 260, left: 50 });
 
 function encuadrarTodo() {
   const puntos = estado.equipos.filter((e) => e.lat !== null);
