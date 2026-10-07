@@ -330,10 +330,16 @@ async function proveedorGoogle(contenedor, temaInicial) {
     gestureHandling: "greedy",
     clickableIcons: false,
     styles: temaInicial === "claro" ? ESTILO_CLARO : ESTILO_OSCURO,
-    backgroundColor: temaInicial === "claro" ? "#eeeae0" : "#121316",
+    backgroundColor: temaInicial === "claro" ? "#f2efe9" : "#16181c",
   });
   const marcadores = new Map();
   let lineas = [], marcasParada = [], circulo = null;
+  // Overlay vacío: solo sirve para convertir coordenadas a pixeles de pantalla.
+  const proyector = new g.OverlayView();
+  proyector.onAdd = () => {};
+  proyector.draw = () => {};
+  proyector.onRemove = () => {};
+  proyector.setMap(mapa);
   const pos = (p) => new g.LatLng(p.lat, p.lng);
   return {
     marcador(id, punto, elemento) {
@@ -380,9 +386,14 @@ async function proveedorGoogle(contenedor, temaInicial) {
     centrar(punto, zoom) { mapa.panTo(pos(punto)); if (zoom) mapa.setZoom(zoom); },
     acercar(paso) { mapa.setZoom((mapa.getZoom() || 13) + paso); },
     capa(nombre) { mapa.setMapTypeId(nombre === "satelite" ? "hybrid" : "roadmap"); },
-    tema(nombre) { mapa.setOptions({ styles: nombre === "claro" ? ESTILO_CLARO : ESTILO_OSCURO, backgroundColor: nombre === "claro" ? "#eeeae0" : "#121316" }); },
+    tema(nombre) { mapa.setOptions({ styles: nombre === "claro" ? ESTILO_CLARO : ESTILO_OSCURO, backgroundColor: nombre === "claro" ? "#f2efe9" : "#16181c" }); },
     redibujar() { g.event.trigger(mapa, "resize"); },
     alTocarMapa(accion) { mapa.addListener("click", accion); },
+    alCambiarZoom(accion) { let espera; mapa.addListener("zoom_changed", () => { clearTimeout(espera); espera = setTimeout(accion, 250); }); },
+    aPixel(punto) {
+      const proy = proyector.getProjection();
+      return proy ? proy.fromLatLngToContainerPixel(pos(punto)) : null;
+    },
   };
 }
 
@@ -556,6 +567,7 @@ async function abrir() {
     try {
       estado.proveedor = await proveedorGoogle($('[data-ogm="lienzo"]', raiz), temaActual());
       estado.proveedor.alTocarMapa(() => { if (esCelular()) plegar(true); });
+      estado.proveedor.alCambiarZoom(() => dibujar());
     } catch {
       aviso("No se pudo cargar Google Maps. Revisá la conexión y volvé a abrir el mapa.");
     }
@@ -647,14 +659,19 @@ function encuadrarTodo() {
  * Dispositivos casi en el mismo lugar (por ejemplo el teléfono y la notebook en casa)
  * se tapaban entre sí: se apilan uno arriba del otro, centrados en el punto real.
  */
-function desplazamientos(equipos, radioMetros = 60, paso = 84) {
+function desplazamientos(equipos, aPixel = null, radioPixeles = 52, radioMetros = 60, paso = 84) {
   const resultado = new Map();
   const pendientes = equipos.filter((e) => e.lat !== null);
+  // Con el mapa cargado se mide en pantalla (así funciona con cualquier zoom); si no, en metros.
+  const cerca = (a, b) => {
+    const pa = aPixel?.(a), pb = aPixel?.(b);
+    return pa && pb ? Math.hypot(pa.x - pb.x, pa.y - pb.y) <= radioPixeles : metros(a, b) <= radioMetros;
+  };
   while (pendientes.length) {
     const base = pendientes.shift();
     const grupo = [base];
     for (let i = pendientes.length - 1; i >= 0; i -= 1) {
-      if (metros(base, pendientes[i]) <= radioMetros) grupo.push(...pendientes.splice(i, 1));
+      if (cerca(base, pendientes[i])) grupo.push(...pendientes.splice(i, 1));
     }
     grupo.sort((a, b) => a.nombre.localeCompare(b.nombre));
     grupo.forEach((e, i) => resultado.set(e.id, grupo.length > 1 ? Math.round((i - (grupo.length - 1) / 2) * paso) : 0));
@@ -706,7 +723,7 @@ function dibujar() {
   const p = estado.proveedor;
   if (p) {
     const vigentes = new Set();
-    const corrimientos = desplazamientos(equipos);
+    const corrimientos = desplazamientos(equipos, p.aPixel);
     for (const e of equipos) {
       if (e.lat === null) continue;
       vigentes.add(e.id);
