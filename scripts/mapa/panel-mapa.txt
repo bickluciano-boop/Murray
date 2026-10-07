@@ -643,12 +643,32 @@ function encuadrarTodo() {
   estado.proveedor?.encuadrar(puntos, margenMapa());
 }
 
-function elementoMarcador(equipo) {
+/**
+ * Dispositivos casi en el mismo lugar (por ejemplo el teléfono y la notebook en casa)
+ * se tapaban entre sí: se apilan uno arriba del otro, centrados en el punto real.
+ */
+function desplazamientos(equipos, radioMetros = 60, paso = 84) {
+  const resultado = new Map();
+  const pendientes = equipos.filter((e) => e.lat !== null);
+  while (pendientes.length) {
+    const base = pendientes.shift();
+    const grupo = [base];
+    for (let i = pendientes.length - 1; i >= 0; i -= 1) {
+      if (metros(base, pendientes[i]) <= radioMetros) grupo.push(...pendientes.splice(i, 1));
+    }
+    grupo.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    grupo.forEach((e, i) => resultado.set(e.id, grupo.length > 1 ? Math.round((i - (grupo.length - 1) / 2) * paso) : 0));
+  }
+  return resultado;
+}
+
+function elementoMarcador(equipo, dy = 0) {
   const el = estado.elementosMarcador.get(equipo.id) || document.createElement("button");
   el.type = "button";
   el.dataset.id = equipo.id;
   const st = estadoDe(equipo);
   el.className = `ogm-pin ${st.clase}${equipo.id === estado.elegido ? " sel" : ""}`;
+  el.style.marginTop = dy ? `${dy}px` : "";
   el.innerHTML = `<span class="ogm-halo"></span>${avatarHtml(equipo)}<span class="ogm-etq">${esc(equipo.nombre)}<em>${esc(haceCuanto(equipo.ubicadoEn))}</em></span>`;
   if (!estado.elementosMarcador.has(equipo.id)) {
     el.addEventListener("click", (evento) => { evento.stopPropagation(); elegir(equipo.id, false); });
@@ -686,10 +706,11 @@ function dibujar() {
   const p = estado.proveedor;
   if (p) {
     const vigentes = new Set();
+    const corrimientos = desplazamientos(equipos);
     for (const e of equipos) {
       if (e.lat === null) continue;
       vigentes.add(e.id);
-      p.marcador(e.id, e, elementoMarcador(e));
+      p.marcador(e.id, e, elementoMarcador(e, corrimientos.get(e.id) || 0));
     }
     p.idsMarcadores().filter((id) => !vigentes.has(id)).forEach((id) => p.quitarMarcador(id));
     const puntos = elegido ? filtrarPorRango(estado.recorrido, estado.rango) : [];
@@ -809,4 +830,4 @@ function iniciar() {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
 else iniciar();
 
-export { paradas, kilometros, filtrarPorRango, normalizarEquipos, direccionCorta };
+export { paradas, kilometros, filtrarPorRango, normalizarEquipos, direccionCorta, desplazamientos };
