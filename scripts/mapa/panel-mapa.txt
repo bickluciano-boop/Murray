@@ -389,6 +389,7 @@ async function proveedorGoogle(contenedor, temaInicial) {
     tema(nombre) { mapa.setOptions({ styles: nombre === "claro" ? ESTILO_CLARO : ESTILO_OSCURO, backgroundColor: nombre === "claro" ? "#f2efe9" : "#16181c" }); },
     redibujar() { g.event.trigger(mapa, "resize"); },
     alTocarMapa(accion) { mapa.addListener("click", accion); },
+    alArrastrar(accion) { mapa.addListener("dragstart", accion); },
     alCambiarZoom(accion) { let espera; mapa.addListener("zoom_changed", () => { clearTimeout(espera); espera = setTimeout(accion, 250); }); },
     aPixel(punto) {
       const proy = proyector.getProjection();
@@ -412,6 +413,8 @@ const estado = {
   temporizador: null,
   ultimoRecorrido: 0,
   elementosMarcador: new Map(),
+  vivo: null,           // { id, seguir, texto, renovador } mientras se sigue un teléfono en vivo
+  mensajeVivo: "",
 };
 
 const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "claro" : "oscuro");
@@ -466,7 +469,13 @@ function construir() {
     const accion = boton.dataset.ogm || boton.dataset.accion;
     if (accion === "mas") return estado.proveedor?.acercar(1);
     if (accion === "menos") return estado.proveedor?.acercar(-1);
-    if (accion === "centrar") return encuadrarTodo();
+    if (accion === "centrar") {
+      const seguido = estado.vivo && estado.equipos.find((e) => e.id === estado.vivo.id && e.lat !== null);
+      if (seguido) { estado.vivo.seguir = true; return estado.proveedor?.centrar(seguido); }
+      return encuadrarTodo();
+    }
+    if (accion === "vivo") return iniciarVivo(equipoElegido());
+    if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
     if (accion === "locate" || accion === "alarm") return ordenar(accion, boton);
@@ -573,6 +582,8 @@ async function abrir() {
     try {
       estado.proveedor = await proveedorGoogle($('[data-ogm="lienzo"]', raiz), temaActual());
       estado.proveedor.alTocarMapa(() => { if (esCelular()) plegar(true); });
+      // Si la persona mueve el mapa a mano, se deja de centrar en el teléfono seguido.
+      estado.proveedor.alArrastrar(() => { if (estado.vivo) estado.vivo.seguir = false; });
       estado.proveedor.alCambiarZoom(() => dibujar());
     } catch {
       aviso("No se pudo cargar Google Maps. Revisá la conexión y volvé a abrir el mapa.");
@@ -586,6 +597,7 @@ async function abrir() {
 function cerrar() {
   if (!estado.abierto) return;
   estado.abierto = false;
+  void detenerVivo();
   clearTimeout(estado.temporizador);
   $("#og-mapa")?.classList.add("hidden");
   document.body.classList.remove("og-mapa-abierto");
@@ -618,20 +630,25 @@ async function refrescar(forzarRecorrido = false) {
   if (!conUbicacion.length && estado.equipos.length) aviso("Todavía no hay ubicaciones. Tocá «Ubicar ahora» para pedir la primera.");
   if (!estado.equipos.length) aviso("Todavía no hay dispositivos vinculados a esta cuenta.");
   const equipo = equipoElegido();
-  if (equipo && (forzarRecorrido || Date.now() - estado.ultimoRecorrido > 30_000)) {
+  if (equipo && (forzarRecorrido || Date.now() - estado.ultimoRecorrido > (estado.vivo ? 10_000 : 30_000))) {
     try { estado.recorrido = await cargarRecorrido(equipo); } catch { estado.recorrido = []; }
     estado.ultimoRecorrido = Date.now();
   }
   dibujar();
   if (!estado.encuadrado && conUbicacion.length) { encuadrarTodo(); estado.encuadrado = true; }
+  const seguido = estado.vivo?.seguir && estado.equipos.find((e) => e.id === estado.vivo.id && e.lat !== null);
+  if (seguido) estado.proveedor?.centrar(seguido);
   const hayVivo = estado.equipos.some((e) => estadoDe(e).clase === "vivo");
-  estado.temporizador = setTimeout(() => refrescar(), hayVivo ? CONFIG.refrescoVivoMs : CONFIG.refrescoMs);
+  const espera = estado.vivo ? VIVO.refrescoMs : hayVivo ? CONFIG.refrescoVivoMs : CONFIG.refrescoMs;
+  estado.temporizador = setTimeout(() => refrescar(), espera);
 }
 
 const equipoElegido = () => estado.equipos.find((e) => e.id === estado.elegido) || null;
 
 async function elegir(id, centrar) {
   if (estado.elegido !== id) {
+    if (estado.vivo && estado.vivo.id !== id) await detenerVivo();
+    estado.mensajeVivo = "";
     estado.elegido = id;
     estado.recorrido = [];
     $("#og-mapa")?.classList.remove("ogm-plegada");
@@ -752,12 +769,13 @@ function dibujar() {
   const km = kilometros(puntosHoy);
   const lista = paradas(filtrarPorRango(estado.recorrido, estado.rango)).slice(-3).reverse();
   const otros = equipos.filter((e) => e.id !== elegido.id);
+  const siguiendo = estado.vivo?.id === elegido.id;
   tarjeta.classList.remove("hidden");
   tarjeta.innerHTML = `
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
     <div class="ogm-cab">
       <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
-      <div><strong>${esc(elegido.nombre)}</strong><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}</small></div>
+      <div><strong>${esc(elegido.nombre)}</strong><small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}`}</small></div>
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
@@ -767,11 +785,80 @@ function dibujar() {
     </div>
     ${lista.length ? `<ul class="ogm-paradas">${lista.map((pa) => `<li><i></i>${esc(horaCorta(pa.desde))} a ${esc(horaCorta(pa.hasta))} · ${pa.minutos} min${pa.direccion ? ` · ${esc(pa.direccion)}` : ""}</li>`).join("")}</ul>` : ""}
     <div class="ogm-botones">
-      ${elegido.tipo === "telefono" ? '<button type="button" class="oro" data-accion="locate">Ubicar ahora</button><button type="button" data-accion="alarm">Hacer sonar</button>' : ""}
+      ${admiteVivo(elegido) ? (siguiendo ? '<button type="button" class="parar" data-accion="vivo-parar">Dejar de seguir</button>' : '<button type="button" class="oro" data-accion="vivo">Seguir en vivo</button>') : ""}
+      ${elegido.tipo === "telefono" ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button><button type="button" data-accion="alarm">Hacer sonar</button>` : ""}
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
+    ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj"></p>
     ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc(haceCuanto(e.ubicadoEn))}</small></li>`).join("")}</ul>` : ""}`;
+}
+
+// ---------------------------------------------------------------------------
+// Seguir en vivo: el teléfono manda su ubicación cada pocos segundos mientras
+// el mapa está abierto (ver /api/remote/live y src/liveLocation.ts en la app).
+// ---------------------------------------------------------------------------
+
+const VIVO = { renovarMs: 4 * 60_000, refrescoMs: 4_000, vigilarIntentos: 40 };
+
+/** Solo teléfonos con la app: la notebook (programa de la computadora) no tiene seguimiento en vivo. */
+function admiteVivo(equipo) {
+  return Boolean(equipo) && equipo.tipo === "telefono" && !/windows|mac ?os|linux|computadora|notebook|\bpc\b/i.test(`${equipo.plataforma} ${equipo.nombre}`);
+}
+
+function pedirVivo(accion, deviceId) {
+  if (DEMO) return Promise.resolve({ live: accion === "start", demo: true });
+  return pedir("/api/remote/live", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId, action: accion }) });
+}
+
+async function iniciarVivo(equipo) {
+  if (!admiteVivo(equipo) || estado.vivo?.id === equipo.id) return;
+  await detenerVivo();
+  estado.mensajeVivo = "";
+  estado.vivo = { id: equipo.id, seguir: true, texto: "Conectando con el teléfono…", renovador: null };
+  dibujar();
+  try {
+    const r = await pedirVivo("start", equipo.id);
+    if (estado.vivo?.id !== equipo.id) return;
+    if (r.demo) estado.vivo.texto = "Demostración: no se envía nada a un teléfono real";
+    else if (r.pushSent === false) estado.vivo.texto = "Esperando que el teléfono se conecte…";
+    estado.vivo.renovador = setInterval(() => {
+      if (estado.vivo) pedirVivo("start", estado.vivo.id).catch(() => undefined);
+    }, VIVO.renovarMs);
+    void vigilarOrdenVivo(equipo.id, r.commandId);
+  } catch (error) {
+    estado.vivo = null;
+    estado.mensajeVivo = error.status === 401 ? "La sesión venció. Volvé a entrar al panel." : "No se pudo activar el seguimiento en vivo. Probá de nuevo.";
+  }
+  void refrescar(true);
+}
+
+/** Mira la orden hasta que el teléfono la toma, para avisar si no pudo arrancar (por ejemplo, falta un permiso). */
+async function vigilarOrdenVivo(id, commandId) {
+  if (!commandId || DEMO) return;
+  for (let intento = 0; intento < VIVO.vigilarIntentos && estado.vivo?.id === id; intento += 1) {
+    await new Promise((ok) => setTimeout(ok, 3000));
+    const c = (await estadoOrden(commandId).catch(() => null))?.command;
+    if (!c || estado.vivo?.id !== id) continue;
+    if (c.status === "executed") { estado.vivo.texto = ""; dibujar(); return; }
+    if (c.status === "failed") {
+      clearInterval(estado.vivo.renovador);
+      estado.vivo = null;
+      estado.mensajeVivo = c.error === "background_location_not_granted"
+        ? "El teléfono necesita el permiso de ubicación «Permitir todo el tiempo» (Ajustes › Apps › Ojo Guard › Ubicación)."
+        : `El teléfono no pudo empezar el seguimiento${c.error ? ` (${c.error})` : ""}.`;
+      dibujar();
+      return;
+    }
+  }
+}
+
+async function detenerVivo() {
+  const vivo = estado.vivo;
+  if (!vivo) return;
+  clearInterval(vivo.renovador);
+  estado.vivo = null;
+  await pedirVivo("stop", vivo.id).catch(() => undefined);
 }
 
 function mensajeTarjeta(texto) {
@@ -845,6 +932,11 @@ function demoRecorrido(equipo) {
 
 function iniciar() {
   agregarPestana();
+  // Si se cierra la pestaña con el seguimiento prendido, se avisa igual al servidor.
+  window.addEventListener("pagehide", () => {
+    if (!estado.vivo || DEMO) return;
+    navigator.sendBeacon?.("/api/remote/live", new Blob([JSON.stringify({ deviceId: estado.vivo.id, action: "stop" })], { type: "application/json" }));
+  });
   new MutationObserver(() => estado.proveedor?.tema(temaActual())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   document.addEventListener("keydown", (evento) => {
     if (evento.key === "Enter" && evento.target.matches?.("#og-mapa li[data-id]")) elegir(evento.target.dataset.id, true);

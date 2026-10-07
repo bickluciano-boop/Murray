@@ -146,6 +146,8 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-botones { display: flex; gap: 8px; flex-wrap: wrap; }
 #og-mapa .ogm-botones button { border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 9px 13px; font-size: 0.86rem; font-weight: 600; }
 #og-mapa .ogm-botones button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }
+#og-mapa .ogm-botones button.parar { border-color: var(--ogm-vivo); color: var(--ogm-vivo); }
+.ogm-aviso-vivo { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--ogm-oro-fondo); border: 1px solid var(--ogm-oro-borde); font-size: 0.82rem; line-height: 1.45; }
 #og-mapa .ogm-botones button:disabled { opacity: 0.6; cursor: wait; }
 .ogm-msj { margin: 8px 0 0; min-height: 1em; font-size: 0.8rem; color: var(--ogm-oro-vivo); }
 .ogm-msj:empty { display: none; }
