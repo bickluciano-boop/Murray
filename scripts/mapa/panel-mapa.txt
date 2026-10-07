@@ -1,0 +1,736 @@
+// Ojo Guard MS · Mapa (base v1)
+//
+// Pantalla "Mapa" del panel: todos los dispositivos en un mapa, el recorrido y
+// las paradas del elegido, y una tarjeta con sus datos y acciones.
+//
+// Está armada en tres piezas para poder crecer sin rehacerla:
+//   1. DATOS: lee lo que el panel ya usa (/api/remote/session y
+//      /api/remote/location-history). Cuando exista el modo en vivo o
+//      Familia y amigos, solo cambia esta pieza.
+//   2. PROVEEDOR DE MAPA: hoy Google Maps. Todo lo que toca google.maps vive
+//      en proveedorGoogle(); para cambiar de proveedor (o sumar funciones
+//      pagas de Google) se reemplaza esa función y el resto queda igual.
+//   3. VISTA: lista, marcadores, tarjeta, recorrido y paradas.
+//
+// No depende de app-v9.js: se engancha con su propio botón en la barra de
+// abajo y se dibuja encima del panel.
+
+const CONFIG = {
+  refrescoMs: 15000,        // cada cuánto se piden las ubicaciones con el mapa abierto
+  refrescoVivoMs: 8000,     // más seguido si algún dispositivo está "en vivo"
+  vivoMs: 2 * 60_000,       // una ubicación de hace menos de esto cuenta como "en vivo"
+  puntosRecorrido: 200,     // tope del servidor por pedido
+  paradaMetros: 120,        // radio para considerar que se quedó en el mismo lugar
+  paradaMinutos: 8,         // tiempo mínimo para marcar una parada
+  saltoMaximoMetros: 5000,  // saltos mayores entre dos puntos no suman kilómetros (GPS errático)
+  zona: "America/Argentina/Buenos_Aires",
+};
+
+const DEMO = new URLSearchParams(location.search).get("demo") === "1";
+const $ = (selector, root = document) => root.querySelector(selector);
+const esc = (valor) => String(valor ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+// ---------------------------------------------------------------------------
+// 1. DATOS
+// ---------------------------------------------------------------------------
+
+async function pedir(ruta, opciones = {}) {
+  const control = new AbortController();
+  const corte = setTimeout(() => control.abort(), 20_000);
+  try {
+    const respuesta = await fetch(ruta, { credentials: "include", cache: "no-store", ...opciones, signal: control.signal });
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw Object.assign(new Error(cuerpo.error || "error"), { status: respuesta.status });
+    return cuerpo;
+  } finally {
+    clearTimeout(corte);
+  }
+}
+
+function numero(valor) {
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Convierte lo que manda el servidor (teléfonos y pulseras) a un formato único. */
+function normalizarEquipos(cuenta) {
+  const equipos = [];
+  for (const d of cuenta.devices || []) {
+    if (d.approvalStatus && d.approvalStatus !== "approved") continue;
+    const ubic = d.lastLocation || {};
+    equipos.push({
+      id: String(d.id),
+      tipo: "telefono",
+      nombre: d.name || "Teléfono",
+      plataforma: d.platform || "",
+      lat: numero(ubic.latitude),
+      lng: numero(ubic.longitude),
+      precision: numero(d.accuracy ?? ubic.accuracy),
+      direccion: ubic.address || "",
+      bateria: numero(d.battery),
+      enLinea: Boolean(d.online),
+      ubicadoEn: d.lastLocationAt || ubic.capturedAt || null,
+      vistoEn: d.lastSeenAt || null,
+      conRecorrido: true,
+    });
+  }
+  for (const w of cuenta.watches || []) {
+    const ubic = w.lastLocation || {};
+    equipos.push({
+      id: `pulsera:${w.id}`,
+      tipo: "pulsera",
+      nombre: w.name || "Pulsera",
+      plataforma: "Pulsera SOS",
+      lat: numero(ubic.latitude),
+      lng: numero(ubic.longitude),
+      precision: numero(ubic.accuracy),
+      direccion: ubic.address || "",
+      bateria: numero(w.battery),
+      enLinea: Boolean(w.online),
+      ubicadoEn: w.lastLocationAt || ubic.capturedAt || null,
+      vistoEn: w.lastSeenAt || null,
+      conRecorrido: false,
+    });
+  }
+  return equipos;
+}
+
+async function cargarEquipos() {
+  if (DEMO) return demoEquipos();
+  const cuenta = await pedir("/api/remote/session");
+  if (!cuenta.authenticated) throw Object.assign(new Error("sin_sesion"), { status: 401 });
+  return normalizarEquipos(cuenta);
+}
+
+async function cargarRecorrido(equipo) {
+  if (!equipo.conRecorrido) return [];
+  if (DEMO) return demoRecorrido(equipo);
+  const datos = await pedir(`/api/remote/location-history?deviceId=${encodeURIComponent(equipo.id)}&limit=${CONFIG.puntosRecorrido}`);
+  return (datos.points || [])
+    .map((p) => ({ lat: numero(p.latitude), lng: numero(p.longitude), precision: numero(p.accuracy), direccion: p.address || "", en: p.capturedAt }))
+    .filter((p) => p.lat !== null && p.lng !== null && p.en)
+    .sort((a, b) => new Date(a.en) - new Date(b.en));
+}
+
+async function enviarOrden(equipo, tipo) {
+  if (DEMO) return { demo: true };
+  return pedir("/api/remote/commands", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId: equipo.id, type: tipo }) });
+}
+
+async function estadoOrden(id) {
+  return pedir(`/api/remote/commands?commandId=${encodeURIComponent(id)}`);
+}
+
+const FOTO_VERSIONES = "ojo_ms_fotos_equipos";
+function versionFoto(id) {
+  try { return JSON.parse(localStorage.getItem(FOTO_VERSIONES) || "{}")[id] || "1"; } catch { return "1"; }
+}
+function marcarFoto(id) {
+  try {
+    const versiones = JSON.parse(localStorage.getItem(FOTO_VERSIONES) || "{}");
+    versiones[id] = String(Date.now());
+    localStorage.setItem(FOTO_VERSIONES, JSON.stringify(versiones));
+  } catch { /* navegación privada: la foto nueva aparece al recargar */ }
+}
+function urlFoto(equipo) {
+  if (DEMO || equipo.tipo !== "telefono") return null;
+  return `/api/remote/devices/photo?deviceId=${encodeURIComponent(equipo.id)}&v=${versionFoto(equipo.id)}`;
+}
+
+/** Achica la foto elegida a 256x256 (recorte al centro) antes de subirla. */
+function prepararFoto(archivo) {
+  return new Promise((resolver, rechazar) => {
+    const img = new Image();
+    const url = URL.createObjectURL(archivo);
+    img.onload = () => {
+      const lado = Math.min(img.naturalWidth, img.naturalHeight);
+      const lienzo = document.createElement("canvas");
+      lienzo.width = 256; lienzo.height = 256;
+      lienzo.getContext("2d").drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, 256, 256);
+      URL.revokeObjectURL(url);
+      resolver(lienzo.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rechazar(new Error("imagen_invalida")); };
+    img.src = url;
+  });
+}
+
+async function subirFoto(equipo, archivo) {
+  const image = await prepararFoto(archivo);
+  await pedir("/api/remote/devices/photo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId: equipo.id, image }) });
+  marcarFoto(equipo.id);
+}
+
+// ---------------------------------------------------------------------------
+// Cálculos sobre el recorrido
+// ---------------------------------------------------------------------------
+
+function metros(a, b) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function kilometros(puntos) {
+  let total = 0;
+  for (let i = 1; i < puntos.length; i += 1) {
+    const d = metros(puntos[i - 1], puntos[i]);
+    if (d < CONFIG.saltoMaximoMetros) total += d;
+  }
+  return total / 1000;
+}
+
+/** Agrupa puntos seguidos que quedan cerca: si duran lo suficiente, es una parada. */
+function paradas(puntos) {
+  const lista = [];
+  let grupo = [];
+  const cerrar = () => {
+    if (grupo.length < 2) return;
+    const desde = new Date(grupo[0].en), hasta = new Date(grupo[grupo.length - 1].en);
+    const minutos = (hasta - desde) / 60_000;
+    if (minutos < CONFIG.paradaMinutos) return;
+    const lat = grupo.reduce((s, p) => s + p.lat, 0) / grupo.length;
+    const lng = grupo.reduce((s, p) => s + p.lng, 0) / grupo.length;
+    lista.push({ lat, lng, desde, hasta, minutos: Math.round(minutos), direccion: grupo.find((p) => p.direccion)?.direccion || "" });
+  };
+  for (const punto of puntos) {
+    if (!grupo.length) { grupo = [punto]; continue; }
+    const centro = { lat: grupo.reduce((s, p) => s + p.lat, 0) / grupo.length, lng: grupo.reduce((s, p) => s + p.lng, 0) / grupo.length };
+    if (metros(centro, punto) <= CONFIG.paradaMetros) grupo.push(punto);
+    else { cerrar(); grupo = [punto]; }
+  }
+  cerrar();
+  return lista;
+}
+
+function inicioDeHoy() {
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: CONFIG.zona, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  return new Date(`${partes}T00:00:00-03:00`);
+}
+
+function filtrarPorRango(puntos, rango) {
+  const desde = rango === "vivo" ? new Date(Date.now() - 2 * 3600_000) : rango === "hoy" ? inicioDeHoy() : new Date(Date.now() - 7 * 86400_000);
+  return puntos.filter((p) => new Date(p.en) >= desde);
+}
+
+// ---------------------------------------------------------------------------
+// Textos
+// ---------------------------------------------------------------------------
+
+const horaCorta = (fecha) => new Intl.DateTimeFormat("es-AR", { timeZone: CONFIG.zona, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(fecha));
+const diaCorto = (fecha) => new Intl.DateTimeFormat("es-AR", { timeZone: CONFIG.zona, day: "numeric", month: "short" }).format(new Date(fecha));
+
+function haceCuanto(fecha) {
+  if (!fecha) return "sin ubicación";
+  const s = Math.max(0, (Date.now() - new Date(fecha).getTime()) / 1000);
+  if (s < 60) return `hace ${Math.max(1, Math.round(s))} s`;
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.round(s / 3600)} h`;
+  return `${diaCorto(fecha)} ${horaCorta(fecha)}`;
+}
+
+function estadoDe(equipo) {
+  const edad = equipo.ubicadoEn ? Date.now() - new Date(equipo.ubicadoEn).getTime() : Infinity;
+  if (edad <= CONFIG.vivoMs) return { clase: "vivo", texto: "En vivo" };
+  if (!equipo.enLinea && edad > 3 * 3600_000) return { clase: "off", texto: "Sin conexión" };
+  return { clase: "", texto: equipo.tipo === "pulsera" ? "Pulsera SOS" : "Última ubicación" };
+}
+
+function iniciales(nombre) {
+  const palabras = String(nombre || "?").split(/\s+/).filter((w) => w && !/^(de|del|la|el|los|las)$/i.test(w));
+  return (palabras.length > 1 ? palabras[0][0] + palabras[palabras.length - 1][0] : (palabras[0] || "?").slice(0, 2)).toUpperCase();
+}
+
+function avatarHtml(equipo, clase = "") {
+  const foto = urlFoto(equipo);
+  return `<span class="ogm-av ${clase}"><span>${esc(iniciales(equipo.nombre))}</span>${foto ? `<img src="${foto}" alt="" onerror="this.remove()">` : ""}</span>`;
+}
+
+// ---------------------------------------------------------------------------
+// 2. PROVEEDOR DE MAPA (Google Maps)
+// ---------------------------------------------------------------------------
+
+const ESTILO_OSCURO = [
+  { elementType: "geometry", stylers: [{ color: "#16181c" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8f8a7c" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#111214" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", stylers: [{ visibility: "on" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#17241c" }] },
+  { featureType: "poi.park", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a2d33" }] },
+  { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#34373e" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#4a4130" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0c1a24" }] },
+];
+const ESTILO_CLARO = [
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", stylers: [{ visibility: "on" }] },
+  { featureType: "poi.park", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
+
+function esperarGoogle(maxMs = 15000) {
+  return new Promise((resolver, rechazar) => {
+    const inicio = Date.now();
+    const mirar = () => {
+      if (window.google?.maps?.Map && window.google.maps.OverlayView) return resolver(window.google.maps);
+      if (Date.now() - inicio > maxMs) return rechazar(new Error("google_maps_no_cargo"));
+      setTimeout(mirar, 200);
+    };
+    mirar();
+  });
+}
+
+/**
+ * Todo lo que sabe de Google Maps está acá. La vista solo usa estos métodos:
+ * marcador, quitarMarcador, recorrido, paradas, precision, encuadrar,
+ * centrar, acercar, capa y tema.
+ */
+async function proveedorGoogle(contenedor, temaInicial) {
+  const g = await esperarGoogle();
+  class Marcador extends g.OverlayView {
+    constructor(posicion, elemento) { super(); this.posicion = posicion; this.elemento = elemento; }
+    onAdd() { this.getPanes().overlayMouseTarget.appendChild(this.elemento); g.OverlayView.preventMapHitsAndGesturesFrom?.(this.elemento); }
+    draw() {
+      const p = this.getProjection()?.fromLatLngToDivPixel(this.posicion);
+      if (!p) return;
+      this.elemento.style.left = `${p.x}px`;
+      this.elemento.style.top = `${p.y}px`;
+    }
+    onRemove() { this.elemento.remove(); }
+    mover(posicion) { this.posicion = posicion; this.draw(); }
+  }
+  const mapa = new g.Map(contenedor, {
+    center: { lat: -34.6037, lng: -58.3816 },
+    zoom: 13,
+    disableDefaultUI: true,
+    gestureHandling: "greedy",
+    clickableIcons: false,
+    styles: temaInicial === "claro" ? ESTILO_CLARO : ESTILO_OSCURO,
+    backgroundColor: temaInicial === "claro" ? "#eeeae0" : "#121316",
+  });
+  const marcadores = new Map();
+  let lineas = [], marcasParada = [], circulo = null;
+  const pos = (p) => new g.LatLng(p.lat, p.lng);
+  return {
+    marcador(id, punto, elemento) {
+      const actual = marcadores.get(id);
+      if (actual && actual.elemento === elemento) { actual.mover(pos(punto)); return; }
+      actual?.setMap(null);
+      const nuevo = new Marcador(pos(punto), elemento);
+      nuevo.setMap(mapa);
+      marcadores.set(id, nuevo);
+    },
+    quitarMarcador(id) { marcadores.get(id)?.setMap(null); marcadores.delete(id); },
+    idsMarcadores() { return [...marcadores.keys()]; },
+    recorrido(puntos) {
+      lineas.forEach((l) => l.setMap(null));
+      lineas = [];
+      if (puntos.length < 2) return;
+      const camino = puntos.map(pos);
+      lineas.push(new g.Polyline({ map: mapa, path: camino, strokeColor: "#d9b24c", strokeOpacity: 0.3, strokeWeight: 10, clickable: false }));
+      lineas.push(new g.Polyline({ map: mapa, path: camino, strokeColor: "#f0c75a", strokeOpacity: 1, strokeWeight: 3.5, clickable: false }));
+    },
+    paradas(lista, crearElemento) {
+      marcasParada.forEach((m) => m.setMap(null));
+      marcasParada = lista.map((parada) => {
+        const m = new Marcador(pos(parada), crearElemento(parada));
+        m.setMap(mapa);
+        return m;
+      });
+    },
+    precision(punto, radio) {
+      circulo?.setMap(null);
+      circulo = null;
+      if (!punto || !radio) return;
+      circulo = new g.Circle({ map: mapa, center: pos(punto), radius: radio, fillColor: "#d9b24c", fillOpacity: 0.12, strokeColor: "#d9b24c", strokeOpacity: 0.45, strokeWeight: 1, clickable: false });
+    },
+    encuadrar(puntos, margen = 80) {
+      if (!puntos.length) return;
+      if (puntos.length === 1) { mapa.setCenter(pos(puntos[0])); mapa.setZoom(16); return; }
+      const limites = new g.LatLngBounds();
+      puntos.forEach((p) => limites.extend(pos(p)));
+      mapa.fitBounds(limites, margen);
+    },
+    centrar(punto, zoom) { mapa.panTo(pos(punto)); if (zoom) mapa.setZoom(zoom); },
+    acercar(paso) { mapa.setZoom((mapa.getZoom() || 13) + paso); },
+    capa(nombre) { mapa.setMapTypeId(nombre === "satelite" ? "hybrid" : "roadmap"); },
+    tema(nombre) { mapa.setOptions({ styles: nombre === "claro" ? ESTILO_CLARO : ESTILO_OSCURO, backgroundColor: nombre === "claro" ? "#eeeae0" : "#121316" }); },
+    redibujar() { g.event.trigger(mapa, "resize"); },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 3. VISTA
+// ---------------------------------------------------------------------------
+
+const estado = {
+  abierto: false,
+  equipos: [],
+  elegido: null,
+  rango: "vivo",
+  recorrido: [],
+  proveedor: null,
+  encuadrado: false,
+  temporizador: null,
+  ultimoRecorrido: 0,
+  elementosMarcador: new Map(),
+};
+
+const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "claro" : "oscuro");
+
+function construir() {
+  const raiz = document.createElement("section");
+  raiz.id = "og-mapa";
+  raiz.className = "ogm hidden";
+  raiz.setAttribute("aria-label", "Mapa de dispositivos");
+  raiz.innerHTML = `
+    <aside class="ogm-lado">
+      <p class="ogm-ceja">OJO GUARD MS · MAPA</p>
+      <h2>Tus dispositivos</h2>
+      <p class="ogm-sub" data-ogm="resumen">Cargando ubicaciones…</p>
+      <ul class="ogm-lista" data-ogm="lista"></ul>
+      <p class="ogm-nota">Las ubicaciones se actualizan solas mientras el mapa está abierto.</p>
+    </aside>
+    <div class="ogm-zona">
+      <div class="ogm-lienzo" data-ogm="lienzo"></div>
+      <div class="ogm-aviso hidden" data-ogm="aviso"></div>
+      <div class="ogm-seg" role="group" aria-label="Qué recorrido mostrar">
+        <button type="button" data-rango="vivo" class="on"><i></i>En vivo</button>
+        <button type="button" data-rango="hoy">Hoy</button>
+        <button type="button" data-rango="semana">7 días</button>
+      </div>
+      <div class="ogm-ctrl">
+        <button type="button" data-ogm="mas" aria-label="Acercar">+</button>
+        <button type="button" data-ogm="menos" aria-label="Alejar">−</button>
+        <button type="button" data-ogm="centrar" aria-label="Ver todos" class="oro">◎</button>
+      </div>
+      <div class="ogm-capas" role="group" aria-label="Tipo de mapa">
+        <button type="button" data-capa="mapa" class="on">Mapa</button>
+        <button type="button" data-capa="satelite">Satélite</button>
+      </div>
+      <div class="ogm-tarjeta hidden" data-ogm="tarjeta"></div>
+    </div>
+    <input type="file" accept="image/*" class="hidden" data-ogm="archivo">`;
+  document.body.appendChild(raiz);
+
+  raiz.addEventListener("click", (evento) => {
+    const boton = evento.target.closest("button, li[data-id]");
+    if (!boton) return;
+    if (boton.dataset.rango) return elegirRango(boton.dataset.rango);
+    if (boton.dataset.capa) {
+      raiz.querySelectorAll("[data-capa]").forEach((b) => b.classList.toggle("on", b === boton));
+      return estado.proveedor?.capa(boton.dataset.capa);
+    }
+    if (boton.dataset.id) return elegir(boton.dataset.id, true);
+    const accion = boton.dataset.ogm || boton.dataset.accion;
+    if (accion === "mas") return estado.proveedor?.acercar(1);
+    if (accion === "menos") return estado.proveedor?.acercar(-1);
+    if (accion === "centrar") return encuadrarTodo();
+    if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
+    if (accion === "llegar") return irConGoogle();
+    if (accion === "locate" || accion === "alarm") return ordenar(accion, boton);
+    if (accion === "cerrar-tarjeta") return raiz.classList.toggle("ogm-plegada");
+  });
+  $('[data-ogm="archivo"]', raiz).addEventListener("change", async (evento) => {
+    const archivo = evento.target.files?.[0];
+    evento.target.value = "";
+    const equipo = equipoElegido();
+    if (!archivo || !equipo) return;
+    mensajeTarjeta("Subiendo foto…");
+    try {
+      await subirFoto(equipo, archivo);
+      estado.elementosMarcador.delete(equipo.id);
+      dibujar();
+      mensajeTarjeta("Foto actualizada.");
+    } catch {
+      mensajeTarjeta("No se pudo subir la foto. Probá con otra imagen.");
+    }
+  });
+  return raiz;
+}
+
+function agregarPestana() {
+  const barra = $(".bottom-tabs");
+  if (!barra || $("[data-mapa-tab]", barra)) return;
+  const boton = document.createElement("button");
+  boton.type = "button";
+  boton.className = "bottom-tab";
+  boton.setAttribute("data-mapa-tab", "");
+  boton.innerHTML = '<span class="tab-icon" aria-hidden="true">◎</span><span>Mapa</span>';
+  const inicio = $('[data-view="home"]', barra);
+  inicio ? inicio.after(boton) : barra.prepend(boton);
+  barra.classList.add("ogm-con-mapa");
+  boton.addEventListener("click", () => (estado.abierto ? null : abrir()));
+  // Cualquier otra pestaña cierra el mapa (app-v9.js se encarga de mostrar su sección).
+  barra.querySelectorAll("[data-view]").forEach((otra) => otra.addEventListener("click", cerrar));
+  document.querySelectorAll("[data-open-view]").forEach((otra) => otra.addEventListener("click", cerrar));
+}
+
+async function abrir() {
+  const raiz = $("#og-mapa") || construir();
+  estado.abierto = true;
+  raiz.classList.remove("hidden");
+  document.body.classList.add("og-mapa-abierto");
+  document.querySelectorAll(".bottom-tabs .bottom-tab").forEach((b) => {
+    const esMapa = b.hasAttribute("data-mapa-tab");
+    b.classList.toggle("active", esMapa);
+    b.setAttribute("aria-current", esMapa ? "page" : "false");
+  });
+  if (!estado.proveedor) {
+    try {
+      estado.proveedor = await proveedorGoogle($('[data-ogm="lienzo"]', raiz), temaActual());
+    } catch {
+      aviso("No se pudo cargar Google Maps. Revisá la conexión y volvé a abrir el mapa.");
+    }
+  } else {
+    estado.proveedor.redibujar();
+  }
+  await refrescar(true);
+}
+
+function cerrar() {
+  if (!estado.abierto) return;
+  estado.abierto = false;
+  clearTimeout(estado.temporizador);
+  $("#og-mapa")?.classList.add("hidden");
+  document.body.classList.remove("og-mapa-abierto");
+  $("[data-mapa-tab]")?.classList.remove("active");
+}
+
+function aviso(texto) {
+  const caja = $('[data-ogm="aviso"]');
+  if (!caja) return;
+  caja.textContent = texto || "";
+  caja.classList.toggle("hidden", !texto);
+}
+
+async function refrescar(forzarRecorrido = false) {
+  clearTimeout(estado.temporizador);
+  if (!estado.abierto) return;
+  try {
+    estado.equipos = await cargarEquipos();
+    aviso("");
+  } catch (error) {
+    if (error.status === 401) aviso("La sesión venció. Volvé a entrar al panel.");
+    else aviso("No se pudieron actualizar las ubicaciones. Se reintenta solo.");
+  }
+  const conUbicacion = estado.equipos.filter((e) => e.lat !== null);
+  if (!estado.elegido || !estado.equipos.some((e) => e.id === estado.elegido)) {
+    estado.elegido = (conUbicacion[0] || estado.equipos[0])?.id || null;
+    forzarRecorrido = true;
+  }
+  if (!conUbicacion.length && estado.equipos.length) aviso("Todavía no hay ubicaciones. Tocá «Ubicar ahora» para pedir la primera.");
+  if (!estado.equipos.length) aviso("Todavía no hay dispositivos vinculados a esta cuenta.");
+  const equipo = equipoElegido();
+  if (equipo && (forzarRecorrido || Date.now() - estado.ultimoRecorrido > 30_000)) {
+    try { estado.recorrido = await cargarRecorrido(equipo); } catch { estado.recorrido = []; }
+    estado.ultimoRecorrido = Date.now();
+  }
+  dibujar();
+  if (!estado.encuadrado && conUbicacion.length) { encuadrarTodo(); estado.encuadrado = true; }
+  const hayVivo = estado.equipos.some((e) => estadoDe(e).clase === "vivo");
+  estado.temporizador = setTimeout(() => refrescar(), hayVivo ? CONFIG.refrescoVivoMs : CONFIG.refrescoMs);
+}
+
+const equipoElegido = () => estado.equipos.find((e) => e.id === estado.elegido) || null;
+
+async function elegir(id, centrar) {
+  if (estado.elegido !== id) {
+    estado.elegido = id;
+    estado.recorrido = [];
+    $("#og-mapa")?.classList.remove("ogm-plegada");
+    dibujar();
+    try { estado.recorrido = await cargarRecorrido(equipoElegido()); } catch { estado.recorrido = []; }
+    estado.ultimoRecorrido = Date.now();
+  }
+  dibujar();
+  const equipo = equipoElegido();
+  if (centrar && equipo?.lat !== null) estado.proveedor?.centrar(equipo, 16);
+}
+
+function elegirRango(rango) {
+  estado.rango = rango;
+  document.querySelectorAll("#og-mapa [data-rango]").forEach((b) => b.classList.toggle("on", b.dataset.rango === rango));
+  dibujar();
+  const puntos = filtrarPorRango(estado.recorrido, rango);
+  if (puntos.length > 1) estado.proveedor?.encuadrar(puntos);
+}
+
+function encuadrarTodo() {
+  const puntos = estado.equipos.filter((e) => e.lat !== null);
+  estado.proveedor?.encuadrar(puntos, 90);
+}
+
+function elementoMarcador(equipo) {
+  const el = estado.elementosMarcador.get(equipo.id) || document.createElement("button");
+  el.type = "button";
+  el.dataset.id = equipo.id;
+  const st = estadoDe(equipo);
+  el.className = `ogm-pin ${st.clase}${equipo.id === estado.elegido ? " sel" : ""}`;
+  el.innerHTML = `<span class="ogm-halo"></span>${avatarHtml(equipo)}<span class="ogm-etq">${esc(equipo.nombre)}<em>${esc(haceCuanto(equipo.ubicadoEn))}</em></span>`;
+  if (!estado.elementosMarcador.has(equipo.id)) {
+    el.addEventListener("click", (evento) => { evento.stopPropagation(); elegir(equipo.id, false); });
+    estado.elementosMarcador.set(equipo.id, el);
+  }
+  return el;
+}
+
+function elementoParada(parada) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "ogm-parada";
+  const texto = `Estuvo ${parada.minutos >= 60 ? `${Math.floor(parada.minutos / 60)} h ${parada.minutos % 60} min` : `${parada.minutos} min`} · ${horaCorta(parada.desde)} a ${horaCorta(parada.hasta)}`;
+  el.innerHTML = `<i></i><span>${esc(texto)}${parada.direccion ? `<small>${esc(parada.direccion)}</small>` : ""}</span>`;
+  el.addEventListener("click", (evento) => { evento.stopPropagation(); el.classList.toggle("abierta"); });
+  return el;
+}
+
+function dibujar() {
+  const raiz = $("#og-mapa");
+  if (!raiz) return;
+  const equipos = estado.equipos;
+  const elegido = equipoElegido();
+
+  // Lista lateral (escritorio) / tira de abajo (celular)
+  const conUbic = equipos.filter((e) => e.lat !== null).length;
+  $('[data-ogm="resumen"]', raiz).textContent = `${equipos.length} dispositivo${equipos.length === 1 ? "" : "s"} · ${conUbic} con ubicación`;
+  $('[data-ogm="lista"]', raiz).innerHTML = equipos.map((e) => {
+    const st = estadoDe(e);
+    const bat = e.bateria === null ? "" : `<span class="ogm-bat${e.bateria < 25 ? " baja" : ""}"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span><span class="ogm-pct">${Math.round(e.bateria)}%</span>`;
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><strong>${esc(e.nombre)}</strong><small><b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ${esc(haceCuanto(e.ubicadoEn))}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${bat}</li>`;
+  }).join("");
+
+  // Marcadores
+  const p = estado.proveedor;
+  if (p) {
+    const vigentes = new Set();
+    for (const e of equipos) {
+      if (e.lat === null) continue;
+      vigentes.add(e.id);
+      p.marcador(e.id, e, elementoMarcador(e));
+    }
+    p.idsMarcadores().filter((id) => !vigentes.has(id)).forEach((id) => p.quitarMarcador(id));
+    const puntos = elegido ? filtrarPorRango(estado.recorrido, estado.rango) : [];
+    const trazo = elegido && elegido.lat !== null && puntos.length ? [...puntos, { lat: elegido.lat, lng: elegido.lng }] : puntos;
+    p.recorrido(trazo);
+    p.paradas(paradas(puntos), elementoParada);
+    p.precision(elegido && elegido.lat !== null ? elegido : null, elegido?.precision && elegido.precision < 500 ? elegido.precision : 0);
+  }
+
+  // Tarjeta del elegido
+  const tarjeta = $('[data-ogm="tarjeta"]', raiz);
+  if (!elegido) { tarjeta.classList.add("hidden"); return; }
+  const st = estadoDe(elegido);
+  const puntosHoy = filtrarPorRango(estado.recorrido, "hoy");
+  const km = kilometros(puntosHoy);
+  const lista = paradas(filtrarPorRango(estado.recorrido, estado.rango)).slice(-3).reverse();
+  const otros = equipos.filter((e) => e.id !== elegido.id);
+  tarjeta.classList.remove("hidden");
+  tarjeta.innerHTML = `
+    <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
+    <div class="ogm-cab">
+      <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
+      <div><strong>${esc(elegido.nombre)}</strong><small><b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ${esc(haceCuanto(elegido.ubicadoEn))}</small></div>
+    </div>
+    <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
+    <div class="ogm-datos">
+      <span><em>Precisión</em>${elegido.precision === null ? "—" : `±${Math.round(elegido.precision)} m`}</span>
+      <span><em>Batería</em>${elegido.bateria === null ? "—" : `${Math.round(elegido.bateria)}%`}</span>
+      <span><em>Hoy</em>${km >= 0.05 ? `${km.toFixed(1).replace(".", ",")} km` : "—"}</span>
+    </div>
+    ${lista.length ? `<ul class="ogm-paradas">${lista.map((pa) => `<li><i></i>${esc(horaCorta(pa.desde))} a ${esc(horaCorta(pa.hasta))} · ${pa.minutos} min${pa.direccion ? ` · ${esc(pa.direccion)}` : ""}</li>`).join("")}</ul>` : ""}
+    <div class="ogm-botones">
+      ${elegido.tipo === "telefono" ? '<button type="button" class="oro" data-accion="locate">Ubicar ahora</button><button type="button" data-accion="alarm">Hacer sonar</button>' : ""}
+      ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
+    </div>
+    <p class="ogm-msj" data-ogm="msj"></p>
+    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc(haceCuanto(e.ubicadoEn))}</small></li>`).join("")}</ul>` : ""}`;
+}
+
+function mensajeTarjeta(texto) {
+  const caja = $('#og-mapa [data-ogm="msj"]');
+  if (caja) caja.textContent = texto;
+}
+
+function irConGoogle() {
+  const e = equipoElegido();
+  if (!e || e.lat === null) return;
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}`, "_blank", "noopener");
+}
+
+async function ordenar(tipo, boton) {
+  const equipo = equipoElegido();
+  if (!equipo) return;
+  const etiqueta = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = tipo === "locate" ? "Ubicando…" : "Haciendo sonar…";
+  mensajeTarjeta("Enviando orden…");
+  try {
+    const r = await enviarOrden(equipo, tipo);
+    if (r.demo) { mensajeTarjeta("Demostración: no se envía ninguna orden a un teléfono real."); return; }
+    if (!r.queued || !r.commandId) throw new Error("no_encolada");
+    mensajeTarjeta(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
+    for (let intento = 0; intento < 20 && estado.abierto; intento += 1) {
+      await new Promise((ok) => setTimeout(ok, 3000));
+      const c = (await estadoOrden(r.commandId).catch(() => null))?.command;
+      if (!c) continue;
+      if (c.status === "executed") {
+        mensajeTarjeta(tipo === "locate" ? "Ubicación recibida." : "El teléfono está sonando.");
+        estado.ultimoRecorrido = 0;
+        await refrescar(true);
+        break;
+      }
+      if (c.status === "failed") { mensajeTarjeta(c.error ? `No se pudo: ${c.error}` : "El teléfono no pudo completar la orden."); break; }
+    }
+  } catch (error) {
+    mensajeTarjeta(error.status === 403
+      ? "Esta acción pide confirmar tu identidad: hacela desde la pestaña Dispositivos."
+      : "No se pudo enviar la orden. Probá de nuevo.");
+  } finally {
+    boton.disabled = false;
+    boton.textContent = etiqueta;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Demostración (?demo=1): datos de ejemplo, no toca el servidor
+// ---------------------------------------------------------------------------
+
+function demoEquipos() {
+  const ahora = Date.now();
+  return [
+    { id: "demo-1", tipo: "telefono", nombre: "Mi teléfono", plataforma: "Android", lat: -34.5800, lng: -58.4245, precision: 12, direccion: "Ugarteche 3178, Palermo", bateria: 64, enLinea: true, ubicadoEn: new Date(ahora - 5000).toISOString(), conRecorrido: true },
+    { id: "demo-2", tipo: "telefono", nombre: "Teléfono de Sofía", plataforma: "iPhone", lat: -34.5871, lng: -58.4302, precision: 20, direccion: "Guatemala 4600, Palermo", bateria: 81, enLinea: true, ubicadoEn: new Date(ahora - 120000).toISOString(), conRecorrido: true },
+    { id: "pulsera:demo", tipo: "pulsera", nombre: "Pulsera de Elsa", plataforma: "Pulsera SOS", lat: -34.5810, lng: -58.4210, precision: 30, direccion: "Plaza Italia", bateria: 47, enLinea: true, ubicadoEn: new Date(ahora - 360000).toISOString(), conRecorrido: false },
+  ];
+}
+
+function demoRecorrido(equipo) {
+  const base = Date.now() - 3 * 3600_000;
+  const camino = [[-34.5925, -58.4105], [-34.5921, -58.4110], [-34.5918, -58.4113], [-34.5905, -58.4140], [-34.5880, -58.4170], [-34.5862, -58.4195], [-34.5860, -58.4197], [-34.5858, -58.4199], [-34.5830, -58.4225], [-34.5800, -58.4245]];
+  const minutos = [0, 6, 14, 30, 40, 52, 62, 75, 120, 178];
+  return camino.map(([lat, lng], i) => ({ lat: lat + (equipo.id === "demo-2" ? -0.006 : 0), lng, precision: 15, direccion: i === 6 ? "Plaza Güemes" : "", en: new Date(base + minutos[i] * 60_000).toISOString() }));
+}
+
+// ---------------------------------------------------------------------------
+// Arranque
+// ---------------------------------------------------------------------------
+
+function iniciar() {
+  agregarPestana();
+  new MutationObserver(() => estado.proveedor?.tema(temaActual())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  document.addEventListener("keydown", (evento) => {
+    if (evento.key === "Enter" && evento.target.matches?.("#og-mapa li[data-id]")) elegir(evento.target.dataset.id, true);
+  });
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
+else iniciar();
+
+export { paradas, kilometros, filtrarPorRango, normalizarEquipos };
