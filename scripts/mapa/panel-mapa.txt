@@ -555,6 +555,12 @@ function agregarPestana() {
 async function abrir() {
   const raiz = $("#og-mapa") || construir();
   estado.abierto = true;
+  // En el iPhone, si la página quedó desplazada (por ejemplo después de mirar el
+  // Historial), Safari achica sus barras y el mapa quedaba corrido: se vuelve arriba
+  // y se bloquea el desplazamiento mientras el mapa está abierto.
+  estado.desplazamiento = window.scrollY;
+  window.scrollTo(0, 0);
+  document.documentElement.classList.add("og-mapa-abierto");
   raiz.classList.remove("hidden");
   if (esCelular()) plegar(true);
   document.body.classList.add("og-mapa-abierto");
@@ -583,6 +589,7 @@ function cerrar() {
   clearTimeout(estado.temporizador);
   $("#og-mapa")?.classList.add("hidden");
   document.body.classList.remove("og-mapa-abierto");
+  document.documentElement.classList.remove("og-mapa-abierto");
   $("[data-mapa-tab]")?.classList.remove("active");
 }
 
