@@ -24,6 +24,7 @@ const CONFIG = {
   paradaMinutos: 8,         // tiempo mínimo para marcar una parada
   saltoMaximoMetros: 5000,  // saltos mayores entre dos puntos no suman kilómetros (GPS errático)
   zona: "America/Argentina/Buenos_Aires",
+  zoomMaximo: 16,           // al encuadrar, no acercar más que esto (unas cuadras a la vista)
 };
 
 const DEMO = new URLSearchParams(location.search).get("demo") === "1";
@@ -66,7 +67,7 @@ function normalizarEquipos(cuenta) {
       lat: numero(ubic.latitude),
       lng: numero(ubic.longitude),
       precision: numero(d.accuracy ?? ubic.accuracy),
-      direccion: ubic.address || "",
+      direccion: direccionCorta(ubic.address),
       bateria: numero(d.battery),
       enLinea: Boolean(d.online),
       ubicadoEn: d.lastLocationAt || ubic.capturedAt || null,
@@ -84,7 +85,7 @@ function normalizarEquipos(cuenta) {
       lat: numero(ubic.latitude),
       lng: numero(ubic.longitude),
       precision: numero(ubic.accuracy),
-      direccion: ubic.address || "",
+      direccion: direccionCorta(ubic.address),
       bateria: numero(w.battery),
       enLinea: Boolean(w.online),
       ubicadoEn: w.lastLocationAt || ubic.capturedAt || null,
@@ -107,7 +108,7 @@ async function cargarRecorrido(equipo) {
   if (DEMO) return demoRecorrido(equipo);
   const datos = await pedir(`/api/remote/location-history?deviceId=${encodeURIComponent(equipo.id)}&limit=${CONFIG.puntosRecorrido}`);
   return (datos.points || [])
-    .map((p) => ({ lat: numero(p.latitude), lng: numero(p.longitude), precision: numero(p.accuracy), direccion: p.address || "", en: p.capturedAt }))
+    .map((p) => ({ lat: numero(p.latitude), lng: numero(p.longitude), precision: numero(p.accuracy), direccion: direccionCorta(p.address), en: p.capturedAt }))
     .filter((p) => p.lat !== null && p.lng !== null && p.en)
     .sort((a, b) => new Date(a.en) - new Date(b.en));
 }
@@ -218,6 +219,23 @@ function filtrarPorRango(puntos, rango) {
 // Textos
 // ---------------------------------------------------------------------------
 
+/**
+ * "3702, Cerviño, Palermo Botánico, Palermo, Buenos Aires, Comuna 14, ..." -> "Cerviño 3702, Palermo Botánico".
+ * Se queda con calle, número y barrio; saca provincia, comuna, código postal y país.
+ */
+function direccionCorta(texto) {
+  const partes = String(texto || "").split(",").map((p) => p.trim()).filter(Boolean);
+  if (!partes.length) return "";
+  if (/^\d+[a-z]?$/i.test(partes[0]) && partes[1]) partes.splice(0, 2, `${partes[1]} ${partes[0]}`);
+  else if (partes[1] && /^\d+[a-z]?$/i.test(partes[1])) partes.splice(0, 2, `${partes[0]} ${partes[1]}`);
+  const sobra = /^(argentina|buenos aires|ciudad aut[oó]noma de buenos aires|caba|comuna \d+|[a-z]\d{4}[a-z]{3}|\d{4})$/i;
+  const utiles = partes.filter((p, i) => i === 0 || !sobra.test(p));
+  const resultado = utiles.slice(0, 2);
+  const parecidos = (x, y) => x.toLowerCase().includes(y.toLowerCase()) || y.toLowerCase().includes(x.toLowerCase());
+  if (utiles[2] && utiles[1] && !parecidos(utiles[2], utiles[1]) && resultado.join(", ").length < 34) resultado.push(utiles[2]);
+  return resultado.join(", ");
+}
+
 const horaCorta = (fecha) => new Intl.DateTimeFormat("es-AR", { timeZone: CONFIG.zona, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(fecha));
 const diaCorto = (fecha) => new Intl.DateTimeFormat("es-AR", { timeZone: CONFIG.zona, day: "numeric", month: "short" }).format(new Date(fecha));
 
@@ -234,7 +252,7 @@ function estadoDe(equipo) {
   const edad = equipo.ubicadoEn ? Date.now() - new Date(equipo.ubicadoEn).getTime() : Infinity;
   if (edad <= CONFIG.vivoMs) return { clase: "vivo", texto: "En vivo" };
   if (!equipo.enLinea && edad > 3 * 3600_000) return { clase: "off", texto: "Sin conexión" };
-  return { clase: "", texto: equipo.tipo === "pulsera" ? "Pulsera SOS" : "Última ubicación" };
+  return { clase: "", texto: "" };
 }
 
 function iniciales(nombre) {
@@ -352,10 +370,12 @@ async function proveedorGoogle(contenedor, temaInicial) {
     },
     encuadrar(puntos, margen = 80) {
       if (!puntos.length) return;
-      if (puntos.length === 1) { mapa.setCenter(pos(puntos[0])); mapa.setZoom(16); return; }
+      if (puntos.length === 1) { mapa.setCenter(pos(puntos[0])); mapa.setZoom(CONFIG.zoomMaximo); return; }
       const limites = new g.LatLngBounds();
       puntos.forEach((p) => limites.extend(pos(p)));
       mapa.fitBounds(limites, margen);
+      // Con dispositivos muy juntos, fitBounds acerca hasta ver la vereda: se limita.
+      g.event.addListenerOnce(mapa, "idle", () => { if ((mapa.getZoom() || 0) > CONFIG.zoomMaximo) mapa.setZoom(CONFIG.zoomMaximo); });
     },
     centrar(punto, zoom) { mapa.panTo(pos(punto)); if (zoom) mapa.setZoom(zoom); },
     acercar(paso) { mapa.setZoom((mapa.getZoom() || 13) + paso); },
@@ -551,7 +571,7 @@ async function elegir(id, centrar) {
   }
   dibujar();
   const equipo = equipoElegido();
-  if (centrar && equipo?.lat !== null) estado.proveedor?.centrar(equipo, 16);
+  if (centrar && equipo?.lat !== null) estado.proveedor?.centrar(equipo, CONFIG.zoomMaximo);
 }
 
 function elegirRango(rango) {
@@ -559,12 +579,17 @@ function elegirRango(rango) {
   document.querySelectorAll("#og-mapa [data-rango]").forEach((b) => b.classList.toggle("on", b.dataset.rango === rango));
   dibujar();
   const puntos = filtrarPorRango(estado.recorrido, rango);
-  if (puntos.length > 1) estado.proveedor?.encuadrar(puntos);
+  if (puntos.length > 1) estado.proveedor?.encuadrar(puntos, margenMapa());
 }
+
+// Margen para que los dispositivos no queden debajo de la tarjeta ni de la barra de abajo.
+const margenMapa = () => (window.innerWidth >= 900
+  ? { top: 80, right: 80, bottom: 130, left: 430 }
+  : { top: 80, right: 50, bottom: Math.round(window.innerHeight * 0.45), left: 50 });
 
 function encuadrarTodo() {
   const puntos = estado.equipos.filter((e) => e.lat !== null);
-  estado.proveedor?.encuadrar(puntos, 90);
+  estado.proveedor?.encuadrar(puntos, margenMapa());
 }
 
 function elementoMarcador(equipo) {
@@ -603,7 +628,7 @@ function dibujar() {
   $('[data-ogm="lista"]', raiz).innerHTML = equipos.map((e) => {
     const st = estadoDe(e);
     const bat = e.bateria === null ? "" : `<span class="ogm-bat${e.bateria < 25 ? " baja" : ""}"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span><span class="ogm-pct">${Math.round(e.bateria)}%</span>`;
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><strong>${esc(e.nombre)}</strong><small><b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ${esc(haceCuanto(e.ubicadoEn))}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${bat}</li>`;
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><strong>${esc(e.nombre)}</strong><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${bat}</li>`;
   }).join("");
 
   // Marcadores
@@ -636,7 +661,7 @@ function dibujar() {
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
     <div class="ogm-cab">
       <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
-      <div><strong>${esc(elegido.nombre)}</strong><small><b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ${esc(haceCuanto(elegido.ubicadoEn))}</small></div>
+      <div><strong>${esc(elegido.nombre)}</strong><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}</small></div>
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
@@ -733,4 +758,4 @@ function iniciar() {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
 else iniciar();
 
-export { paradas, kilometros, filtrarPorRango, normalizarEquipos };
+export { paradas, kilometros, filtrarPorRango, normalizarEquipos, direccionCorta };
