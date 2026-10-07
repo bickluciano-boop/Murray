@@ -414,6 +414,8 @@ const estado = {
   ultimoRecorrido: 0,
   elementosMarcador: new Map(),
   vivo: null,           // { id, seguir, texto, renovador } mientras se sigue un teléfono en vivo
+  sonando: null,        // { id, hasta } mientras la alarma del teléfono puede estar sonando
+  mensajeOrden: null,   // { id, texto }: último resultado de Ubicar / Hacer sonar / Detener
   mensajeVivo: "",
 };
 
@@ -478,7 +480,7 @@ function construir() {
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
-    if (accion === "locate" || accion === "alarm") return ordenar(accion, boton);
+    if (accion === "locate" || accion === "alarm" || accion === "stop-ring") return ordenar(accion, boton);
     if (accion === "cerrar-tarjeta") return plegar(!raiz.classList.contains("ogm-plegada"));
   });
   activarArrastre(raiz);
@@ -649,6 +651,7 @@ async function elegir(id, centrar) {
   if (estado.elegido !== id) {
     if (estado.vivo && estado.vivo.id !== id) await detenerVivo();
     estado.mensajeVivo = "";
+    estado.mensajeOrden = null;
     estado.elegido = id;
     estado.recorrido = [];
     $("#og-mapa")?.classList.remove("ogm-plegada");
@@ -770,6 +773,8 @@ function dibujar() {
   const lista = paradas(filtrarPorRango(estado.recorrido, estado.rango)).slice(-3).reverse();
   const otros = equipos.filter((e) => e.id !== elegido.id);
   const siguiendo = estado.vivo?.id === elegido.id;
+  // La alarma del teléfono se corta sola al minuto: mientras tanto, el botón pasa a "Detener sonido".
+  const sonandoAhora = estado.sonando?.id === elegido.id && Date.now() < estado.sonando.hasta;
   tarjeta.classList.remove("hidden");
   tarjeta.innerHTML = `
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
@@ -786,11 +791,11 @@ function dibujar() {
     ${lista.length ? `<ul class="ogm-paradas">${lista.map((pa) => `<li><i></i>${esc(horaCorta(pa.desde))} a ${esc(horaCorta(pa.hasta))} · ${pa.minutos} min${pa.direccion ? ` · ${esc(pa.direccion)}` : ""}</li>`).join("")}</ul>` : ""}
     <div class="ogm-botones">
       ${admiteVivo(elegido) ? (siguiendo ? '<button type="button" class="parar" data-accion="vivo-parar">Dejar de seguir</button>' : '<button type="button" class="oro" data-accion="vivo">Seguir en vivo</button>') : ""}
-      ${elegido.tipo === "telefono" ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button><button type="button" data-accion="alarm">Hacer sonar</button>` : ""}
+      ${elegido.tipo === "telefono" ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button>${sonandoAhora ? '<button type="button" class="parar" data-accion="stop-ring">Detener sonido</button>' : '<button type="button" data-accion="alarm">Hacer sonar</button>'}` : ""}
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
-    <p class="ogm-msj" data-ogm="msj"></p>
+    <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
     ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc(haceCuanto(e.ubicadoEn))}</small></li>`).join("")}</ul>` : ""}`;
 }
 
@@ -862,6 +867,8 @@ async function detenerVivo() {
 }
 
 function mensajeTarjeta(texto) {
+  // Se guarda para que no se borre cuando la tarjeta se vuelve a dibujar (cada pocos segundos).
+  estado.mensajeOrden = estado.elegido ? { id: estado.elegido, texto } : null;
   const caja = $('#og-mapa [data-ogm="msj"]');
   if (caja) caja.textContent = texto;
 }
@@ -877,19 +884,23 @@ async function ordenar(tipo, boton) {
   if (!equipo) return;
   const etiqueta = boton.textContent;
   boton.disabled = true;
-  boton.textContent = tipo === "locate" ? "Ubicando…" : "Haciendo sonar…";
+  boton.textContent = tipo === "locate" ? "Ubicando…" : tipo === "alarm" ? "Haciendo sonar…" : "Deteniendo…";
   mensajeTarjeta("Enviando orden…");
   try {
     const r = await enviarOrden(equipo, tipo);
-    if (r.demo) { mensajeTarjeta("Demostración: no se envía ninguna orden a un teléfono real."); return; }
-    if (!r.queued || !r.commandId) throw new Error("no_encolada");
+    if (!r.demo && (!r.queued || !r.commandId)) throw new Error("no_encolada");
+    // Ni bien sale la orden de sonar ya se puede detener (no hace falta esperar a que el teléfono confirme).
+    if (tipo === "alarm") estado.sonando = { id: equipo.id, hasta: Date.now() + 70_000 };
+    if (tipo === "stop-ring") estado.sonando = null;
+    if (r.demo) { mensajeTarjeta("Demostración: no se envía ninguna orden a un teléfono real."); dibujar(); return; }
+    if (tipo !== "locate") dibujar();
     mensajeTarjeta(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
     for (let intento = 0; intento < 20 && estado.abierto; intento += 1) {
       await new Promise((ok) => setTimeout(ok, 3000));
       const c = (await estadoOrden(r.commandId).catch(() => null))?.command;
       if (!c) continue;
       if (c.status === "executed") {
-        mensajeTarjeta(tipo === "locate" ? "Ubicación recibida." : "El teléfono está sonando.");
+        mensajeTarjeta(tipo === "locate" ? "Ubicación recibida." : tipo === "alarm" ? "El teléfono está sonando. Se corta solo al minuto." : "Sonido detenido.");
         estado.ultimoRecorrido = 0;
         await refrescar(true);
         break;
