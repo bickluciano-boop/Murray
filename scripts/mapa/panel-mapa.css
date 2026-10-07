@@ -176,3 +176,17 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
   .ogm-otros li { display: flex; align-items: center; gap: 10px; padding: 10px 0 0; font-size: 0.88rem; font-weight: 500; cursor: pointer; }
   .ogm-otros small { margin-left: auto; color: var(--ogm-suave); font-size: 0.76rem; font-weight: 400; }
 }
+
+/* Distancia desde quien mira, batería en línea y botón de sonido en la lista (como Buscar de Apple) */
+.ogm-nombre { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.ogm-nombre strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ogm-dist { flex: none; font-style: normal; font-size: 0.8rem; color: var(--ogm-suave); font-variant-numeric: tabular-nums; }
+.ogm-lista small .ogm-bat { display: inline-block; vertical-align: -1px; width: 20px; height: 10px; margin-left: 4px; }
+#og-mapa .ogm-sonar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ogm-oro-fondo); border: 1px solid var(--ogm-oro-borde); color: var(--ogm-oro-vivo); }
+#og-mapa .ogm-sonar.on { border-color: var(--ogm-vivo); color: var(--ogm-vivo); }
+#og-mapa .ogm-sonar:disabled { opacity: 0.6; cursor: wait; }
+.ogm-yo { position: absolute; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: #2f7cf6; border: 3px solid #fff; box-shadow: 0 0 0 7px rgba(47, 124, 246, 0.22), 0 2px 6px rgba(0, 0, 0, 0.35); pointer-events: none; }
+@media (max-width: 899px) {
+  .ogm-datos { gap: 16px; }
+  .ogm-otros li .ogm-sonar { margin-left: 4px; }
+}

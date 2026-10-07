@@ -25,6 +25,7 @@ const CONFIG = {
   saltoMaximoMetros: 5000,  // saltos mayores entre dos puntos no suman kilómetros (GPS errático)
   zona: "America/Argentina/Buenos_Aires",
   zoomMaximo: 16,           // al encuadrar, no acercar más que esto (unas cuadras a la vista)
+  cercaMetros: 10,          // a esta distancia o menos de quien mira, dice "Cerca" en vez de metros
 };
 
 const DEMO = new URLSearchParams(location.search).get("demo") === "1";
@@ -248,6 +249,31 @@ function haceCuanto(fecha) {
   return `${diaCorto(fecha)} ${horaCorta(fecha)}`;
 }
 
+/** Distancia desde donde está quien mira el panel. A 10 m o menos dice "Cerca": el GPS no distingue menos que eso. */
+function textoDistancia(m) {
+  if (m === null || !Number.isFinite(m)) return "";
+  if (m <= CONFIG.cercaMetros) return "Cerca";
+  if (m < 100) return `${Math.round(m)} m`;
+  if (m < 1000) return `${Math.round(m / 10) * 10} m`;
+  if (m < 100_000) return `${(m / 1000).toFixed(1).replace(".", ",")} km`;
+  return `${Math.round(m / 1000)} km`;
+}
+
+function distanciaA(equipo) {
+  if (!estado.yo || !equipo || equipo.lat === null) return null;
+  return metros(estado.yo, equipo);
+}
+
+const ICONO_SONAR = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICONO_DETENER = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+
+/** Botón chico de sonido para la lista (como en Buscar de Apple). */
+function botonSonar(equipo) {
+  if (equipo.tipo !== "telefono") return "";
+  const sonando = estado.sonando?.id === equipo.id && Date.now() < estado.sonando.hasta;
+  return `<button type="button" class="ogm-sonar${sonando ? " on" : ""}" data-accion="${sonando ? "stop-ring" : "alarm"}" data-equipo="${esc(equipo.id)}" title="${sonando ? "Detener sonido" : "Hacer sonar"}" aria-label="${sonando ? "Detener sonido" : "Hacer sonar"} ${esc(equipo.nombre)}">${sonando ? ICONO_DETENER : ICONO_SONAR}</button>`;
+}
+
 function estadoDe(equipo) {
   const edad = equipo.ubicadoEn ? Date.now() - new Date(equipo.ubicadoEn).getTime() : Infinity;
   if (edad <= CONFIG.vivoMs) return { clase: "vivo", texto: "En vivo" };
@@ -414,6 +440,8 @@ const estado = {
   ultimoRecorrido: 0,
   elementosMarcador: new Map(),
   vivo: null,           // { id, seguir, texto, renovador } mientras se sigue un teléfono en vivo
+  yo: null,             // { lat, lng, precision }: dónde está quien mira el panel (si dio permiso)
+  miReloj: null,
   sonando: null,        // { id, hasta } mientras la alarma del teléfono puede estar sonando
   mensajeOrden: null,   // { id, texto }: último resultado de Ubicar / Hacer sonar / Detener
   mensajeVivo: "",
@@ -480,7 +508,10 @@ function construir() {
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
-    if (accion === "locate" || accion === "alarm" || accion === "stop-ring") return ordenar(accion, boton);
+    if (accion === "locate" || accion === "alarm" || accion === "stop-ring") {
+      const destino = boton.dataset.equipo ? estado.equipos.find((e) => e.id === boton.dataset.equipo) : equipoElegido();
+      return ordenar(accion, boton, destino);
+    }
     if (accion === "cerrar-tarjeta") return plegar(!raiz.classList.contains("ogm-plegada"));
   });
   activarArrastre(raiz);
@@ -593,12 +624,32 @@ async function abrir() {
   } else {
     estado.proveedor.redibujar();
   }
+  seguirMiUbicacion();
   await refrescar(true);
+}
+
+/** Ubicación de quien mira el panel (celular o compu): sirve para "a 2,3 km" / "Cerca". */
+let redibujoPendiente = null;
+function seguirMiUbicacion() {
+  if (estado.miReloj !== null || !navigator.geolocation) return;
+  estado.miReloj = navigator.geolocation.watchPosition(
+    (pos) => {
+      estado.yo = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy };
+      if (!redibujoPendiente) redibujoPendiente = setTimeout(() => { redibujoPendiente = null; dibujar(); }, 800);
+    },
+    () => { estado.yo = null; },
+    { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
+  );
+}
+function dejarMiUbicacion() {
+  if (estado.miReloj !== null) navigator.geolocation?.clearWatch(estado.miReloj);
+  estado.miReloj = null;
 }
 
 function cerrar() {
   if (!estado.abierto) return;
   estado.abierto = false;
+  dejarMiUbicacion();
   void detenerVivo();
   clearTimeout(estado.temporizador);
   $("#og-mapa")?.classList.add("hidden");
@@ -742,8 +793,9 @@ function dibujar() {
   $('[data-ogm="resumen"]', raiz).textContent = `${equipos.length} dispositivo${equipos.length === 1 ? "" : "s"} · ${conUbic} con ubicación`;
   $('[data-ogm="lista"]', raiz).innerHTML = equipos.map((e) => {
     const st = estadoDe(e);
-    const bat = e.bateria === null ? "" : `<span class="ogm-bat${e.bateria < 25 ? " baja" : ""}"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span><span class="ogm-pct">${Math.round(e.bateria)}%</span>`;
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><strong>${esc(e.nombre)}</strong><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${bat}</li>`;
+    const bat = e.bateria === null ? "" : ` <span class="ogm-bat${e.bateria < 25 ? " baja" : ""}" title="Batería ${Math.round(e.bateria)}%"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span>`;
+    const dist = textoDistancia(distanciaA(e));
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
   }).join("");
 
   // Marcadores
@@ -755,6 +807,15 @@ function dibujar() {
       if (e.lat === null) continue;
       vigentes.add(e.id);
       p.marcador(e.id, e, elementoMarcador(e, corrimientos.get(e.id) || 0));
+    }
+    if (estado.yo) {
+      vigentes.add("__yo");
+      if (!estado.elementoYo) {
+        estado.elementoYo = document.createElement("span");
+        estado.elementoYo.className = "ogm-yo";
+        estado.elementoYo.title = "Vos";
+      }
+      p.marcador("__yo", estado.yo, estado.elementoYo);
     }
     p.idsMarcadores().filter((id) => !vigentes.has(id)).forEach((id) => p.quitarMarcador(id));
     const puntos = elegido ? filtrarPorRango(estado.recorrido, estado.rango) : [];
@@ -780,13 +841,14 @@ function dibujar() {
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
     <div class="ogm-cab">
       <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
-      <div><strong>${esc(elegido.nombre)}</strong><small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}`}</small></div>
+      <div><strong>${esc(elegido.nombre)}</strong><small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}${distanciaA(elegido) !== null ? ` · ${esc(textoDistancia(distanciaA(elegido)))}` : ""}`}</small></div>
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
       <span><em>Precisión</em>${elegido.precision === null ? "—" : `±${Math.round(elegido.precision)} m`}</span>
       <span><em>Batería</em>${elegido.bateria === null ? "—" : `${Math.round(elegido.bateria)}%`}</span>
       <span><em>Hoy</em>${km >= 0.05 ? `${km.toFixed(1).replace(".", ",")} km` : "—"}</span>
+      ${estado.yo && elegido.lat !== null ? `<span><em>De vos</em>${esc(textoDistancia(distanciaA(elegido)))}</span>` : ""}
     </div>
     ${lista.length ? `<ul class="ogm-paradas">${lista.map((pa) => `<li><i></i>${esc(horaCorta(pa.desde))} a ${esc(horaCorta(pa.hasta))} · ${pa.minutos} min${pa.direccion ? ` · ${esc(pa.direccion)}` : ""}</li>`).join("")}</ul>` : ""}
     <div class="ogm-botones">
@@ -796,7 +858,7 @@ function dibujar() {
     </div>
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
-    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc(haceCuanto(e.ubicadoEn))}</small></li>`).join("")}</ul>` : ""}`;
+    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -866,11 +928,11 @@ async function detenerVivo() {
   await pedirVivo("stop", vivo.id).catch(() => undefined);
 }
 
-function mensajeTarjeta(texto) {
+function mensajeTarjeta(texto, id = estado.elegido) {
   // Se guarda para que no se borre cuando la tarjeta se vuelve a dibujar (cada pocos segundos).
-  estado.mensajeOrden = estado.elegido ? { id: estado.elegido, texto } : null;
+  estado.mensajeOrden = id ? { id, texto } : null;
   const caja = $('#og-mapa [data-ogm="msj"]');
-  if (caja) caja.textContent = texto;
+  if (caja && id === estado.elegido) caja.textContent = texto;
 }
 
 function irConGoogle() {
@@ -879,41 +941,42 @@ function irConGoogle() {
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}`, "_blank", "noopener");
 }
 
-async function ordenar(tipo, boton) {
-  const equipo = equipoElegido();
+async function ordenar(tipo, boton, equipo = equipoElegido()) {
   if (!equipo) return;
+  const avisar = (texto) => mensajeTarjeta(texto, equipo.id);
+  const conTexto = !boton.classList.contains("ogm-sonar");
   const etiqueta = boton.textContent;
   boton.disabled = true;
-  boton.textContent = tipo === "locate" ? "Ubicando…" : tipo === "alarm" ? "Haciendo sonar…" : "Deteniendo…";
-  mensajeTarjeta("Enviando orden…");
+  if (conTexto) boton.textContent = tipo === "locate" ? "Ubicando…" : tipo === "alarm" ? "Haciendo sonar…" : "Deteniendo…";
+  avisar("Enviando orden…");
   try {
     const r = await enviarOrden(equipo, tipo);
     if (!r.demo && (!r.queued || !r.commandId)) throw new Error("no_encolada");
     // Ni bien sale la orden de sonar ya se puede detener (no hace falta esperar a que el teléfono confirme).
     if (tipo === "alarm") estado.sonando = { id: equipo.id, hasta: Date.now() + 70_000 };
     if (tipo === "stop-ring") estado.sonando = null;
-    if (r.demo) { mensajeTarjeta("Demostración: no se envía ninguna orden a un teléfono real."); dibujar(); return; }
+    if (r.demo) { avisar("Demostración: no se envía ninguna orden a un teléfono real."); dibujar(); return; }
     if (tipo !== "locate") dibujar();
-    mensajeTarjeta(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
+    avisar(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
     for (let intento = 0; intento < 20 && estado.abierto; intento += 1) {
       await new Promise((ok) => setTimeout(ok, 3000));
       const c = (await estadoOrden(r.commandId).catch(() => null))?.command;
       if (!c) continue;
       if (c.status === "executed") {
-        mensajeTarjeta(tipo === "locate" ? "Ubicación recibida." : tipo === "alarm" ? "El teléfono está sonando. Se corta solo al minuto." : "Sonido detenido.");
+        avisar(tipo === "locate" ? "Ubicación recibida." : tipo === "alarm" ? "El teléfono está sonando. Se corta solo al minuto." : "Sonido detenido.");
         estado.ultimoRecorrido = 0;
         await refrescar(true);
         break;
       }
-      if (c.status === "failed") { mensajeTarjeta(c.error ? `No se pudo: ${c.error}` : "El teléfono no pudo completar la orden."); break; }
+      if (c.status === "failed") { avisar(c.error ? `No se pudo: ${c.error}` : "El teléfono no pudo completar la orden."); break; }
     }
   } catch (error) {
-    mensajeTarjeta(error.status === 403
+    avisar(error.status === 403
       ? "Esta acción pide confirmar tu identidad: hacela desde la pestaña Dispositivos."
       : "No se pudo enviar la orden. Probá de nuevo.");
   } finally {
     boton.disabled = false;
-    boton.textContent = etiqueta;
+    if (conTexto) boton.textContent = etiqueta;
   }
 }
 
