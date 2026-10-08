@@ -100,7 +100,7 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-ctrl { top: 18px; right: 18px; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; }
 #og-mapa .ogm-ctrl button { width: 42px; height: 42px; font-size: 1.25rem; border-bottom: 1px solid var(--ogm-linea); }
 #og-mapa .ogm-ctrl button:last-child { border-bottom: 0; }
-#og-mapa .ogm-ctrl .oro { color: var(--ogm-oro-vivo); font-size: 1.1rem; }
+#og-mapa .ogm-ctrl .oro { color: var(--ogm-oro-vivo); font-size: 1.1rem; border-bottom: 0; }
 .ogm-capas { right: 18px; bottom: 104px; display: flex; padding: 3px; border-radius: 12px; }
 #og-mapa .ogm-capas button { padding: 6px 12px; font-size: 0.8rem; border-radius: 9px; color: var(--ogm-suave); }
 #og-mapa .ogm-capas button.on { background: var(--ogm-oro-fondo); color: var(--ogm-texto); }
@@ -160,7 +160,8 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
   .ogm-seg { top: max(12px, env(safe-area-inset-top)); left: 12px; }
   .ogm-ctrl { top: max(12px, env(safe-area-inset-top)); right: 12px; }
   .ogm-ctrl [data-ogm="mas"], .ogm-ctrl [data-ogm="menos"] { display: none; }
-  .ogm-capas { top: calc(max(12px, env(safe-area-inset-top)) + 54px); right: 12px; bottom: auto; flex-direction: column; }
+  /* Debajo de los dos botones de arriba (centrar e invitar): con 54px tapaba el de invitar */
+  .ogm-capas { top: calc(max(12px, env(safe-area-inset-top)) + 96px); right: 12px; bottom: auto; flex-direction: column; }
   .ogm-aviso { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
   .ogm-tarjeta { left: 8px; right: 8px; width: auto; bottom: 84px; max-height: 52vh; border-radius: 22px; padding: 8px 16px 14px; }
   /* Manija grande (todo el ancho, 28px de alto) con la rayita dibujada adentro */
