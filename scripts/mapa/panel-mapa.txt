@@ -97,11 +97,56 @@ function normalizarEquipos(cuenta) {
   return equipos;
 }
 
+const ROLES = { adulto: "ADULTO", menor: "MENOR", amigo: "AMIGO", titular: "TITULAR" };
+
+/** Personas de la familia (etapa A de Familia y amigos): se ven como un integrante más del mapa. */
+function normalizarFamilia(datos) {
+  return (datos.people || []).map((p) => {
+    const ubic = p.lastLocation || {};
+    return {
+      id: `persona:${p.id}`,
+      tipo: "persona",
+      rol: p.owner ? "titular" : p.role,
+      nombre: p.name || "Persona",
+      plataforma: "",
+      lat: numero(ubic.latitude),
+      lng: numero(ubic.longitude),
+      precision: numero(ubic.accuracy),
+      direccion: direccionCorta(ubic.address),
+      bateria: numero(p.battery),
+      enLinea: Boolean(p.online),
+      ubicadoEn: p.lastLocationAt || ubic.capturedAt || null,
+      vistoEn: p.lastSeenAt || null,
+      conRecorrido: false,
+      pausado: Boolean(p.paused),
+    };
+  });
+}
+
 async function cargarEquipos() {
-  if (DEMO) return demoEquipos();
+  if (DEMO) { estado.invitaciones = []; return demoEquipos(); }
   const cuenta = await pedir("/api/remote/session");
   if (!cuenta.authenticated) throw Object.assign(new Error("sin_sesion"), { status: 401 });
-  return normalizarEquipos(cuenta);
+  const equipos = normalizarEquipos(cuenta);
+  try {
+    const familia = await pedir("/api/remote/family");
+    estado.invitaciones = familia.invites || [];
+    return [...normalizarFamilia(familia), ...equipos];
+  } catch {
+    // Sin familia (o servidor sin esta parte todavía): el mapa sigue con los dispositivos.
+    estado.invitaciones = [];
+    return equipos;
+  }
+}
+
+async function crearInvitacion(nombre, rol) {
+  if (DEMO) return { name: nombre, role: rol, code: "DEMO42", link: "https://ejemplo/unirme?codigo=DEMO42", expiresAt: new Date(Date.now() + 7 * 86400_000).toISOString() };
+  return pedir("/api/remote/family/invite", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: nombre, role: rol }) });
+}
+
+async function quitarDeFamilia(id) {
+  if (DEMO) return;
+  await pedir("/api/remote/family/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
 }
 
 async function cargarRecorrido(equipo) {
@@ -265,6 +310,12 @@ function distanciaA(equipo) {
 }
 
 const ICONO_SONAR = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICONO_INVITAR = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="10" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 19c.7-3.6 3.3-5.5 6.5-5.5 1.6 0 3 .4 4.1 1.2M18 13v6M15 16h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+function etiquetaRol(equipo) {
+  return equipo.tipo === "persona" && ROLES[equipo.rol] ? `<u class="ogm-rol">${ROLES[equipo.rol]}</u>` : "";
+}
+
 const ICONO_DETENER = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
 
 /** Botón chico de sonido para la lista (como en Buscar de Apple). */
@@ -275,6 +326,7 @@ function botonSonar(equipo) {
 }
 
 function estadoDe(equipo) {
+  if (equipo.pausado) return { clase: "off", texto: "Ubicación pausada" };
   const edad = equipo.ubicadoEn ? Date.now() - new Date(equipo.ubicadoEn).getTime() : Infinity;
   if (edad <= CONFIG.vivoMs) return { clase: "vivo", texto: "En vivo" };
   if (!equipo.enLinea && edad > 3 * 3600_000) return { clase: "off", texto: "Sin conexión" };
@@ -283,7 +335,7 @@ function estadoDe(equipo) {
 
 function iniciales(nombre) {
   const palabras = String(nombre || "?").split(/\s+/).filter((w) => w && !/^(de|del|la|el|los|las)$/i.test(w));
-  return (palabras.length > 1 ? palabras[0][0] + palabras[palabras.length - 1][0] : (palabras[0] || "?").slice(0, 2)).toUpperCase();
+  return (palabras.length > 1 ? palabras[0][0] + palabras[palabras.length - 1][0] : (palabras[0] || "?")[0]).toUpperCase();
 }
 
 function avatarHtml(equipo, clase = "") {
@@ -441,6 +493,8 @@ const estado = {
   elementosMarcador: new Map(),
   vivo: null,           // { id, seguir, texto, renovador } mientras se sigue un teléfono en vivo
   yo: null,             // { lat, lng, precision }: dónde está quien mira el panel (si dio permiso)
+  invitaciones: [],     // invitaciones a la familia que todavía nadie usó
+  dialogo: null,        // { paso: "datos" | "listo", nombre, rol, invitacion, error }
   miReloj: null,
   sonando: null,        // { id, hasta } mientras la alarma del teléfono puede estar sonando
   mensajeOrden: null,   // { id, texto }: último resultado de Ubicar / Hacer sonar / Detener
@@ -459,7 +513,9 @@ function construir() {
       <p class="ogm-ceja">OJO GUARD MS · MAPA</p>
       <h2>Tus dispositivos</h2>
       <p class="ogm-sub" data-ogm="resumen">Cargando ubicaciones…</p>
+      <button type="button" class="ogm-invitar" data-ogm="invitar">${ICONO_INVITAR}Invitar a la familia</button>
       <ul class="ogm-lista" data-ogm="lista"></ul>
+      <div data-ogm="invitaciones"></div>
       <p class="ogm-nota">Las ubicaciones se actualizan solas mientras el mapa está abierto.</p>
     </aside>
     <div class="ogm-zona">
@@ -474,6 +530,7 @@ function construir() {
         <button type="button" data-ogm="mas" aria-label="Acercar">+</button>
         <button type="button" data-ogm="menos" aria-label="Alejar">−</button>
         <button type="button" data-ogm="centrar" aria-label="Ver todos" class="oro">◎</button>
+        <button type="button" data-ogm="invitar" aria-label="Invitar a la familia" class="solo-celular">${ICONO_INVITAR}</button>
       </div>
       <div class="ogm-capas" role="group" aria-label="Tipo de mapa">
         <button type="button" data-capa="mapa" class="on">Mapa</button>
@@ -481,6 +538,7 @@ function construir() {
       </div>
       <div class="ogm-tarjeta hidden" data-ogm="tarjeta"></div>
     </div>
+    <div class="ogm-dialogo hidden" data-ogm="dialogo" role="dialog" aria-modal="true" aria-label="Invitar a la familia"></div>
     <input type="file" accept="image/*" class="hidden" data-ogm="archivo">`;
   document.body.appendChild(raiz);
 
@@ -504,6 +562,13 @@ function construir() {
       if (seguido) { estado.vivo.seguir = true; return estado.proveedor?.centrar(seguido); }
       return encuadrarTodo();
     }
+    if (accion === "invitar") return abrirDialogo();
+    if (accion === "rol") { estado.dialogo.rol = boton.dataset.rol; estado.dialogo.nombre = $('#og-mapa [data-ogm="nombre"]')?.value || ""; return dibujarDialogo(); }
+    if (accion === "crear-invitacion") return confirmarInvitacion(boton);
+    if (accion === "cerrar-dialogo") { estado.dialogo = null; dibujarDialogo(); return refrescar(); }
+    if (accion === "copiar") return copiarLink(boton);
+    if (accion === "compartir") return navigator.share?.({ title: "Ojo Guard · Familia", text: `Te invito a mi familia en Ojo Guard. Código: ${boton.dataset.codigo}`, url: boton.dataset.link }).catch(() => undefined);
+    if (accion === "quitar-invitacion") return quitarDeFamilia(boton.dataset.id).then(() => refrescar()).catch(() => undefined);
     if (accion === "vivo") return iniciarVivo(equipoElegido());
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
@@ -789,14 +854,25 @@ function dibujar() {
   const elegido = equipoElegido();
 
   // Lista lateral (escritorio) / tira de abajo (celular)
-  const conUbic = equipos.filter((e) => e.lat !== null).length;
-  $('[data-ogm="resumen"]', raiz).textContent = `${equipos.length} dispositivo${equipos.length === 1 ? "" : "s"} · ${conUbic} con ubicación`;
-  $('[data-ogm="lista"]', raiz).innerHTML = equipos.map((e) => {
+  const personas = equipos.filter((e) => e.tipo === "persona");
+  const dispositivos = equipos.filter((e) => e.tipo !== "persona");
+  $(".ogm-lado h2", raiz).textContent = personas.length ? "Familia y equipos" : "Tus dispositivos";
+  $('[data-ogm="resumen"]', raiz).textContent = [
+    personas.length ? `${personas.length} persona${personas.length === 1 ? "" : "s"}` : "",
+    `${dispositivos.length} dispositivo${dispositivos.length === 1 ? "" : "s"}`,
+  ].filter(Boolean).join(" · ");
+  const fila = (e) => {
     const st = estadoDe(e);
     const bat = e.bateria === null ? "" : ` <span class="ogm-bat${e.bateria < 25 ? " baja" : ""}" title="Batería ${Math.round(e.bateria)}%"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span>`;
     const dist = textoDistancia(distanciaA(e));
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
-  }).join("");
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${etiquetaRol(e)}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
+  };
+  $('[data-ogm="lista"]', raiz).innerHTML = personas.length
+    ? `<li class="ogm-grupo">FAMILIA</li>${personas.map(fila).join("")}<li class="ogm-grupo">DISPOSITIVOS</li>${dispositivos.map(fila).join("")}`
+    : dispositivos.map(fila).join("");
+  $('[data-ogm="invitaciones"]', raiz).innerHTML = estado.invitaciones.length
+    ? `<p class="ogm-grupo">INVITACIONES SIN USAR</p><ul class="ogm-invitaciones">${estado.invitaciones.map((i) => `<li><div><strong>${esc(i.name)}</strong> <u class="ogm-rol">${esc(ROLES[i.role] || i.role)}</u><small>Código <b>${esc(i.code)}</b> · vence ${esc(diaCorto(i.expiresAt))}</small></div><button type="button" data-accion="copiar" data-link="${esc(i.link)}">Copiar link</button><button type="button" class="quitar" data-accion="quitar-invitacion" data-id="${esc(i.id)}" aria-label="Anular invitación de ${esc(i.name)}">✕</button></li>`).join("")}</ul>`
+    : "";
 
   // Marcadores
   const p = estado.proveedor;
@@ -841,7 +917,7 @@ function dibujar() {
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
     <div class="ogm-cab">
       <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
-      <div><strong>${esc(elegido.nombre)}</strong><small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}${distanciaA(elegido) !== null ? ` · ${esc(textoDistancia(distanciaA(elegido)))}` : ""}`}</small></div>
+      <div><strong>${esc(elegido.nombre)}</strong>${etiquetaRol(elegido)}<small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}${distanciaA(elegido) !== null ? ` · ${esc(textoDistancia(distanciaA(elegido)))}` : ""}`}</small></div>
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
@@ -858,7 +934,7 @@ function dibujar() {
     </div>
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
-    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
+    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -928,6 +1004,79 @@ async function detenerVivo() {
   await pedirVivo("stop", vivo.id).catch(() => undefined);
 }
 
+// ---------------------------------------------------------------------------
+// Invitar a la familia: nombre + rol -> código de 6 letras y link para mandar.
+// ---------------------------------------------------------------------------
+
+const ROLES_TEXTO = {
+  adulto: ["Adulto", "Ve a toda la familia y puede pausar su ubicación."],
+  menor: ["Menor", "Vos sos su tutor. No puede pausar su ubicación, pero siempre ve quién lo mira."],
+  amigo: ["Amigo", "Solo comparte su ubicación y la puede pausar cuando quiera."],
+};
+
+function abrirDialogo() {
+  estado.dialogo = { paso: "datos", nombre: "", rol: "adulto", invitacion: null, error: "" };
+  dibujarDialogo();
+  setTimeout(() => $('#og-mapa [data-ogm="nombre"]')?.focus(), 50);
+}
+
+function dibujarDialogo() {
+  const caja = $('#og-mapa [data-ogm="dialogo"]');
+  if (!caja) return;
+  const d = estado.dialogo;
+  caja.classList.toggle("hidden", !d);
+  if (!d) { caja.innerHTML = ""; return; }
+  if (d.paso === "listo") {
+    const i = d.invitacion;
+    caja.innerHTML = `<div class="ogm-dlg">
+      <p class="ogm-ceja">INVITACIÓN LISTA</p>
+      <h3>Mandale esto a ${esc(i.name)}</h3>
+      <div class="ogm-codigo">${esc(i.code)}</div>
+      <p class="ogm-dlg-txt">Con este link, ${esc(i.name)} instala Ojo Guard, entra con su correo y escribe el código en <b>Familia › Unirme</b>. Vence el ${esc(diaCorto(i.expiresAt))}.</p>
+      <div class="ogm-dlg-botones">
+        ${navigator.share ? `<button type="button" class="oro" data-accion="compartir" data-link="${esc(i.link)}" data-codigo="${esc(i.code)}">Compartir</button>` : ""}
+        <button type="button" ${navigator.share ? "" : 'class="oro"'} data-accion="copiar" data-link="${esc(i.link)}">Copiar link</button>
+        <button type="button" data-accion="cerrar-dialogo">Listo</button>
+      </div></div>`;
+    return;
+  }
+  caja.innerHTML = `<div class="ogm-dlg">
+    <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
+    <h3>Invitar a alguien</h3>
+    <label class="ogm-campo">¿Cómo se llama?<input data-ogm="nombre" maxlength="40" placeholder="Por ejemplo, Sofía" value="${esc(d.nombre)}"></label>
+    <p class="ogm-dlg-sub">¿Qué es para vos?</p>
+    <div class="ogm-roles">${Object.entries(ROLES_TEXTO).map(([clave, [titulo, texto]]) => `<button type="button" class="${d.rol === clave ? "on" : ""}" data-accion="rol" data-rol="${clave}"><strong>${titulo}</strong><small>${texto}</small></button>`).join("")}</div>
+    ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
+    <div class="ogm-dlg-botones"><button type="button" class="oro" data-accion="crear-invitacion">Crear invitación</button><button type="button" data-accion="cerrar-dialogo">Cancelar</button></div>
+  </div>`;
+}
+
+async function confirmarInvitacion(boton) {
+  const d = estado.dialogo;
+  if (!d) return;
+  d.nombre = ($('#og-mapa [data-ogm="nombre"]')?.value || "").trim();
+  if (!d.nombre) { d.error = "Escribí cómo se llama la persona."; return dibujarDialogo(); }
+  boton.disabled = true;
+  boton.textContent = "Creando…";
+  try {
+    d.invitacion = await crearInvitacion(d.nombre, d.rol);
+    d.paso = "listo";
+    d.error = "";
+  } catch (error) {
+    d.error = error.status === 403 ? "Para invitar, entrá al panel con tu acceso normal (no con el de emergencia)." : "No se pudo crear la invitación. Probá de nuevo.";
+  }
+  dibujarDialogo();
+}
+
+async function copiarLink(boton) {
+  try {
+    await navigator.clipboard.writeText(boton.dataset.link);
+    boton.textContent = "Copiado ✓";
+  } catch {
+    boton.textContent = boton.dataset.link;
+  }
+}
+
 function mensajeTarjeta(texto, id = estado.elegido) {
   // Se guarda para que no se borre cuando la tarjeta se vuelve a dibujar (cada pocos segundos).
   estado.mensajeOrden = id ? { id, texto } : null;
@@ -987,8 +1136,9 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
 function demoEquipos() {
   const ahora = Date.now();
   return [
+    { id: "persona:demo-sofi", tipo: "persona", rol: "menor", nombre: "Sofía", plataforma: "", lat: -34.5871, lng: -58.4302, precision: 15, direccion: "Guatemala 4600, Palermo", bateria: 70, enLinea: true, ubicadoEn: new Date(ahora - 4 * 60_000).toISOString(), conRecorrido: false, pausado: false },
     { id: "demo-1", tipo: "telefono", nombre: "Mi teléfono", plataforma: "Android", lat: -34.5800, lng: -58.4245, precision: 12, direccion: "Ugarteche 3178, Palermo", bateria: 64, enLinea: true, ubicadoEn: new Date(ahora - 5000).toISOString(), conRecorrido: true },
-    { id: "demo-2", tipo: "telefono", nombre: "Teléfono de Sofía", plataforma: "iPhone", lat: -34.5871, lng: -58.4302, precision: 20, direccion: "Guatemala 4600, Palermo", bateria: 81, enLinea: true, ubicadoEn: new Date(ahora - 120000).toISOString(), conRecorrido: true },
+    { id: "demo-2", tipo: "telefono", nombre: "Teléfono de trabajo", plataforma: "iPhone", lat: -34.5871, lng: -58.4302, precision: 20, direccion: "Guatemala 4600, Palermo", bateria: 81, enLinea: true, ubicadoEn: new Date(ahora - 120000).toISOString(), conRecorrido: true },
     { id: "pulsera:demo", tipo: "pulsera", nombre: "Pulsera de Elsa", plataforma: "Pulsera SOS", lat: -34.5810, lng: -58.4210, precision: 30, direccion: "Plaza Italia", bateria: 47, enLinea: true, ubicadoEn: new Date(ahora - 360000).toISOString(), conRecorrido: false },
   ];
 }
@@ -1013,6 +1163,7 @@ function iniciar() {
   });
   new MutationObserver(() => estado.proveedor?.tema(temaActual())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   document.addEventListener("keydown", (evento) => {
+    if (evento.key === "Escape" && estado.dialogo) { estado.dialogo = null; dibujarDialogo(); return; }
     if (evento.key === "Enter" && evento.target.matches?.("#og-mapa li[data-id]")) elegir(evento.target.dataset.id, true);
   });
 }

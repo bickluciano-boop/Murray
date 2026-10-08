@@ -190,3 +190,40 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
   .ogm-datos { gap: 16px; }
   .ogm-otros li .ogm-sonar { margin-left: 4px; }
 }
+
+/* Familia y amigos (etapa A): grupos en la lista, rol, invitaciones y diálogo para invitar */
+.ogm-rol { text-decoration: none; font-size: 0.58rem; letter-spacing: 0.12em; font-weight: 700; color: var(--ogm-oro); border: 1px solid var(--ogm-oro-borde); border-radius: 6px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; flex: none; }
+.ogm-lista .ogm-grupo, p.ogm-grupo { list-style: none; font-size: 0.66rem; letter-spacing: 0.18em; color: var(--ogm-tenue); font-weight: 700; padding: 12px 4px 2px; cursor: default; }
+.ogm-lista .ogm-grupo:hover { background: none; }
+#og-mapa .ogm-invitar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 0 0 12px; padding: 10px; border-radius: 12px; border: 1px dashed var(--ogm-oro-borde); color: var(--ogm-oro-vivo); font-weight: 600; font-size: 0.9rem; }
+.ogm-invitaciones { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+.ogm-invitaciones li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--ogm-linea); }
+.ogm-invitaciones li > div { flex: 1; min-width: 0; font-size: 0.88rem; }
+.ogm-invitaciones small { display: block; color: var(--ogm-suave); font-size: 0.76rem; }
+.ogm-invitaciones small b { color: var(--ogm-oro-vivo); letter-spacing: 0.08em; }
+#og-mapa .ogm-invitaciones button { font-size: 0.76rem; border: 1px solid var(--ogm-linea); border-radius: 9px; padding: 5px 8px; }
+#og-mapa .ogm-invitaciones button.quitar { border: 0; color: var(--ogm-tenue); padding: 5px; }
+#og-mapa .ogm-ctrl .solo-celular { display: none; }
+.ogm-dialogo { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.55); }
+.ogm-dialogo.hidden { display: none; }
+.ogm-dlg { width: min(440px, 100%); max-height: calc(100% - 32px); overflow-y: auto; background: var(--ogm-fondo); border: 1px solid var(--ogm-linea); border-radius: 22px; padding: 22px; box-shadow: var(--ogm-sombra); }
+.ogm-dlg h3 { font-size: 1.4rem; margin: 6px 0 14px; color: var(--ogm-texto); }
+.ogm-campo { display: grid; gap: 6px; font-size: 0.86rem; color: var(--ogm-suave); }
+.ogm-campo input { font: inherit; font-size: 1rem; color: var(--ogm-texto); background: var(--ogm-panel); border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 11px 12px; outline: none; }
+.ogm-campo input:focus { border-color: var(--ogm-oro); }
+.ogm-dlg-sub { margin: 14px 0 6px; font-size: 0.86rem; color: var(--ogm-suave); }
+.ogm-roles { display: grid; gap: 8px; }
+#og-mapa .ogm-roles button { text-align: left; border: 1px solid var(--ogm-linea); border-radius: 13px; padding: 10px 12px; display: grid; gap: 2px; }
+#og-mapa .ogm-roles button.on { border-color: var(--ogm-oro); background: var(--ogm-oro-fondo); }
+.ogm-roles strong { font-size: 0.95rem; }
+.ogm-roles small { font-size: 0.78rem; color: var(--ogm-suave); line-height: 1.4; }
+.ogm-codigo { font-size: 2.3rem; letter-spacing: 0.22em; font-weight: 700; text-align: center; color: var(--ogm-oro-vivo); background: var(--ogm-oro-fondo); border: 1px solid var(--ogm-oro-borde); border-radius: 16px; padding: 14px 8px; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
+.ogm-dlg-txt { font-size: 0.86rem; color: var(--ogm-suave); line-height: 1.5; margin: 0; }
+.ogm-dlg-txt b { color: var(--ogm-texto); }
+.ogm-dlg-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+#og-mapa .ogm-dlg-botones button { flex: 1 1 auto; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 11px 14px; font-weight: 600; }
+#og-mapa .ogm-dlg-botones button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }
+@media (max-width: 899px) {
+  #og-mapa .ogm-ctrl .solo-celular { display: grid; place-items: center; border-top: 1px solid var(--ogm-linea); color: var(--ogm-oro-vivo); }
+}
+.ogm-nombre .ogm-rol { margin-right: auto; }
