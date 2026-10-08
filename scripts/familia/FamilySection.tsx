@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { AppState, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import * as Location from "expo-location";
 import MapView, { Marker } from "react-native-maps";
 
+import { adjustFamilyLocation, familyLocationAllowed } from "./familyLocation";
+import { markPendingSystemActivity } from "./pendingSystemActivity";
 import { fetchFamily, joinFamily, pauseFamilyLocation, type FamilyPerson } from "./remoteApi";
 import { loadNativeEnrollment, type NativeEnrollment } from "./remoteStorage";
 
@@ -9,6 +12,10 @@ import { loadNativeEnrollment, type NativeEnrollment } from "./remoteStorage";
  * Familia y amigos, etapa A, dentro de Configuración: ver a la familia en el
  * mapa, unirse con el código de una invitación y pausar la propia ubicación
  * (adultos y amigos; los menores no pueden).
+ *
+ * En iPhone, además, avisa si falta el permiso de ubicación "Siempre": sin él
+ * la familia solo ve dónde estaba la persona la última vez que abrió la app
+ * (ver familyLocation.ts).
  *
  * Vive en un archivo aparte para no agrandar App.tsx: recibe de ahí la paleta,
  * la sección plegable y los estilos de los botones, así se ve igual que el resto
@@ -60,6 +67,7 @@ export function FamilySection({ paleta: P, Seccion, botones }: Props) {
   const [codigo, setCodigo] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [siempre, setSiempre] = useState(true);
 
   const cargar = useCallback(async (vinculo: NativeEnrollment) => {
     try {
@@ -69,6 +77,16 @@ export function FamilySection({ paleta: P, Seccion, botones }: Props) {
     } catch (error) {
       setMensaje(mensajeDeError(error));
     }
+  }, []);
+
+  // Se vuelve a mirar al regresar de Ajustes, así el aviso se va solo apenas se da el permiso.
+  useEffect(() => {
+    const revisar = () => void familyLocationAllowed().then(setSiempre);
+    revisar();
+    const suscripcion = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") revisar();
+    });
+    return () => suscripcion.remove();
   }, []);
 
   useEffect(() => {
@@ -87,11 +105,26 @@ export function FamilySection({ paleta: P, Seccion, botones }: Props) {
       setCodigo("");
       setMensaje(`Listo: ya estás en la familia${r.role === "menor" ? ". Tus tutores van a poder ver dónde estás." : "."}`);
       await cargar(enrollment);
+      void adjustFamilyLocation();
     } catch (error) {
       setMensaje(mensajeDeError(error));
     } finally {
       setOcupado(false);
     }
+  }
+
+  async function permitirSiempre() {
+    const primero = await Location.requestForegroundPermissionsAsync().catch(() => null);
+    const fondo = primero?.granted ? await Location.requestBackgroundPermissionsAsync().catch(() => null) : null;
+    if (fondo?.granted) {
+      setSiempre(true);
+      void adjustFamilyLocation();
+      return;
+    }
+    // iPhone lo pregunta una sola vez; si ya se contestó, se cambia en Ajustes.
+    // Volver de Ajustes no tiene que mandar la app a la pantalla de bloqueo.
+    markPendingSystemActivity();
+    void Linking.openSettings();
   }
 
   async function pausar(minutos: number) {
@@ -164,6 +197,17 @@ export function FamilySection({ paleta: P, Seccion, botones }: Props) {
           </View>
         </View>
       ))}
+
+      {Platform.OS === "ios" && people.length > 0 && !siempre ? (
+        <View style={s.aviso}>
+          <Text style={s.avisoTexto}>
+            Para que tu familia te vea aunque Ojo Guard esté cerrada, el iPhone tiene que permitir la ubicación «Siempre».
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => void permitirSiempre()} style={[botones.primario, s.espacio]}>
+            <Text style={botones.primarioTexto}>Permitir siempre</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {enrollment && !people.length && !me.memberships ? (
         <Text style={botones.ayuda}>Todavía no hay nadie. Para sumar a alguien, invitalo desde el mapa de Ojo Guard MS, o pedile a tu familia un código y escribilo acá abajo.</Text>
@@ -243,5 +287,7 @@ function estilos(P: Paleta) {
     botonMitad: { flex: 1 },
     espacio: { marginTop: 12 },
     mensaje: { color: P.doradoTexto, fontSize: 13, marginTop: 12, lineHeight: 18 },
+    aviso: { marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: P.doradoBorde, backgroundColor: P.doradoFondo },
+    avisoTexto: { color: P.texto, fontSize: 13, lineHeight: 18 },
   });
 }
