@@ -1013,7 +1013,7 @@ async function detenerVivo() {
 const ROLES_TEXTO = {
   adulto: ["Adulto", "Ve a toda la familia y puede pausar su ubicación."],
   menor: ["Menor", "Vos sos su tutor. No puede pausar su ubicación, pero siempre ve quién lo mira."],
-  amigo: ["Amigo", "Solo comparte su ubicación y la puede pausar cuando quiera."],
+  amigo: ["Amigo", "Solo ustedes dos se ven, sin el resto de la familia. Puede pausar su ubicación cuando quiera."],
 };
 
 function abrirDialogo() {
