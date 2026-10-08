@@ -1,5 +1,5 @@
 ﻿# actualizar-mapa.ps1 - Actualiza la pantalla Mapa del panel (src\panel-mapa.txt y src\panel-mapa.css) a la ultima version
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldos: *.bak-c0169c4. Si algo falla, se restaura.
+# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldos: *.bak-ac6a59a. Si algo falla, se restaura.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -8,13 +8,13 @@ $raiz = (Get-Location).Path
 if (-not (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta del PANEL (la que tiene wrangler.toml), no la de la app."; return }
 Ok "Carpeta correcta"
 function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPath $ruta).Hash.ToLower() }
-$archivos = @(@("panel-mapa.txt", "300da422967248e26a43a8d66205b34536fc4a4ebf7938a4d59c502f897146f8"), @("panel-mapa.css", "cd3bd918284bc3fbc627fd98f70ecaf7141f433ff47b99874d1f4c1627c7d52d"))
+$archivos = @(@("panel-mapa.txt", "859062b3d72d549ba0432921d9aa544a0bd89a8938d7ab6f3c7ec0f3c5862780"), @("panel-mapa.css", "83b9e21797b12c9e01dd8274dcfff817ba683dc0bb81d6588c050508bea1c335"))
 foreach ($a in $archivos) { if (-not (Test-Path (Join-Path $raiz ("src\" + $a[0])))) { Mal ("No encuentro src\" + $a[0] + ": primero corre aplicar-mapa.ps1."); return } }
 $pendientes = @($archivos | Where-Object { (Sha (Join-Path $raiz ("src\" + $_[0]))) -ne $_[1] })
 if ($pendientes.Count -eq 0) { Avi "El mapa ya estaba actualizado. No toco nada."; return }
 foreach ($a in $pendientes) {
     $tmp = Join-Path $raiz ("src\" + $a[0] + ".descarga")
-    try { Invoke-WebRequest -UseBasicParsing ("https://raw.githubusercontent.com/bickluciano-boop/Murray/c0169c4/scripts/mapa/" + $a[0]) -OutFile $tmp } catch { }
+    try { Invoke-WebRequest -UseBasicParsing ("https://raw.githubusercontent.com/bickluciano-boop/Murray/ac6a59a/scripts/mapa/" + $a[0]) -OutFile $tmp } catch { }
     if (-not (Test-Path $tmp) -or (Sha $tmp) -ne $a[1]) {
         foreach ($b in $pendientes) { $x = Join-Path $raiz ("src\" + $b[0] + ".descarga"); if (Test-Path $x) { Remove-Item -LiteralPath $x -Force } }
         Mal ("No se pudo descargar bien " + $a[0] + ". No toque nada."); return
@@ -24,12 +24,12 @@ foreach ($a in $pendientes) {
 $todoBien = $true
 foreach ($a in $pendientes) {
     $arch = Join-Path $raiz ("src\" + $a[0])
-    Copy-Item -LiteralPath $arch -Destination ($arch + ".bak-c0169c4") -Force
+    Copy-Item -LiteralPath $arch -Destination ($arch + ".bak-ac6a59a") -Force
     Move-Item -LiteralPath ($arch + ".descarga") -Destination $arch -Force
-    if ((Sha $arch) -eq $a[1]) { Ok ("Actualizado: src\" + $a[0] + " (respaldo .bak-c0169c4)") } else { $todoBien = $false }
+    if ((Sha $arch) -eq $a[1]) { Ok ("Actualizado: src\" + $a[0] + " (respaldo .bak-ac6a59a)") } else { $todoBien = $false }
 }
 if (-not $todoBien) {
-    foreach ($a in $pendientes) { $arch = Join-Path $raiz ("src\" + $a[0]); if (Test-Path ($arch + ".bak-c0169c4")) { Copy-Item -LiteralPath ($arch + ".bak-c0169c4") -Destination $arch -Force } }
+    foreach ($a in $pendientes) { $arch = Join-Path $raiz ("src\" + $a[0]); if (Test-Path ($arch + ".bak-ac6a59a")) { Copy-Item -LiteralPath ($arch + ".bak-ac6a59a") -Destination $arch -Force } }
     Mal "Algo no salio bien. Restaure la version anterior. Mandame esta pantalla."
     return
 }
