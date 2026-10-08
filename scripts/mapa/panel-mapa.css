@@ -212,6 +212,7 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-campo { display: grid; gap: 6px; font-size: 0.86rem; color: var(--ogm-suave); }
 .ogm-campo input { font: inherit; font-size: 1rem; color: var(--ogm-texto); background: var(--ogm-panel); border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 11px 12px; outline: none; }
 .ogm-campo input:focus { border-color: var(--ogm-oro); }
+.ogm-campo + .ogm-campo { margin-top: 12px; }
 .ogm-dlg-sub { margin: 14px 0 6px; font-size: 0.86rem; color: var(--ogm-suave); }
 .ogm-roles { display: grid; gap: 8px; }
 #og-mapa .ogm-roles button { text-align: left; border: 1px solid var(--ogm-linea); border-radius: 13px; padding: 10px 12px; display: grid; gap: 2px; }
@@ -221,6 +222,7 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-codigo { font-size: 2.3rem; letter-spacing: 0.22em; font-weight: 700; text-align: center; color: var(--ogm-oro-vivo); background: var(--ogm-oro-fondo); border: 1px solid var(--ogm-oro-borde); border-radius: 16px; padding: 14px 8px; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
 .ogm-dlg-txt { font-size: 0.86rem; color: var(--ogm-suave); line-height: 1.5; margin: 0; }
 .ogm-dlg-txt b { color: var(--ogm-texto); }
+.ogm-dlg-txt + .ogm-dlg-txt { margin-top: 8px; }
 .ogm-dlg-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 #og-mapa .ogm-dlg-botones button { flex: 1 1 auto; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 11px 14px; font-weight: 600; }
 #og-mapa .ogm-dlg-botones button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }

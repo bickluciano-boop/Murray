@@ -131,6 +131,7 @@ async function cargarEquipos() {
   try {
     const familia = await pedir("/api/remote/family");
     estado.invitaciones = familia.invites || [];
+    estado.nombreTitular = familia.ownerName || estado.nombreTitular;
     return [...normalizarFamilia(familia), ...equipos];
   } catch {
     // Sin familia (o servidor sin esta parte todavía): el mapa sigue con los dispositivos.
@@ -139,9 +140,9 @@ async function cargarEquipos() {
   }
 }
 
-async function crearInvitacion(nombre, rol) {
-  if (DEMO) return { name: nombre, role: rol, code: "DEMO42", link: "https://ejemplo/unirme?codigo=DEMO42", expiresAt: new Date(Date.now() + 7 * 86400_000).toISOString() };
-  return pedir("/api/remote/family/invite", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: nombre, role: rol }) });
+async function crearInvitacion(nombre, rol, comoTeVe) {
+  if (DEMO) return { name: nombre, role: rol, ownerName: comoTeVe, code: "DEMO42", link: "https://ejemplo/unirme?codigo=DEMO42", expiresAt: new Date(Date.now() + 7 * 86400_000).toISOString() };
+  return pedir("/api/remote/family/invite", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: nombre, role: rol, ownerName: comoTeVe }) });
 }
 
 async function quitarDeFamilia(id) {
@@ -499,6 +500,7 @@ const estado = {
   sonando: null,        // { id, hasta } mientras la alarma del teléfono puede estar sonando
   mensajeOrden: null,   // { id, texto }: último resultado de Ubicar / Hacer sonar / Detener
   mensajeVivo: "",
+  nombreTitular: "",    // cómo te ven en su mapa las personas que invitás (el último que usaste)
 };
 
 const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "claro" : "oscuro");
@@ -563,7 +565,7 @@ function construir() {
       return encuadrarTodo();
     }
     if (accion === "invitar") return abrirDialogo();
-    if (accion === "rol") { estado.dialogo.rol = boton.dataset.rol; estado.dialogo.nombre = $('#og-mapa [data-ogm="nombre"]')?.value || ""; return dibujarDialogo(); }
+    if (accion === "rol") { leerCamposDialogo(); estado.dialogo.rol = boton.dataset.rol; return dibujarDialogo(); }
     if (accion === "crear-invitacion") return confirmarInvitacion(boton);
     if (accion === "cerrar-dialogo") { estado.dialogo = null; dibujarDialogo(); return refrescar(); }
     if (accion === "copiar") return copiarLink(boton);
@@ -1015,9 +1017,16 @@ const ROLES_TEXTO = {
 };
 
 function abrirDialogo() {
-  estado.dialogo = { paso: "datos", nombre: "", rol: "adulto", invitacion: null, error: "" };
+  estado.dialogo = { paso: "datos", nombre: "", rol: "adulto", comoTeVe: estado.nombreTitular, invitacion: null, error: "" };
   dibujarDialogo();
   setTimeout(() => $('#og-mapa [data-ogm="nombre"]')?.focus(), 50);
+}
+
+// Lo escrito en el diálogo, antes de volver a dibujarlo (si no, se perdería).
+function leerCamposDialogo() {
+  const d = estado.dialogo;
+  d.nombre = ($('#og-mapa [data-ogm="nombre"]')?.value || "").trim();
+  d.comoTeVe = ($('#og-mapa [data-ogm="como-te-ve"]')?.value || "").trim();
 }
 
 function dibujarDialogo() {
@@ -1033,6 +1042,7 @@ function dibujarDialogo() {
       <h3>Mandale esto a ${esc(i.name)}</h3>
       <div class="ogm-codigo">${esc(i.code)}</div>
       <p class="ogm-dlg-txt">Con este link, ${esc(i.name)} instala Ojo Guard, entra con su correo y escribe el código en <b>Familia › Unirme</b>. Vence el ${esc(diaCorto(i.expiresAt))}.</p>
+      ${i.ownerName ? `<p class="ogm-dlg-txt">En su mapa vas a aparecer como <b>${esc(i.ownerName)}</b>.</p>` : ""}
       <div class="ogm-dlg-botones">
         ${navigator.share ? `<button type="button" class="oro" data-accion="compartir" data-link="${esc(i.link)}" data-codigo="${esc(i.code)}">Compartir</button>` : ""}
         <button type="button" ${navigator.share ? "" : 'class="oro"'} data-accion="copiar" data-link="${esc(i.link)}">Copiar link</button>
@@ -1044,6 +1054,7 @@ function dibujarDialogo() {
     <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
     <h3>Invitar a alguien</h3>
     <label class="ogm-campo">¿Cómo se llama?<input data-ogm="nombre" maxlength="40" placeholder="Por ejemplo, Sofía" value="${esc(d.nombre)}"></label>
+    <label class="ogm-campo">¿Con qué nombre te va a ver a vos?<input data-ogm="como-te-ve" maxlength="40" placeholder="Por ejemplo, Papá o Luciano" value="${esc(d.comoTeVe)}"></label>
     <p class="ogm-dlg-sub">¿Qué es para vos?</p>
     <div class="ogm-roles">${Object.entries(ROLES_TEXTO).map(([clave, [titulo, texto]]) => `<button type="button" class="${d.rol === clave ? "on" : ""}" data-accion="rol" data-rol="${clave}"><strong>${titulo}</strong><small>${texto}</small></button>`).join("")}</div>
     ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
@@ -1054,12 +1065,14 @@ function dibujarDialogo() {
 async function confirmarInvitacion(boton) {
   const d = estado.dialogo;
   if (!d) return;
-  d.nombre = ($('#og-mapa [data-ogm="nombre"]')?.value || "").trim();
+  leerCamposDialogo();
   if (!d.nombre) { d.error = "Escribí cómo se llama la persona."; return dibujarDialogo(); }
+  if (!d.comoTeVe) { d.error = "Escribí con qué nombre te va a ver a vos."; return dibujarDialogo(); }
   boton.disabled = true;
   boton.textContent = "Creando…";
   try {
-    d.invitacion = await crearInvitacion(d.nombre, d.rol);
+    d.invitacion = await crearInvitacion(d.nombre, d.rol, d.comoTeVe);
+    estado.nombreTitular = d.comoTeVe;
     d.paso = "listo";
     d.error = "";
   } catch (error) {
