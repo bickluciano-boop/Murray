@@ -227,3 +227,4 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
   #og-mapa .ogm-ctrl .solo-celular { display: grid; place-items: center; border-top: 1px solid var(--ogm-linea); color: var(--ogm-oro-vivo); }
 }
 .ogm-nombre .ogm-rol { margin-right: auto; }
+.ogm-cab .ogm-rol { margin: 0 6px 0 0; }

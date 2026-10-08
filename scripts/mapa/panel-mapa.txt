@@ -921,7 +921,7 @@ function dibujar() {
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
-      <span><em>Precisión</em>${elegido.precision === null ? "—" : `±${Math.round(elegido.precision)} m`}</span>
+      <span title="Cuánto se puede equivocar el GPS del dispositivo. No es la distancia hasta vos: esa es «De vos»."><em>Margen de error</em>${elegido.precision === null ? "—" : `±${Math.round(elegido.precision)} m`}</span>
       <span><em>Batería</em>${elegido.bateria === null ? "—" : `${Math.round(elegido.bateria)}%`}</span>
       <span><em>Hoy</em>${km >= 0.05 ? `${km.toFixed(1).replace(".", ",")} km` : "—"}</span>
       ${estado.yo && elegido.lat !== null ? `<span><em>De vos</em>${esc(textoDistancia(distanciaA(elegido)))}</span>` : ""}
