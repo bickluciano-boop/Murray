@@ -25,9 +25,11 @@ Actualizado: 09/10/2026.
   `aplicar-build23.ps1` en la app y `aplicar-sirena-panel.ps1` en el panel).
   Suena con la app cerrada y el iPhone bloqueado, salvo en silencio. Falta la
   build y probarlo.
-- [ ] **Alertas críticas de Apple.** Falta que Lu lo envíe: los textos están
-  listos para copiar en la página "Pedido de Alertas críticas"
-  (https://claude.ai/artifact/KWJeEVMrjYhSTELXtJwpRc). Si lo aprueban: permiso
+- [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
+  Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
+  si en 2 o 3 semanas no hay respuesta, volver a enviarlo con los mismos
+  textos (página "Pedido de Alertas críticas",
+  https://claude.ai/artifact/KWJeEVMrjYhSTELXtJwpRc). Si lo aprueban: permiso
   `com.apple.developer.usernotifications.critical-alerts`, sonido de alarma
   propio en el push y pedir el permiso al usuario. Con eso suena en silencio,
   con volumen bajo y con la app cerrada, como "Buscar".
