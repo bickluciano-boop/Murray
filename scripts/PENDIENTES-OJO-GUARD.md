@@ -4,11 +4,14 @@ Actualizado: 09/10/2026.
 
 ## En curso
 
-- [ ] **Familia, menores, parte 1.** Desde el panel, el titular y los adultos
-  de la familia pueden usar **Ubicar ahora**, **Hacer sonar** (y Detener) y
+- [x] **Familia, menores, parte 1** (script `aplicar-familia-menores.ps1`,
+  falta correrlo y probarlo). Desde el panel, el titular y los adultos de la
+  familia pueden usar **Ubicar ahora**, **Hacer sonar** (y Detener) y
   **Seguir en vivo** sobre el teléfono de una persona con rol MENOR. Los
-  amigos no. Cada pedido le muestra un aviso al menor ("Luciano pidió tu
-  ubicación"), sin modo oculto.
+  amigos no. Cada pedido le avisa al menor por push y por correo ("Luciano
+  pidió tu ubicación"), sin modo oculto.
+- [ ] **Panel: gestionar a las personas de la familia** (cambiar el rol o
+  quitar a alguien). Hoy solo se pueden anular invitaciones sin usar.
 - [ ] **Familia, menores, parte 2.** **Pedir evidencia** (foto y audio corto)
   del teléfono del menor, verla en el panel y que el mail le llegue al tutor.
 
