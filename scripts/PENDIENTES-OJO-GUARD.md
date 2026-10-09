@@ -49,6 +49,15 @@ Actualizado: 09/10/2026.
 - [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
   `--auto-submit` (hoy se manda con `eas submit --platform ios --latest`).
 
+## Antirrobo (app)
+
+- [ ] **Probar en la calle el "Modo cercanía"** (Configuración → Modo cercanía:
+  "alerta si un accesorio autorizado con Bluetooth o UWB sale del radio
+  seguro"). Idea: avisar en el momento del arrebato usando los auriculares o
+  el reloj que la persona ya lleva, sin vender un llavero (a diferencia de
+  PhoneGuard). Confirmar que funciona con el teléfono bloqueado y en segundo
+  plano, en Android y en iPhone. Próxima build.
+
 ## Android
 
 - [ ] **Modo perdido: al enchufar el cargador**, mandar la ubicación y la
@@ -65,6 +74,44 @@ Actualizado: 09/10/2026.
 
 - [ ] Etapa B: lugares (casa, colegio) y avisos al llegar o salir.
 - [ ] Etapa C: SOS del menor.
+
+## Negocio e inversores
+
+Devolución de Axel Abulafia (09/10/2026, "Ojo Guard - mirada preliminar"): el
+deck es un pitch de visión; antes de invertir quiere ver el producto andando,
+tracción y la economía del negocio.
+
+- [ ] **Responderle a Axel** (borrador preparado en la conversación): gracias,
+  qué funciona hoy y qué es roadmap, por qué Ojo Guard aunque exista Buscar,
+  privacidad de menores, y ofrecer una **demo en vivo de 15 minutos**.
+- [ ] **Deck nuevo**:
+  - capturas reales en lugar de "escena ilustrativa";
+  - "funciona hoy" separado de "próximo" (pulsera SOS, auto, tags y collar
+    son roadmap);
+  - slide de equipo;
+  - competencia: Buscar de Apple, Samsung y Google, Life360, Prey,
+    PhoneGuard, AngelSense/Jiobit, y por qué Ojo Guard igual;
+  - modelo de negocio, cuánto se busca y para qué.
+- [ ] **Definir cuánto pedir y para qué** (fue una de sus críticas fuertes).
+- [ ] **Tracción mínima:** beta cerrada con 20 a 50 familias conocidas, para
+  tener los primeros números reales (usuarios activos, retención).
+- [ ] **Canal B2B2C:** explorar aseguradoras (seguros de celular) y empresas
+  de seguridad o monitoreo. Es la sugerencia de Axel, y el caso de PhoneGuard
+  muestra que llegar a la gente de a uno es lo difícil.
+- [ ] **Cuidar la información:** marcar el deck como "Confidencial", mandarlo
+  como link de solo lectura y mostrar el "qué", no el "cómo".
+
+**PhoneGuard** (competidor local, datos de prensa de enero de 2026): de Leandro
+Campopiano y Néstor Muñoz (Rock Software). App gratis más un llavero Bluetooth
+de unos $5.000; si el teléfono se aleja del llavero (de 10 a 150 m), pregunta
+tres veces y avisa a la familia, a los vecinos en 3 km y a las fuerzas de
+seguridad, y suena una sirena con PIN. Invirtieron más de USD 155.000; tenían
+unas 900 descargas y más de 30 alertas; se dieron de alta como proveedores del
+Estado, pero el avance se frenó. Diferencia con Ojo Guard: ellos cubren el
+momento del arrebato y dependen del llavero y de que haya muchos vecinos con la
+app; Ojo Guard cubre el después (evidencia, Modo perdido, panel) y la familia,
+solo con el teléfono. Decisión: por ahora no contactarlos; una alianza queda
+como opción más adelante.
 
 ## Panel y otros
 
