@@ -119,8 +119,21 @@ function normalizarFamilia(datos) {
       vistoEn: p.lastSeenAt || null,
       conRecorrido: false,
       pausado: Boolean(p.paused),
+      // Menor de tu familia: podés ubicarlo, hacerlo sonar y seguirlo en vivo (y él lo ve).
+      ordenable: Boolean(p.canCommand),
+      plataforma: p.platform || "",
     };
   });
+}
+
+/** A qué se le pueden mandar órdenes: tus teléfonos y los menores de tu familia. */
+function puedeOrdenar(equipo) {
+  return Boolean(equipo) && (equipo.tipo === "telefono" || (equipo.tipo === "persona" && equipo.ordenable));
+}
+
+/** Las órdenes a un menor van por la ruta de familia, con el id de la persona. */
+function esPersona(id) {
+  return String(id).startsWith("persona:");
 }
 
 async function cargarEquipos() {
@@ -162,11 +175,12 @@ async function cargarRecorrido(equipo) {
 
 async function enviarOrden(equipo, tipo) {
   if (DEMO) return { demo: true };
+  if (esPersona(equipo.id)) return pedir("/api/remote/family/command", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ personId: equipo.id.slice(8), type: tipo }) });
   return pedir("/api/remote/commands", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId: equipo.id, type: tipo }) });
 }
 
-async function estadoOrden(id) {
-  return pedir(`/api/remote/commands?commandId=${encodeURIComponent(id)}`);
+async function estadoOrden(id, equipoId = "") {
+  return pedir(`${esPersona(equipoId) ? "/api/remote/family/command" : "/api/remote/commands"}?commandId=${encodeURIComponent(id)}`);
 }
 
 const FOTO_VERSIONES = "ojo_ms_fotos_equipos";
@@ -321,7 +335,7 @@ const ICONO_DETENER = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidd
 
 /** Botón chico de sonido para la lista (como en Buscar de Apple). */
 function botonSonar(equipo) {
-  if (equipo.tipo !== "telefono") return "";
+  if (!puedeOrdenar(equipo)) return "";
   const sonando = estado.sonando?.id === equipo.id && Date.now() < estado.sonando.hasta;
   return `<button type="button" class="ogm-sonar${sonando ? " on" : ""}" data-accion="${sonando ? "stop-ring" : "alarm"}" data-equipo="${esc(equipo.id)}" title="${sonando ? "Detener sonido" : "Hacer sonar"}" aria-label="${sonando ? "Detener sonido" : "Hacer sonar"} ${esc(equipo.nombre)}">${sonando ? ICONO_DETENER : ICONO_SONAR}</button>`;
 }
@@ -931,9 +945,10 @@ function dibujar() {
     ${lista.length ? `<ul class="ogm-paradas">${lista.map((pa) => `<li><i></i>${esc(horaCorta(pa.desde))} a ${esc(horaCorta(pa.hasta))} · ${pa.minutos} min${pa.direccion ? ` · ${esc(pa.direccion)}` : ""}</li>`).join("")}</ul>` : ""}
     <div class="ogm-botones">
       ${admiteVivo(elegido) ? (siguiendo ? '<button type="button" class="parar" data-accion="vivo-parar">Dejar de seguir</button>' : '<button type="button" class="oro" data-accion="vivo">Seguir en vivo</button>') : ""}
-      ${elegido.tipo === "telefono" ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button>${sonandoAhora ? '<button type="button" class="parar" data-accion="stop-ring">Detener sonido</button>' : '<button type="button" data-accion="alarm">Hacer sonar</button>'}` : ""}
+      ${puedeOrdenar(elegido) ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button>${sonandoAhora ? '<button type="button" class="parar" data-accion="stop-ring">Detener sonido</button>' : '<button type="button" data-accion="alarm">Hacer sonar</button>'}` : ""}
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
+    ${elegido.tipo === "persona" && elegido.ordenable ? `<p class="ogm-nota-menor">${esc(elegido.nombre)} ve en su teléfono cada pedido que hagas.</p>` : ""}
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
     ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
@@ -946,14 +961,19 @@ function dibujar() {
 
 const VIVO = { renovarMs: 4 * 60_000, refrescoMs: 4_000, vigilarIntentos: 40 };
 
-/** Solo teléfonos con la app: la notebook (programa de la computadora) no tiene seguimiento en vivo. */
+/** Solo teléfonos con la app (los tuyos y los de los menores de tu familia): la notebook no tiene seguimiento en vivo. */
 function admiteVivo(equipo) {
-  return Boolean(equipo) && equipo.tipo === "telefono" && !/windows|mac ?os|linux|computadora|notebook|\bpc\b/i.test(`${equipo.plataforma} ${equipo.nombre}`);
+  return puedeOrdenar(equipo) && !/windows|mac ?os|linux|computadora|notebook|\bpc\b/i.test(`${equipo.plataforma} ${equipo.nombre}`);
 }
 
 function pedirVivo(accion, deviceId) {
   if (DEMO) return Promise.resolve({ live: accion === "start", demo: true });
-  return pedir("/api/remote/live", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId, action: accion }) });
+  return pedir(...rutaVivo(accion, deviceId));
+}
+
+function rutaVivo(accion, id) {
+  const cuerpo = esPersona(id) ? { personId: id.slice(8), action: accion } : { deviceId: id, action: accion };
+  return [esPersona(id) ? "/api/remote/family/live" : "/api/remote/live", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cuerpo) }];
 }
 
 async function iniciarVivo(equipo) {
@@ -983,7 +1003,7 @@ async function vigilarOrdenVivo(id, commandId) {
   if (!commandId || DEMO) return;
   for (let intento = 0; intento < VIVO.vigilarIntentos && estado.vivo?.id === id; intento += 1) {
     await new Promise((ok) => setTimeout(ok, 3000));
-    const c = (await estadoOrden(commandId).catch(() => null))?.command;
+    const c = (await estadoOrden(commandId, id).catch(() => null))?.command;
     if (!c || estado.vivo?.id !== id) continue;
     if (c.status === "executed") { estado.vivo.texto = ""; dibujar(); return; }
     if (c.status === "failed") {
@@ -1122,7 +1142,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
     avisar(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
     for (let intento = 0; intento < 20 && estado.abierto; intento += 1) {
       await new Promise((ok) => setTimeout(ok, 3000));
-      const c = (await estadoOrden(r.commandId).catch(() => null))?.command;
+      const c = (await estadoOrden(r.commandId, equipo.id).catch(() => null))?.command;
       if (!c) continue;
       if (c.status === "executed") {
         avisar(tipo === "locate" ? "Ubicación recibida." : tipo === "alarm" ? "El teléfono está sonando. Se corta solo al minuto." : "Sonido detenido.");
@@ -1134,7 +1154,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
     }
   } catch (error) {
     avisar(error.status === 403
-      ? "Esta acción pide confirmar tu identidad: hacela desde la pestaña Dispositivos."
+      ? (esPersona(equipo.id) ? "Solo el titular y los adultos de la familia pueden hacer esto." : "Esta acción pide confirmar tu identidad: hacela desde la pestaña Dispositivos.")
       : "No se pudo enviar la orden. Probá de nuevo.");
   } finally {
     boton.disabled = false;
@@ -1149,7 +1169,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
 function demoEquipos() {
   const ahora = Date.now();
   return [
-    { id: "persona:demo-sofi", tipo: "persona", rol: "menor", nombre: "Sofía", plataforma: "", lat: -34.5871, lng: -58.4302, precision: 15, direccion: "Guatemala 4600, Palermo", bateria: 70, enLinea: true, ubicadoEn: new Date(ahora - 4 * 60_000).toISOString(), conRecorrido: false, pausado: false },
+    { id: "persona:demo-sofi", tipo: "persona", rol: "menor", nombre: "Sofía", plataforma: "iOS", ordenable: true, lat: -34.5871, lng: -58.4302, precision: 15, direccion: "Guatemala 4600, Palermo", bateria: 70, enLinea: true, ubicadoEn: new Date(ahora - 4 * 60_000).toISOString(), conRecorrido: false, pausado: false },
     { id: "demo-1", tipo: "telefono", nombre: "Mi teléfono", plataforma: "Android", lat: -34.5800, lng: -58.4245, precision: 12, direccion: "Ugarteche 3178, Palermo", bateria: 64, enLinea: true, ubicadoEn: new Date(ahora - 5000).toISOString(), conRecorrido: true },
     { id: "demo-2", tipo: "telefono", nombre: "Teléfono de trabajo", plataforma: "iPhone", lat: -34.5871, lng: -58.4302, precision: 20, direccion: "Guatemala 4600, Palermo", bateria: 81, enLinea: true, ubicadoEn: new Date(ahora - 120000).toISOString(), conRecorrido: true },
     { id: "pulsera:demo", tipo: "pulsera", nombre: "Pulsera de Elsa", plataforma: "Pulsera SOS", lat: -34.5810, lng: -58.4210, precision: 30, direccion: "Plaza Italia", bateria: 47, enLinea: true, ubicadoEn: new Date(ahora - 360000).toISOString(), conRecorrido: false },
@@ -1172,7 +1192,8 @@ function iniciar() {
   // Si se cierra la pestaña con el seguimiento prendido, se avisa igual al servidor.
   window.addEventListener("pagehide", () => {
     if (!estado.vivo || DEMO) return;
-    navigator.sendBeacon?.("/api/remote/live", new Blob([JSON.stringify({ deviceId: estado.vivo.id, action: "stop" })], { type: "application/json" }));
+    const [ruta, opciones] = rutaVivo("stop", estado.vivo.id);
+    navigator.sendBeacon?.(ruta, new Blob([opciones.body], { type: "application/json" }));
   });
   new MutationObserver(() => estado.proveedor?.tema(temaActual())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   document.addEventListener("keydown", (evento) => {

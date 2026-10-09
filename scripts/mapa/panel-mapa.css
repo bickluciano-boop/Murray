@@ -151,6 +151,7 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 #og-mapa .ogm-botones button:disabled { opacity: 0.6; cursor: wait; }
 .ogm-msj { margin: 8px 0 0; min-height: 1em; font-size: 0.8rem; color: var(--ogm-oro-vivo); }
 .ogm-msj:empty { display: none; }
+.ogm-nota-menor { margin: 10px 0 0; font-size: 0.76rem; line-height: 1.4; color: var(--ogm-suave); }
 .ogm-otros { display: none; }
 
 /* Celular: mapa a pantalla completa y la tarjeta abajo, sobre la barra de pestañas */
