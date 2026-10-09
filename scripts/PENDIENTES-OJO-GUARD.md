@@ -21,10 +21,10 @@ Actualizado: 09/10/2026.
 - [x] **"Hacer sonar" con la app abierta y la perilla en silencio** (build 22,
   probado el 09/10/2026: con la perilla en silencio, la sirena sonó al abrir la
   app).
-- [ ] **Sirena propia de 28 s en la notificación de "Hacer sonar"** (build 23:
-  `aplicar-build23.ps1` en la app y `aplicar-sirena-panel.ps1` en el panel).
-  Suena con la app cerrada y el iPhone bloqueado, salvo en silencio. Falta la
-  build y probarlo.
+- [x] **Sirena propia de 28 s en la notificación de "Hacer sonar"** (build 23,
+  probado el 09/10/2026: con el iPhone bloqueado, la app cerrada y la perilla
+  con sonido, la sirena sonó unos 30 s). En silencio no suena: para eso hacen
+  falta las Alertas críticas.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   si en 2 o 3 semanas no hay respuesta, volver a enviarlo con los mismos
