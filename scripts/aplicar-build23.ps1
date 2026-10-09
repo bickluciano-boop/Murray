@@ -28,7 +28,7 @@ if ((Contar (Leer (Join-Path $raiz "src\remoteSync.ts")).texto 'const enCurso = 
 if (Test-Path (Join-Path $raiz "assets\sounds\ojo_sirena.wav")) { Mal "Ya existe assets\sounds\ojo_sirena.wav de un intento anterior. No toco nada. Mandame esta pantalla."; return }
 New-Item -ItemType Directory -Force -Path (Join-Path $raiz "assets\sounds") | Out-Null
 $cambios = @(
-    @('app.json', 'sirena en las notificaciones', '          "defaultChannel": "ojo-alertas"
+    ,@('app.json', 'sirena en las notificaciones', '          "defaultChannel": "ojo-alertas"
         }', '          "defaultChannel": "ojo-alertas",
           "sounds": ["./assets/sounds/ojo_sirena.wav"]
         }')

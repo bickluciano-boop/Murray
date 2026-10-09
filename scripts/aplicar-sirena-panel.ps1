@@ -26,7 +26,7 @@ Ok "Carpeta correcta"
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'ojo_sirena.wav') -ne 0) { Avi "La sirena ya estaba aplicada en el panel. No toco nada."; return }
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'silencioso?: boolean') -eq 0) { Mal "Primero corre aplicar-familia-avisos.ps1."; return }
 $cambios = @(
-    @('src\index.ts', 'sirena en Hacer sonar', '      sound: aviso?.silencioso ? undefined : "default",', '      // "Hacer sonar": sirena propia de 28 s (assets/sounds/ojo_sirena.wav en la app, desde la
+    ,@('src\index.ts', 'sirena en Hacer sonar', '      sound: aviso?.silencioso ? undefined : "default",', '      // "Hacer sonar": sirena propia de 28 s (assets/sounds/ojo_sirena.wav en la app, desde la
       // build 23). iPhone la reproduce con la app cerrada y bloqueado; en silencio, solo con
       // Alertas criticas. Si el telefono todavia no la tiene, suena el aviso comun.
       sound: aviso?.silencioso ? undefined : type === "alarm" ? "ojo_sirena.wav" : "default",')
