@@ -19,6 +19,9 @@ Actualizado: 09/10/2026.
 ## iPhone
 
 - [ ] **"Hacer sonar" con la app abierta y la perilla en silencio no suena**
+  (`aplicar-build22.ps1`: vuelve a pedir el modo de audio al sonar y deja el
+  registro "hacer sonar: iPhone: sonando / NO suena" en Configuración; falta
+  la build y probarlo)
   (sí suena con la perilla activa). La app pide sonar en silencio
   (`playsInSilentMode`), pero algo lo pisa. Próxima build: volver a aplicar
   el modo de audio justo antes de sonar y guardar un registro de lo que pasó.
@@ -35,7 +38,9 @@ Actualizado: 09/10/2026.
   "Protección de dispositivo robado" y desactivar el Centro de control con el
   iPhone bloqueado (Ajustes → Face ID y código → "Acceso con el iPhone
   bloqueado"), para que no puedan poner el modo avión sin desbloquearlo.
-- [ ] **Avisos repetidos de "Hacer sonar":** el 08/10 a las 20:29 llegaron unas 20
+- [ ] **Avisos repetidos de "Hacer sonar"** (arreglado en `aplicar-build22.ps1`:
+  la app no vuelve a ejecutar una orden en curso; en simulación, de 31
+  ejecuciones a 1; falta la build y probarlo): el 08/10 a las 20:29 llegaron unas 20
   notificaciones iguales en el mismo minuto. Probablemente la app vuelve a
   mostrar el aviso cada vez que revisa la orden mientras la sirena suena.
   Revisar en la próxima build (un solo aviso por orden).
@@ -45,7 +50,7 @@ Actualizado: 09/10/2026.
   confirmaciones, sumar un aviso obligatorio de ingreso al panel desde un
   equipo nuevo. Propuesto a Lu, falta su OK.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
-  amigos (va en la próxima build).
+  amigos (en `aplicar-build22.ps1` pasa a decir "Reanudar"; falta la build).
 - [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
   `--auto-submit` (hoy se manda con `eas submit --platform ios --latest`).
 
@@ -65,8 +70,8 @@ Actualizado: 09/10/2026.
   tomada de un atajo de iPhone que circula en redes, que con el teléfono
   bloqueado probablemente no funciona; Ojo Guard sí puede hacerlo.
 - [ ] Instalar y probar la última build de Android (en vivo caminando).
-- [ ] **Canal de notificación "ojo-familia-aviso" sin sonido** (próxima build de
-  Android). El servidor ya manda en silencio "Luciano vio dónde estás"
+- [ ] **Canal de notificación "ojo-familia-aviso" sin sonido** (creado en
+  `aplicar-build22.ps1`; falta la build de Android). El servidor ya manda en silencio "Luciano vio dónde estás"
   (`aplicar-familia-avisos.ps1`); mientras la app no cree ese canal, Android
   lo muestra por su canal general, con sonido.
 
