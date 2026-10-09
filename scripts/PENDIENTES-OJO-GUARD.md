@@ -68,6 +68,14 @@ Actualizado: 09/10/2026.
 
 ## Android
 
+- [ ] **La build 152 se cierra sola al abrir** (09/10/2026). Causa: el mapa de
+  Familia usa Google Maps, que en Android pide una clave que la app no tiene;
+  apareció ahora porque la familia ya tiene ubicaciones. Arreglo en
+  `aplicar-mapa-android.ps1`: en Android no se muestra ese mapa (ni el del
+  detalle de un intento) y cada persona se toca para abrirla en Google Maps.
+  Falta la build y probarlo.
+- [ ] Más adelante, si se quiere el mapa adentro de la app en Android: crear
+  una clave de Google Maps para Android (Google Cloud) y ponerla en `app.json`.
 - [ ] **Modo perdido: al enchufar el cargador**, mandar la ubicación y la
   evidencia al instante (Android avisa a la app cuando lo conectan). Idea
   tomada de un atajo de iPhone que circula en redes, que con el teléfono
