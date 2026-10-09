@@ -4,8 +4,9 @@ Actualizado: 09/10/2026.
 
 ## En curso
 
-- [x] **Familia, menores, parte 1** (script `aplicar-familia-menores.ps1`,
-  falta correrlo y probarlo). Desde el panel, el titular y los adultos de la
+- [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
+  probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
+  Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
   familia pueden usar **Ubicar ahora**, **Hacer sonar** (y Detener) y
   **Seguir en vivo** sobre el teléfono de una persona con rol MENOR. Los
   amigos no. Cada pedido le avisa al menor por push y por correo ("Luciano
@@ -34,6 +35,15 @@ Actualizado: 09/10/2026.
   "Protección de dispositivo robado" y desactivar el Centro de control con el
   iPhone bloqueado (Ajustes → Face ID y código → "Acceso con el iPhone
   bloqueado"), para que no puedan poner el modo avión sin desbloquearlo.
+- [ ] **Avisos repetidos de "Hacer sonar":** el 08/10 a las 20:29 llegaron unas 20
+  notificaciones iguales en el mismo minuto. Probablemente la app vuelve a
+  mostrar el aviso cada vez que revisa la orden mientras la sirena suena.
+  Revisar en la próxima build (un solo aviso por orden).
+- [ ] **Preferencias de mails** (Cuenta → Notificaciones): los de seguridad
+  siempre; con tilde las confirmaciones de órdenes, el resultado de Ubicar,
+  "dejó de responder" y los de familia. Si se pueden apagar las
+  confirmaciones, sumar un aviso obligatorio de ingreso al panel desde un
+  equipo nuevo. Propuesto a Lu, falta su OK.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
   amigos (va en la próxima build).
 - [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
