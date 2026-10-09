@@ -240,11 +240,15 @@ async function familyIsTutorOf(env: Env, viewer: string, minorEmail: string) {
   return Boolean(fila);
 }
 
-function familyMinorNotice(type: CommandType | "live", quien: string): [string, string] {
-  if (type === "locate") return ["Ojo Guard \u2014 Pidieron tu ubicaci\u00f3n", `${quien} pidi\u00f3 tu ubicaci\u00f3n desde Ojo Guard MS.`];
-  if (type === "alarm") return ["Ojo Guard \u2014 Buscando este tel\u00e9fono", `${quien} hizo sonar tu tel\u00e9fono para encontrarlo.`];
-  if (type === "stop-ring") return ["Ojo Guard \u2014 Sonido detenido", `${quien} detuvo el sonido.`];
-  return ["Ojo Guard \u2014 Ubicaci\u00f3n en vivo", `${quien} est\u00e1 viendo tu ubicaci\u00f3n en vivo.`];
+// Que ve el menor en su telefono (titulo y texto), el asunto del correo a su cuenta
+// (null: sin correo) y si el aviso llega en silencio. "Ubicar ahora" avisa igual, pero
+// sin sonido ni correo (decision de Lu, 09/10/2026): se entera si mira el telefono y
+// no lo interrumpe. Hacer sonar si suena: la idea es justamente que lo note.
+function familyMinorNotice(type: CommandType | "live", quien: string): { titulo: string; texto: string; asunto: string | null; silencioso: boolean } {
+  if (type === "locate") return { titulo: "Ojo Guard", texto: `${quien} vio d\u00f3nde est\u00e1s.`, asunto: null, silencioso: true };
+  if (type === "alarm") return { titulo: "Ojo Guard", texto: `${quien} hizo sonar tu tel\u00e9fono para encontrarlo.`, asunto: "Hicieron sonar tu tel\u00e9fono", silencioso: false };
+  if (type === "stop-ring") return { titulo: "Ojo Guard", texto: `${quien} detuvo el sonido.`, asunto: null, silencioso: true };
+  return { titulo: "Ojo Guard", texto: `${quien} est\u00e1 viendo tu ubicaci\u00f3n en vivo.`, asunto: "Ubicaci\u00f3n en vivo", silencioso: false };
 }
 
 async function remoteFamilyCommand(request: Request, env: Env, url: URL) {
@@ -284,9 +288,9 @@ async function remoteFamilyCommand(request: Request, env: Env, url: URL) {
   }
   await env.DB.prepare("INSERT INTO commands (id,device_id,owner_email,type,status,created_at,expires_at) VALUES (?,?,?,?,?,?,?)")
     .bind(id, target.device.id, target.minorEmail, type, "pending", createdAt, plusMinutes(60)).run();
-  const [titulo, detalle] = familyMinorNotice(type, target.quien);
-  const pushSent = await sendExpoCommandPush(target.device.pushToken, type, id, target.device.name, { title: titulo, body: detalle }).catch(() => false);
-  await sendSecurityNotice(env, target.minorEmail, titulo.replace(/^Ojo Guard \u2014 /, ""), detalle, target.device.name);
+  const aviso = familyMinorNotice(type, target.quien);
+  const pushSent = await sendExpoCommandPush(target.device.pushToken, type, id, target.device.name, { title: aviso.titulo, body: aviso.texto, silencioso: aviso.silencioso }).catch(() => false);
+  if (aviso.asunto) await sendSecurityNotice(env, target.minorEmail, aviso.asunto, aviso.texto, target.device.name);
   return json({ queued: true, commandId: id, status: "pending", pushSent }, 202);
 }
 
@@ -317,9 +321,9 @@ async function remoteFamilyLive(request: Request, env: Env) {
   const id = randomId("cmd");
   await env.DB.prepare("INSERT INTO commands (id,device_id,owner_email,type,status,created_at,expires_at) VALUES (?,?,?,?,?,?,?)")
     .bind(id, deviceId, target.minorEmail, "live", "pending", ahora, until).run();
-  const [titulo, detalle] = familyMinorNotice("live", target.quien);
-  const pushSent = await sendExpoCommandPush(target.device.pushToken, "live", id, target.device.name, { title: titulo, body: detalle }).catch(() => false);
-  await sendSecurityNotice(env, target.minorEmail, titulo.replace(/^Ojo Guard \u2014 /, ""), detalle, target.device.name);
+  const aviso = familyMinorNotice("live", target.quien);
+  const pushSent = await sendExpoCommandPush(target.device.pushToken, "live", id, target.device.name, { title: aviso.titulo, body: aviso.texto, silencioso: aviso.silencioso }).catch(() => false);
+  if (aviso.asunto) await sendSecurityNotice(env, target.minorEmail, aviso.asunto, aviso.texto, target.device.name);
   return json({ live: true, until, commandId: id, status: "pending", pushSent }, 202);
 }
 
