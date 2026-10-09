@@ -18,15 +18,16 @@ Actualizado: 09/10/2026.
 
 ## iPhone
 
-- [ ] **"Hacer sonar" con la app abierta y la perilla en silencio no suena**
-  (`aplicar-build22.ps1`: vuelve a pedir el modo de audio al sonar y deja el
-  registro "hacer sonar: iPhone: sonando / NO suena" en Configuración; falta
-  la build y probarlo)
-  (sí suena con la perilla activa). La app pide sonar en silencio
-  (`playsInSilentMode`), pero algo lo pisa. Próxima build: volver a aplicar
-  el modo de audio justo antes de sonar y guardar un registro de lo que pasó.
-- [ ] **Alertas críticas de Apple.** Pedido enviado o a enviar por Lu (texto
-  ya preparado). Si lo aprueban: permiso
+- [x] **"Hacer sonar" con la app abierta y la perilla en silencio** (build 22,
+  probado el 09/10/2026: con la perilla en silencio, la sirena sonó al abrir la
+  app).
+- [ ] **Sirena propia de 28 s en la notificación de "Hacer sonar"** (build 23:
+  `aplicar-build23.ps1` en la app y `aplicar-sirena-panel.ps1` en el panel).
+  Suena con la app cerrada y el iPhone bloqueado, salvo en silencio. Falta la
+  build y probarlo.
+- [ ] **Alertas críticas de Apple.** Falta que Lu lo envíe: los textos están
+  listos para copiar en la página "Pedido de Alertas críticas"
+  (https://claude.ai/artifact/KWJeEVMrjYhSTELXtJwpRc). Si lo aprueban: permiso
   `com.apple.developer.usernotifications.critical-alerts`, sonido de alarma
   propio en el push y pedir el permiso al usuario. Con eso suena en silencio,
   con volumen bajo y con la app cerrada, como "Buscar".
