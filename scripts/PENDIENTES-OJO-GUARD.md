@@ -56,6 +56,10 @@ Actualizado: 09/10/2026.
   tomada de un atajo de iPhone que circula en redes, que con el teléfono
   bloqueado probablemente no funciona; Ojo Guard sí puede hacerlo.
 - [ ] Instalar y probar la última build de Android (en vivo caminando).
+- [ ] **Canal de notificación "ojo-familia-aviso" sin sonido** (próxima build de
+  Android). El servidor ya manda en silencio "Luciano vio dónde estás"
+  (`aplicar-familia-avisos.ps1`); mientras la app no cree ese canal, Android
+  lo muestra por su canal general, con sonido.
 
 ## Familia, más adelante
 
