@@ -1,7 +1,7 @@
 ﻿# aplicar-menores-evidencia.ps1 - Familia: el tutor pide una foto y un audio del telefono de un menor (el menor
 # siempre recibe el aviso), aviso a la persona cuando le cambian el rol, y salir de una familia.
 # Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\index.ts y actualiza src\panel-mapa.txt y
-# src\panel-mapa.css. Respaldos .bak-evidencia; si algo falla, se restaura todo.
+# src\panel-mapa.css. Respaldos .bak-fotomenor; si algo falla, se restaura todo.
 # Base de datos: antes de publicar, agregar dos columnas (el script lo recuerda al final).
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
@@ -271,14 +271,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-evidencia")) { Mal ("Ya existe " + $t + ".bak-evidencia. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-fotomenor")) { Mal ("Ya existe " + $t + ".bak-fotomenor. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-evidencia"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-fotomenor"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-evidencia): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-fotomenor): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -311,7 +311,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-evidencia") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-fotomenor") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."
