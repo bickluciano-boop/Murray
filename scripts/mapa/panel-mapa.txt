@@ -121,6 +121,9 @@ function normalizarFamilia(datos) {
       pausado: Boolean(p.paused),
       // Menor de tu familia: podés ubicarlo, hacerlo sonar y seguirlo en vivo (y él lo ve).
       ordenable: Boolean(p.canCommand),
+      // De tu familia (sos el titular): le podés cambiar el rol o quitarla.
+      gestionable: Boolean(p.canManage),
+      idFamilia: p.id,
       plataforma: p.platform || "",
     };
   });
@@ -161,6 +164,11 @@ async function crearInvitacion(nombre, rol, comoTeVe) {
 async function quitarDeFamilia(id) {
   if (DEMO) return;
   await pedir("/api/remote/family/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+}
+
+async function cambiarRol(id, rol) {
+  if (DEMO) return;
+  await pedir("/api/remote/family/role", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, role: rol }) });
 }
 
 async function cargarRecorrido(equipo) {
@@ -569,7 +577,7 @@ function construir() {
       raiz.querySelectorAll("[data-capa]").forEach((b) => b.classList.toggle("on", b === boton));
       return estado.proveedor?.capa(boton.dataset.capa);
     }
-    if (boton.dataset.id) return elegir(boton.dataset.id, true);
+    if (boton.dataset.id && !boton.dataset.accion) return elegir(boton.dataset.id, true);
     const accion = boton.dataset.ogm || boton.dataset.accion;
     if (accion === "mas") return estado.proveedor?.acercar(1);
     if (accion === "menos") return estado.proveedor?.acercar(-1);
@@ -585,6 +593,12 @@ function construir() {
     if (accion === "copiar") return copiarLink(boton);
     if (accion === "compartir") return navigator.share?.({ title: "Ojo Guard · Familia", text: `Te invito a mi familia en Ojo Guard. Código: ${boton.dataset.codigo}`, url: boton.dataset.link }).catch(() => undefined);
     if (accion === "quitar-invitacion") return quitarDeFamilia(boton.dataset.id).then(() => refrescar()).catch(() => undefined);
+    if (accion === "administrar") return abrirGestion(equipoElegido());
+    if (accion === "gestion-rol") { estado.dialogo.rol = boton.dataset.rol; estado.dialogo.error = ""; return dibujarDialogo(); }
+    if (accion === "gestion-guardar") return guardarGestion(boton);
+    if (accion === "gestion-quitar") { estado.dialogo.confirmarQuitar = true; estado.dialogo.error = ""; return dibujarDialogo(); }
+    if (accion === "gestion-volver") { estado.dialogo.confirmarQuitar = false; estado.dialogo.error = ""; return dibujarDialogo(); }
+    if (accion === "gestion-quitar-si") return quitarGestion(boton);
     if (accion === "vivo") return iniciarVivo(equipoElegido());
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
@@ -949,6 +963,7 @@ function dibujar() {
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
     ${elegido.tipo === "persona" && elegido.ordenable ? `<p class="ogm-nota-menor">${esc(elegido.nombre)} ve en su teléfono cada pedido que hagas.</p>` : ""}
+    ${elegido.tipo === "persona" && elegido.gestionable ? '<button type="button" class="ogm-administrar" data-accion="administrar">Cambiar rol o quitar</button>' : ""}
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
     ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
@@ -1055,6 +1070,25 @@ function dibujarDialogo() {
   const d = estado.dialogo;
   caja.classList.toggle("hidden", !d);
   if (!d) { caja.innerHTML = ""; return; }
+  caja.setAttribute("aria-label", d.paso === "gestion" ? `Administrar a ${d.nombre}` : "Invitar a la familia");
+  if (d.paso === "gestion") {
+    caja.innerHTML = d.confirmarQuitar ? `<div class="ogm-dlg">
+      <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
+      <h3>¿Quitar a ${esc(d.nombre)}?</h3>
+      <p class="ogm-dlg-txt">Deja de ver a la familia en el mapa y ustedes dejan de ver a ${esc(d.nombre)}. Para que vuelva, hay que mandarle una invitación nueva.</p>
+      ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
+      <div class="ogm-dlg-botones"><button type="button" class="peligro" data-accion="gestion-quitar-si">Sí, quitar</button><button type="button" data-accion="gestion-volver">Volver</button></div>
+    </div>` : `<div class="ogm-dlg">
+      <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
+      <h3>${esc(d.nombre)}</h3>
+      <p class="ogm-dlg-sub">¿Qué es para vos?</p>
+      <div class="ogm-roles">${Object.entries(ROLES_TEXTO).map(([clave, [titulo, texto]]) => `<button type="button" class="${d.rol === clave ? "on" : ""}" data-accion="gestion-rol" data-rol="${clave}"><strong>${titulo}</strong><small>${texto}</small></button>`).join("")}</div>
+      ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
+      <div class="ogm-dlg-botones"><button type="button" class="oro" data-accion="gestion-guardar" ${d.rol === d.rolActual ? "disabled" : ""}>Guardar</button><button type="button" data-accion="cerrar-dialogo">Cancelar</button></div>
+      <button type="button" class="ogm-quitar-persona" data-accion="gestion-quitar">Quitar de la familia</button>
+    </div>`;
+    return;
+  }
   if (d.paso === "listo") {
     const i = d.invitacion;
     caja.innerHTML = `<div class="ogm-dlg">
@@ -1099,6 +1133,50 @@ async function confirmarInvitacion(boton) {
     d.error = error.status === 403 ? "Para invitar, entrá al panel con tu acceso normal (no con el de emergencia)." : "No se pudo crear la invitación. Probá de nuevo.";
   }
   dibujarDialogo();
+}
+
+// Administrar a alguien de tu familia (solo el titular): cambiarle el rol o quitarlo.
+function abrirGestion(equipo) {
+  if (!equipo?.gestionable) return;
+  estado.dialogo = { paso: "gestion", id: equipo.idFamilia, equipoId: equipo.id, nombre: equipo.nombre, rol: equipo.rol, rolActual: equipo.rol, confirmarQuitar: false, error: "" };
+  dibujarDialogo();
+}
+
+function errorGestion(error, queSeHacia) {
+  return error.status === 403 ? "Para esto, entrá al panel con tu acceso normal (no con el de emergencia)." : `No se pudo ${queSeHacia}. Probá de nuevo.`;
+}
+
+async function guardarGestion(boton) {
+  const d = estado.dialogo;
+  if (!d || d.rol === d.rolActual) return;
+  boton.disabled = true;
+  boton.textContent = "Guardando…";
+  try {
+    await cambiarRol(d.id, d.rol);
+    estado.dialogo = null;
+    dibujarDialogo();
+    return refrescar();
+  } catch (error) {
+    d.error = errorGestion(error, "cambiar el rol");
+    dibujarDialogo();
+  }
+}
+
+async function quitarGestion(boton) {
+  const d = estado.dialogo;
+  if (!d) return;
+  boton.disabled = true;
+  boton.textContent = "Quitando…";
+  try {
+    if (estado.vivo?.id === d.equipoId) await detenerVivo();
+    await quitarDeFamilia(d.id);
+    estado.dialogo = null;
+    dibujarDialogo();
+    return refrescar();
+  } catch (error) {
+    d.error = errorGestion(error, "quitar a esta persona");
+    dibujarDialogo();
+  }
 }
 
 async function copiarLink(boton) {

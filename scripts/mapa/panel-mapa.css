@@ -227,6 +227,12 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-dlg-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 #og-mapa .ogm-dlg-botones button { flex: 1 1 auto; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 11px 14px; font-weight: 600; }
 #og-mapa .ogm-dlg-botones button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }
+#og-mapa .ogm-dlg-botones button.peligro { border-color: var(--ogm-off); color: var(--ogm-off); }
+#og-mapa .ogm-dlg-botones button:disabled { opacity: 0.45; cursor: default; }
+/* Administrar a alguien de la familia: enlace discreto en la tarjeta y "Quitar" debajo del dialogo. */
+#og-mapa .ogm-administrar, #og-mapa .ogm-quitar-persona { display: block; padding: 0; border: 0; background: none; font-size: 0.8rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+#og-mapa .ogm-administrar { margin: 10px 0 0; color: var(--ogm-suave); }
+#og-mapa .ogm-quitar-persona { margin: 14px auto 0; color: var(--ogm-off); }
 @media (max-width: 899px) {
   #og-mapa .ogm-ctrl .solo-celular { display: grid; place-items: center; border-top: 1px solid var(--ogm-linea); color: var(--ogm-oro-vivo); }
 }
