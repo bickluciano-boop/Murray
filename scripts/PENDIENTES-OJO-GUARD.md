@@ -56,7 +56,8 @@ Actualizado: 09/10/2026.
   siempre; con tilde las confirmaciones de órdenes, el resultado de Ubicar,
   "dejó de responder" y los de familia. Si se pueden apagar las
   confirmaciones, sumar un aviso obligatorio de ingreso al panel desde un
-  equipo nuevo. Propuesto a Lu, falta su OK.
+  equipo nuevo. Lu dio el OK el 10/10/2026; va después de menores parte 2 y
+  el deck.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
   amigos (en `aplicar-build22.ps1` pasa a decir "Reanudar"; falta la build).
 - [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
@@ -101,7 +102,7 @@ Devolución de Axel Abulafia (09/10/2026, "Ojo Guard - mirada preliminar"): el
 deck es un pitch de visión; antes de invertir quiere ver el producto andando,
 tracción y la economía del negocio.
 
-- [ ] **Responderle a Axel** (borrador preparado en la conversación): gracias,
+- [x] **Responderle a Axel** (Lu le respondió el 10/10/2026): gracias,
   qué funciona hoy y qué es roadmap, por qué Ojo Guard aunque exista Buscar,
   privacidad de menores, y ofrecer una **demo en vivo de 15 minutos**.
 - [ ] **Deck nuevo**:
