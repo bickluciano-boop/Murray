@@ -1,0 +1,63 @@
+// Ojo Guard MS · Avisos por correo (Cuenta › Avisos de seguridad).
+// Pieza aparte del panel, como el mapa: se engancha a la tarjeta #notification-prefs-card y a su
+// botón Guardar sin tocar app-v9.js. Agrega qué avisos por correo se pueden apagar; los de
+// seguridad llegan siempre (ver EMAIL_OPCIONALES en src/index.ts).
+
+const OPCIONES = [
+  ["ordenes", "Confirmaciones de lo que pedís desde el panel", "Hacer sonar, ubicar, foto y audio, búsqueda cercana."],
+  ["ubicacion", "Resultado de «Ubicar ahora»", "El mail con la ubicación que mandó el teléfono."],
+  ["familia", "Familia", "Cuando alguien sale de tu familia."],
+];
+const RUTA = "/api/notification-categories";
+
+function armar() {
+  const tarjeta = document.getElementById("notification-prefs-card");
+  const guardar = document.getElementById("notify-prefs-save");
+  if (!tarjeta || !guardar || tarjeta.querySelector(".og-avisos")) return null;
+  const caja = document.createElement("div");
+  caja.className = "og-avisos";
+  // Bloque propio (separado por una línea) para no depender de cómo la tarjeta acomoda a sus hijos;
+  // las casillas usan las mismas etiquetas <label> que las de arriba, así se ven igual.
+  caja.style.cssText = "display:grid;gap:6px;margin:14px 0 12px;padding-top:12px;border-top:1px solid rgba(127,127,127,.3)";
+  caja.innerHTML = `<strong style="display:block">¿Qué avisos querés por correo?</strong>
+    ${OPCIONES.map(([clave, titulo, ayuda]) => `<label><input type="checkbox" data-aviso="${clave}" checked /> ${titulo}</label><small style="display:block;opacity:.8">${ayuda}</small>`).join("")}
+    <small style="display:block;opacity:.8">Siempre llegan, por seguridad: intentos de entrada, ingresos desde un equipo nuevo, Modo perdido, cambios en tus dispositivos y accesos, y los avisos de familia que te protegen.</small>`;
+  guardar.before(caja);
+  guardar.addEventListener("click", () => {
+    const off = [...caja.querySelectorAll("[data-aviso]")].filter((casilla) => !casilla.checked).map((casilla) => casilla.dataset.aviso);
+    fetch(RUTA, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ off }) })
+      .then((respuesta) => { if (!respuesta.ok) throw new Error(String(respuesta.status)); })
+      .catch(() => {
+        // El mensaje de la tarjeta lo escribe app-v9.js; se agrega el aviso después de él.
+        setTimeout(() => {
+          const mensaje = document.getElementById("notify-prefs-message");
+          if (mensaje) mensaje.textContent = `${mensaje.textContent} No se pudieron guardar los avisos por correo; probá de nuevo.`.trim();
+        }, 600);
+      });
+  });
+  return caja;
+}
+
+function cargar(caja) {
+  fetch(RUTA, { credentials: "include", cache: "no-store" })
+    .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
+    .then((datos) => {
+      if (!datos) return;
+      for (const casilla of caja.querySelectorAll("[data-aviso]")) casilla.checked = !(datos.off || []).includes(casilla.dataset.aviso);
+    })
+    .catch(() => undefined);
+}
+
+function iniciar() {
+  const caja = armar();
+  if (!caja) return;
+  cargar(caja);
+  // Al entrar a Cuenta se vuelve a leer: si la página se abrió antes de iniciar sesión, la
+  // primera lectura no pudo traer nada.
+  document.addEventListener("click", (evento) => {
+    if (evento.target.closest?.('[data-view="account"]')) cargar(caja);
+  });
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
+else iniciar();
