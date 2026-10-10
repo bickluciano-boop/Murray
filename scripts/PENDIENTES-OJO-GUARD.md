@@ -15,8 +15,17 @@ Actualizado: 09/10/2026.
   el 10/10/2026: "LB iPhone" pasó a Amigo desde el mapa). En la tarjeta de la
   persona, "Cambiar rol o quitar" (solo el titular). También arregla la X de
   las invitaciones sin usar, que no anulaba.
-- [ ] **Familia, menores, parte 2.** **Pedir evidencia** (foto y audio corto)
-  del teléfono del menor, verla en el panel y que el mail le llegue al tutor.
+- [ ] **Familia, menores, parte 2: foto y audio** (hecho el 10/10/2026; falta
+  aplicarlo, publicarlo y probarlo). Panel: `aplicar-menores-evidencia.ps1` +
+  dos columnas nuevas en `commands` (`requested_by`, `requested_by_name`).
+  En la tarjeta del menor, "Pedir foto y audio": el menor recibe el aviso
+  ("Luciano pidió una foto y un audio de tu teléfono") y un mail; el teléfono
+  los saca como la evidencia de siempre (en iPhone, cuando abre Ojo Guard);
+  le llegan por mail solo a quien los pidió y los ve en la tarjeta.
+  Cuidados, para que nadie quede como Menor sin saberlo: aviso por push y mail
+  cuando a alguien le cambian el rol, y "Salir de esta familia" en el panel y
+  en la app (`aplicar-familia-salir-app.ps1`, próxima build); si sale, al
+  titular le llega un mail.
 
 ## iPhone
 
