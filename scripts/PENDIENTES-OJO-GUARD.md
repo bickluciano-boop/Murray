@@ -35,8 +35,11 @@ Actualizado: 09/10/2026.
   con volumen bajo y con la app cerrada, como "Buscar".
 - [ ] **Probar la build 21 en la calle:** app cerrada, caminar unas cuadras y
   ver si "LB iPhone" se mueve solo en el panel.
-- [ ] **iPhone de la mujer de Lu:** darla de alta en TestFlight (pruebas
-  internas), cuenta propia con "Empresa", unirla a la familia como Adulto.
+- [ ] **iPhone de Mariana (la mujer de Lu):** darla de alta en TestFlight
+  (pruebas internas), cuenta propia con "Empresa", unirla a la familia como
+  Adulto. El 09/10 quedó sin hacer porque parecía complicado; los pasos para
+  copiar y pegar están en la página "Mariana en TestFlight",
+  https://claude.ai/artifact/6VoD48tDTYG4hTg2VqHsA4.
 - [ ] **Consejos de seguridad en la configuración inicial (iPhone):** activar
   "Protección de dispositivo robado" y desactivar el Centro de control con el
   iPhone bloqueado (Ajustes → Face ID y código → "Acceso con el iPhone
