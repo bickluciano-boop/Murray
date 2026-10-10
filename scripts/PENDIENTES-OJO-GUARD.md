@@ -11,11 +11,10 @@ Actualizado: 09/10/2026.
   **Seguir en vivo** sobre el teléfono de una persona con rol MENOR. Los
   amigos no. Cada pedido le avisa al menor por push y por correo ("Luciano
   pidió tu ubicación"), sin modo oculto.
-- [ ] **Panel: gestionar a las personas de la familia** (cambiar el rol o
-  quitar a alguien). Hecho en `aplicar-familia-gestion.ps1` (10/10/2026): en
-  la tarjeta de la persona, "Cambiar rol o quitar" (solo el titular). También
-  arregla la X de las invitaciones sin usar, que no anulaba. Falta aplicarlo,
-  publicarlo y probarlo.
+- [x] **Panel: gestionar a las personas de la familia** (publicado y probado
+  el 10/10/2026: "LB iPhone" pasó a Amigo desde el mapa). En la tarjeta de la
+  persona, "Cambiar rol o quitar" (solo el titular). También arregla la X de
+  las invitaciones sin usar, que no anulaba.
 - [ ] **Familia, menores, parte 2.** **Pedir evidencia** (foto y audio corto)
   del teléfono del menor, verla en el panel y que el mail le llegue al tutor.
 
@@ -74,12 +73,11 @@ Actualizado: 09/10/2026.
 
 ## Android
 
-- [ ] **La build 152 se cierra sola al abrir** (09/10/2026). Causa: el mapa de
-  Familia usa Google Maps, que en Android pide una clave que la app no tiene;
-  apareció ahora porque la familia ya tiene ubicaciones. Arreglo en
-  `aplicar-mapa-android.ps1`: en Android no se muestra ese mapa (ni el del
+- [x] **La build 152 se cerraba sola al abrir** (arreglado en la build
+  siguiente, probado el 10/10/2026). Causa: el mapa de Familia usa Google
+  Maps, que en Android pide una clave que la app no tiene. Con
+  `aplicar-mapa-android.ps1`, en Android no se muestra ese mapa (ni el del
   detalle de un intento) y cada persona se toca para abrirla en Google Maps.
-  Falta la build y probarlo.
 - [ ] Más adelante, si se quiere el mapa adentro de la app en Android: crear
   una clave de Google Maps para Android (Google Cloud) y ponerla en `app.json`.
 - [ ] **Modo perdido: al enchufar el cargador**, mandar la ubicación y la
