@@ -53,7 +53,8 @@ Actualizado: 09/10/2026.
   Adulto. El 09/10 quedó sin hacer porque parecía complicado; los pasos para
   copiar y pegar están en la página "Mariana en TestFlight",
   https://claude.ai/artifact/6VoD48tDTYG4hTg2VqHsA4.
-- [ ] **Consejos de seguridad en la configuración inicial (iPhone):** activar
+- [ ] **Consejos de seguridad en la configuración inicial (iPhone)** (hecho el
+  10/10/2026 en `aplicar-consejos-y-subida.ps1`; falta la build): activar
   "Protección de dispositivo robado" y desactivar el Centro de control con el
   iPhone bloqueado (Ajustes → Face ID y código → "Acceso con el iPhone
   bloqueado"), para que no puedan poner el modo avión sin desbloquearlo.
@@ -77,8 +78,10 @@ Actualizado: 09/10/2026.
   los primeros segundos traían el ruido de las cámaras.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
   amigos (en `aplicar-build22.ps1` pasa a decir "Reanudar"; falta la build).
-- [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
-  `--auto-submit` (hoy se manda con `eas submit --platform ios --latest`).
+- [ ] `eas.json` con `submit.production` (ascAppId 6812533689), en
+  `aplicar-consejos-y-subida.ps1`: desde la próxima build de iPhone,
+  `eas.cmd build --platform ios --profile production --auto-submit` la sube
+  sola a TestFlight. Falta probarlo.
 
 ## Antirrobo (app)
 
