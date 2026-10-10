@@ -12,7 +12,10 @@ Actualizado: 09/10/2026.
   amigos no. Cada pedido le avisa al menor por push y por correo ("Luciano
   pidió tu ubicación"), sin modo oculto.
 - [ ] **Panel: gestionar a las personas de la familia** (cambiar el rol o
-  quitar a alguien). Hoy solo se pueden anular invitaciones sin usar.
+  quitar a alguien). Hecho en `aplicar-familia-gestion.ps1` (10/10/2026): en
+  la tarjeta de la persona, "Cambiar rol o quitar" (solo el titular). También
+  arregla la X de las invitaciones sin usar, que no anulaba. Falta aplicarlo,
+  publicarlo y probarlo.
 - [ ] **Familia, menores, parte 2.** **Pedir evidencia** (foto y audio corto)
   del teléfono del menor, verla en el panel y que el mail le llegue al tutor.
 
