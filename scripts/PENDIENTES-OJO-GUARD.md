@@ -63,12 +63,18 @@ Actualizado: 09/10/2026.
   notificaciones iguales en el mismo minuto. Probablemente la app vuelve a
   mostrar el aviso cada vez que revisa la orden mientras la sirena suena.
   Revisar en la próxima build (un solo aviso por orden).
-- [ ] **Preferencias de mails** (Cuenta → Notificaciones): los de seguridad
-  siempre; con tilde las confirmaciones de órdenes, el resultado de Ubicar,
-  "dejó de responder" y los de familia. Si se pueden apagar las
-  confirmaciones, sumar un aviso obligatorio de ingreso al panel desde un
-  equipo nuevo. Lu dio el OK el 10/10/2026; va después de menores parte 2 y
-  el deck.
+- [ ] **Preferencias de mails** (hecho el 10/10/2026 en
+  `aplicar-avisos-correo.ps1` + columna `email_off` en `notification_prefs`;
+  falta aplicarlo, publicarlo y probarlo). En Cuenta > Avisos de seguridad se
+  pueden apagar: confirmaciones de órdenes (salvo Modo perdido), el resultado
+  de Ubicar y "salió de tu familia". Siempre llegan: intentos de entrada,
+  Modo perdido, dispositivos, accesos y los avisos de familia que protegen.
+  Nuevo aviso obligatorio: "Ingreso desde un equipo nuevo" (cookie `ojo_eq`;
+  la primera vez que se entre desde cada navegador después de publicarlo,
+  llega uno).
+- [ ] **Audio de la evidencia de 6 a 10 segundos** (`aplicar-audio-10s.ps1`,
+  próxima build): con la app abierta el audio arranca junto con las fotos y
+  los primeros segundos traían el ruido de las cámaras.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
   amigos (en `aplicar-build22.ps1` pasa a decir "Reanudar"; falta la build).
 - [ ] `eas.json`: agregar el perfil `submit.production` para poder usar
