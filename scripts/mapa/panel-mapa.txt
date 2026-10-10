@@ -166,6 +166,11 @@ async function quitarDeFamilia(id) {
   await pedir("/api/remote/family/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
 }
 
+async function salirDeFamilia(id) {
+  if (DEMO) return;
+  await pedir("/api/remote/family/leave", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ personId: id }) });
+}
+
 async function cambiarRol(id, rol) {
   if (DEMO) return;
   await pedir("/api/remote/family/role", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, role: rol }) });
@@ -603,7 +608,9 @@ function construir() {
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
-    if (accion === "locate" || accion === "alarm" || accion === "stop-ring") {
+    if (accion === "salir") return abrirSalida(equipoElegido());
+    if (accion === "salir-si") return confirmarSalida(boton);
+    if (accion === "locate" || accion === "alarm" || accion === "stop-ring" || accion === "capture-evidence") {
       const destino = boton.dataset.equipo ? estado.equipos.find((e) => e.id === boton.dataset.equipo) : equipoElegido();
       return ordenar(accion, boton, destino);
     }
@@ -960,10 +967,13 @@ function dibujar() {
     <div class="ogm-botones">
       ${admiteVivo(elegido) ? (siguiendo ? '<button type="button" class="parar" data-accion="vivo-parar">Dejar de seguir</button>' : '<button type="button" class="oro" data-accion="vivo">Seguir en vivo</button>') : ""}
       ${puedeOrdenar(elegido) ? `<button type="button" ${admiteVivo(elegido) ? "" : 'class="oro"'} data-accion="locate">Ubicar ahora</button>${sonandoAhora ? '<button type="button" class="parar" data-accion="stop-ring">Detener sonido</button>' : '<button type="button" data-accion="alarm">Hacer sonar</button>'}` : ""}
+      ${elegido.tipo === "persona" && elegido.ordenable ? '<button type="button" data-accion="capture-evidence">Pedir foto y audio</button>' : ""}
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
     ${elegido.tipo === "persona" && elegido.ordenable ? `<p class="ogm-nota-menor">${esc(elegido.nombre)} ve en su teléfono cada pedido que hagas.</p>` : ""}
+    ${estado.evidencia?.id === elegido.id ? htmlEvidencia(estado.evidencia, elegido) : ""}
     ${elegido.tipo === "persona" && elegido.gestionable ? '<button type="button" class="ogm-administrar" data-accion="administrar">Cambiar rol o quitar</button>' : ""}
+    ${elegido.tipo === "persona" && elegido.rol === "titular" ? '<button type="button" class="ogm-administrar" data-accion="salir">Salir de esta familia</button>' : ""}
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
     ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
@@ -1070,7 +1080,17 @@ function dibujarDialogo() {
   const d = estado.dialogo;
   caja.classList.toggle("hidden", !d);
   if (!d) { caja.innerHTML = ""; return; }
-  caja.setAttribute("aria-label", d.paso === "gestion" ? `Administrar a ${d.nombre}` : "Invitar a la familia");
+  caja.setAttribute("aria-label", d.paso === "gestion" ? `Administrar a ${d.nombre}` : d.paso === "salir" ? "Salir de una familia" : "Invitar a la familia");
+  if (d.paso === "salir") {
+    caja.innerHTML = `<div class="ogm-dlg">
+      <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
+      <h3>¿Salir de la familia de ${esc(d.nombre)}?</h3>
+      <p class="ogm-dlg-txt">Dejás de ver a esa familia en el mapa y ellos dejan de verte. Para volver, te tienen que mandar una invitación nueva.</p>
+      ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
+      <div class="ogm-dlg-botones"><button type="button" class="peligro" data-accion="salir-si">Sí, salir</button><button type="button" data-accion="cerrar-dialogo">Cancelar</button></div>
+    </div>`;
+    return;
+  }
   if (d.paso === "gestion") {
     caja.innerHTML = d.confirmarQuitar ? `<div class="ogm-dlg">
       <p class="ogm-ceja">FAMILIA Y AMIGOS</p>
@@ -1179,6 +1199,44 @@ async function quitarGestion(boton) {
   }
 }
 
+// Salir de la familia de otro titular (cualquiera puede; al titular le llega un correo).
+function abrirSalida(equipo) {
+  if (!equipo || equipo.rol !== "titular") return;
+  estado.dialogo = { paso: "salir", id: equipo.idFamilia, equipoId: equipo.id, nombre: equipo.nombre, error: "" };
+  dibujarDialogo();
+}
+
+async function confirmarSalida(boton) {
+  const d = estado.dialogo;
+  if (!d) return;
+  boton.disabled = true;
+  boton.textContent = "Saliendo…";
+  try {
+    await salirDeFamilia(d.id);
+    estado.dialogo = null;
+    dibujarDialogo();
+    return refrescar();
+  } catch (error) {
+    d.error = errorGestion(error, "salir de la familia");
+    dibujarDialogo();
+  }
+}
+
+// Foto y audio que pediste a un menor de tu familia: miniatura y link al audio. Son links (no un
+// reproductor) porque la tarjeta se vuelve a dibujar cada pocos segundos y cortaría el audio.
+function htmlEvidencia(ev, equipo) {
+  return `<div class="ogm-evidencia">
+    ${ev.front ? `<a href="${esc(ev.front)}" target="_blank" rel="noopener"><img src="${esc(ev.front)}" alt="Foto del teléfono de ${esc(equipo.nombre)}"></a>` : ""}
+    <div><strong>Foto y audio recibidos</strong><small>${esc(haceCuanto(ev.en))} · también te llegaron por mail</small>${ev.audio ? `<a href="${esc(ev.audio)}" target="_blank" rel="noopener">Escuchar el audio ›</a>` : ""}</div>
+  </div>`;
+}
+
+const MOTIVOS_CAPTURA = {
+  camera_not_granted: "Ojo Guard no tiene permiso de cámara en ese teléfono.",
+  remote_capture_timeout: "el teléfono no llegó a sacar la foto a tiempo.",
+  capture_already_running: "el teléfono ya estaba sacando otra foto.",
+};
+
 async function copiarLink(boton) {
   try {
     await navigator.clipboard.writeText(boton.dataset.link);
@@ -1207,7 +1265,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
   const conTexto = !boton.classList.contains("ogm-sonar");
   const etiqueta = boton.textContent;
   boton.disabled = true;
-  if (conTexto) boton.textContent = tipo === "locate" ? "Ubicando…" : tipo === "alarm" ? "Haciendo sonar…" : "Deteniendo…";
+  if (conTexto) boton.textContent = tipo === "locate" ? "Ubicando…" : tipo === "alarm" ? "Haciendo sonar…" : tipo === "capture-evidence" ? "Pidiendo…" : "Deteniendo…";
   avisar("Enviando orden…");
   try {
     const r = await enviarOrden(equipo, tipo);
@@ -1218,10 +1276,21 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
     if (r.demo) { avisar("Demostración: no se envía ninguna orden a un teléfono real."); dibujar(); return; }
     if (tipo !== "locate") dibujar();
     avisar(r.pushSent ? "Orden enviada · esperando al teléfono." : "Orden guardada · se ejecuta cuando el teléfono se conecte.");
-    for (let intento = 0; intento < 20 && estado.abierto; intento += 1) {
+    // La foto y el audio pueden tardar: en iPhone se sacan recién cuando el menor abre Ojo Guard.
+    const vueltas = tipo === "capture-evidence" ? 60 : 20;
+    let termino = false;
+    for (let intento = 0; intento < vueltas && estado.abierto; intento += 1) {
       await new Promise((ok) => setTimeout(ok, 3000));
       const c = (await estadoOrden(r.commandId, equipo.id).catch(() => null))?.command;
       if (!c) continue;
+      if (c.status === "executed" || c.status === "failed") termino = true;
+      if (c.status === "executed" && tipo === "capture-evidence") {
+        if (c.evidence?.front) estado.evidencia = { id: equipo.id, front: c.evidence.front, audio: c.evidence.audio, en: c.executedAt || new Date().toISOString() };
+        avisar(c.evidence ? "Llegaron la foto y el audio. También te los mandamos por mail." : "El teléfono sacó la foto y el audio. Te llegan por mail.");
+        dibujar();
+        break;
+      }
+      if (c.status === "failed" && tipo === "capture-evidence") { avisar(`No se pudo: ${MOTIVOS_CAPTURA[c.error] || "el teléfono no pudo sacar la foto."}`); break; }
       if (c.status === "executed") {
         avisar(tipo === "locate" ? "Ubicación recibida." : tipo === "alarm" ? "El teléfono está sonando. Se corta solo al minuto." : "Sonido detenido.");
         estado.ultimoRecorrido = 0;
@@ -1230,6 +1299,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
       }
       if (c.status === "failed") { avisar(c.error ? `No se pudo: ${c.error}` : "El teléfono no pudo completar la orden."); break; }
     }
+    if (!termino && tipo === "capture-evidence" && estado.abierto) avisar("Pedido enviado. La foto y el audio se sacan cuando el teléfono puede (en iPhone, al abrir Ojo Guard) y te llegan por mail.");
   } catch (error) {
     avisar(error.status === 403
       ? (esPersona(equipo.id) ? "Solo el titular y los adultos de la familia pueden hacer esto." : "Esta acción pide confirmar tu identidad: hacela desde la pestaña Dispositivos.")

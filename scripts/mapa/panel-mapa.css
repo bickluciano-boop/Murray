@@ -233,6 +233,13 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 #og-mapa .ogm-administrar, #og-mapa .ogm-quitar-persona { display: block; padding: 0; border: 0; background: none; font-size: 0.8rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 #og-mapa .ogm-administrar { margin: 10px 0 0; color: var(--ogm-suave); }
 #og-mapa .ogm-quitar-persona { margin: 14px auto 0; color: var(--ogm-off); }
+/* Foto y audio pedidos a un menor de la familia. */
+.ogm-evidencia { display: flex; gap: 12px; align-items: center; margin: 12px 0 0; padding: 10px; border: 1px solid var(--ogm-linea); border-radius: 12px; }
+.ogm-evidencia img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; display: block; }
+.ogm-evidencia div { display: grid; gap: 2px; min-width: 0; }
+.ogm-evidencia strong { font-size: 0.86rem; }
+.ogm-evidencia small { font-size: 0.74rem; color: var(--ogm-suave); }
+.ogm-evidencia a { color: var(--ogm-oro-vivo); font-size: 0.8rem; font-weight: 600; }
 @media (max-width: 899px) {
   #og-mapa .ogm-ctrl .solo-celular { display: grid; place-items: center; border-top: 1px solid var(--ogm-linea); color: var(--ogm-oro-vivo); }
 }
