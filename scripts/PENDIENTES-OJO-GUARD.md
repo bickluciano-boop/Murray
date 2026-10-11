@@ -73,9 +73,11 @@ Actualizado: 09/10/2026.
   Nuevo aviso obligatorio: "Ingreso desde un equipo nuevo" (cookie `ojo_eq`;
   la primera vez que se entre desde cada navegador después de publicarlo,
   llega uno).
-- [ ] **Audio de la evidencia de 6 a 10 segundos** (`aplicar-audio-10s.ps1`,
-  próxima build): con la app abierta el audio arranca junto con las fotos y
-  los primeros segundos traían el ruido de las cámaras.
+- [ ] **Audio de la evidencia: unos 10 segundos reales** (`aplicar-audio-10s.ps1`
+  v2, próxima build): se graban 11 s porque el grabador pierde casi un
+  segundo al arrancar y cortar (con 6 s el reproductor mostraba 0:05). Con la
+  app abierta el audio arranca junto con las fotos y los primeros segundos
+  traen el ruido de las cámaras.
 - [ ] Botón **"Compartir de nuevo"** cortado en Configuración → Familia y
   amigos (en `aplicar-build22.ps1` pasa a decir "Reanudar"; falta la build).
 - [ ] `eas.json` con `submit.production` (ascAppId 6812533689), en

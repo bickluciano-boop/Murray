@@ -1,7 +1,8 @@
-﻿# aplicar-audio-10s.ps1 - El audio de la evidencia (Modo perdido y foto y audio de menores) pasa de 6 a 10
-# segundos. Con la app abierta el audio arranca junto con las fotos y los primeros segundos se llevan el
-# ruido de las camaras. Va en la carpeta de la APP (la que tiene app.json). Toca App.tsx y
-# SilentCaptureService.kt (Android). Respaldo .bak-audio10. Sale en la PROXIMA build.
+﻿# aplicar-audio-10s.ps1 (v2) - El audio de toda la evidencia (intento de entrada, Modo perdido, pedir evidencia y
+# foto y audio de menores) queda en unos 10 segundos reales: se graban 11, porque el grabador tarda casi un segundo
+# en arrancar y cortar (con 6 s el reproductor mostraba 0:05). Sirve tambien si ya se habia corrido la version
+# anterior (10 s). Va en la carpeta de la APP (la que tiene app.json). Toca App.tsx y SilentCaptureService.kt
+# (Android). Respaldo .bak-audio11. Sale en la PROXIMA build.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -24,19 +25,39 @@ function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPat
 
 if (-not (Test-Path (Join-Path $raiz "app.json")) -or (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta de la APP (la que tiene app.json), no la del panel."; return }
 Ok "Carpeta correcta"
-if ((Contar (Leer (Join-Path $raiz "App.tsx")).texto 'setTimeout(resolve, 10_000)') -ne 0) { Avi "El audio de 10 segundos ya estaba aplicado. No toco nada."; return }
-$cambios = @(
-    @('App.tsx', 'audio de 10 segundos (app abierta)', '        await new Promise((resolve) => setTimeout(resolve, 6_000));
-', '        // 10 s: con la app abierta, el audio arranca junto con las fotos y los primeros
-        // segundos se llevan el ruido de las camaras (con 6 s quedaban unos 3 s limpios).
-        await new Promise((resolve) => setTimeout(resolve, 10_000));
+$appTexto = (Leer (Join-Path $raiz "App.tsx")).texto
+if ((Contar $appTexto 'setTimeout(resolve, 11_000)') -ne 0) { Avi "El audio de 10 segundos reales ya estaba aplicado. No toco nada."; return }
+$cambiosOriginal = @(
+    @('App.tsx', 'audio de 11 s grabados, 10 reales (app abierta)', '        await new Promise((resolve) => setTimeout(resolve, 6_000));
+', '        // 11 s: con la app abierta el audio arranca junto con las fotos (los primeros segundos
+        // traen el ruido de las camaras) y el grabador tarda casi un segundo en arrancar y
+        // cortar. Asi quedan unos 10 s reales (con 6 s el reproductor mostraba 0:05).
+        await new Promise((resolve) => setTimeout(resolve, 11_000));
 '),
     @('App.tsx', 'duracion informada', '        audioDurationSeconds: 6,
 ', '        audioDurationSeconds: 10,
 '),
-    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'audio de 10 segundos (Android en segundo plano)', 'private suspend fun recordAudioClip(durationMs: Long = 6_000)', 'private suspend fun recordAudioClip(durationMs: Long = 10_000)'),
-    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'margen para el audio mas largo', ')?.apply { acquire(30_000) }', ')?.apply { acquire(40_000) }')
+    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'audio de 11 s grabados (Android en segundo plano)', 'private suspend fun recordAudioClip(durationMs: Long = 6_000)', 'private suspend fun recordAudioClip(durationMs: Long = 11_000)'),
+    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'margen para el audio mas largo', ')?.apply { acquire(30_000) }', ')?.apply { acquire(40_000) }'),
+    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'duracion real informada', '      Pair(bytes, (durationMs / 1000).toInt())', '      // El grabador pierde casi un segundo entre arrancar y cortar: se informa lo que de verdad
+      // queda (11 s grabados = unos 10 s de audio).
+      Pair(bytes, ((durationMs - 1_000) / 1000).toInt())')
 )
+$cambiosDesde10 = @(
+    @('App.tsx', 'audio de 11 s grabados, 10 reales (app abierta)', '        // 10 s: con la app abierta, el audio arranca junto con las fotos y los primeros
+        // segundos se llevan el ruido de las camaras (con 6 s quedaban unos 3 s limpios).
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+', '        // 11 s: con la app abierta el audio arranca junto con las fotos (los primeros segundos
+        // traen el ruido de las camaras) y el grabador tarda casi un segundo en arrancar y
+        // cortar. Asi quedan unos 10 s reales (con 6 s el reproductor mostraba 0:05).
+        await new Promise((resolve) => setTimeout(resolve, 11_000));
+'),
+    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'audio de 11 s grabados (Android en segundo plano)', 'private suspend fun recordAudioClip(durationMs: Long = 10_000)', 'private suspend fun recordAudioClip(durationMs: Long = 11_000)'),
+    @('modules\native-capture\android\src\main\java\expo\modules\nativecapture\SilentCaptureService.kt', 'duracion real informada', '      Pair(bytes, (durationMs / 1000).toInt())', '      // El grabador pierde casi un segundo entre arrancar y cortar: se informa lo que de verdad
+      // queda (11 s grabados = unos 10 s de audio).
+      Pair(bytes, ((durationMs - 1_000) / 1000).toInt())')
+)
+if ((Contar $appTexto 'setTimeout(resolve, 10_000)') -ne 0) { Ok "Estaba la version anterior (10 s): la paso a 11 s grabados"; $cambios = $cambiosDesde10 } else { $cambios = $cambiosOriginal }
 $descargas = @()
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
@@ -70,14 +91,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-audio10")) { Mal ("Ya existe " + $t + ".bak-audio10. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-audio11")) { Mal ("Ya existe " + $t + ".bak-audio11. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-audio10"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-audio11"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-audio10): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-audio11): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -110,7 +131,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-audio10") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-audio11") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."
