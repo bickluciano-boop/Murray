@@ -140,7 +140,7 @@ function esPersona(id) {
 }
 
 async function cargarEquipos() {
-  if (DEMO) { estado.invitaciones = []; if (!estado.lugares.length) estado.lugares = demoLugares(); return demoEquipos(); }
+  if (DEMO) { estado.invitaciones = []; if (!estado.lugares.length) estado.lugares = demoLugares(); if (!estado.sosDemoVisto) estado.sos = demoSos(); return demoEquipos(); }
   const cuenta = await pedir("/api/remote/session");
   if (!cuenta.authenticated) throw Object.assign(new Error("sin_sesion"), { status: 401 });
   const equipos = normalizarEquipos(cuenta);
@@ -149,6 +149,7 @@ async function cargarEquipos() {
     estado.invitaciones = familia.invites || [];
     estado.lugares = familia.places || [];
     estado.alertas = familia.alerts || [];
+    estado.sos = familia.sos || [];
     estado.nombreTitular = familia.ownerName || estado.nombreTitular;
     return [...normalizarFamilia(familia), ...equipos];
   } catch {
@@ -173,6 +174,11 @@ async function direccionDe(punto) {
   if (DEMO) return "Guatemala 4600, Palermo (demostración)";
   const r = await pedir(`/api/remote/address?lat=${encodeURIComponent(punto.lat)}&lng=${encodeURIComponent(punto.lng)}`);
   return r.address || "";
+}
+
+async function marcarSosAtendido(id) {
+  if (DEMO) { estado.sosDemoVisto = true; return; }
+  await pedir("/api/remote/family/sos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
 }
 
 async function guardarAviso(datos) {
@@ -570,6 +576,7 @@ const estado = {
   yo: null,             // { lat, lng, precision }: dónde está quien mira el panel (si dio permiso)
   invitaciones: [],     // invitaciones a la familia que todavía nadie usó
   lugares: [],          // tus lugares guardados (Casa, Colegio): atajos para armar un aviso rápido
+  sos: [],              // SOS activos que te llegaron: { id, personId, personName, createdAt, location }
   alertas: [],          // avisos que armaste: { id, personId, targetName, name, latitude, longitude, radius, onArrive, frequency }
   borradorAviso: null,  // el aviso que se está armando mientras se elige un punto en el mapa
   eligiendoLugar: false, // mientras se mueve el mapa para elegir dónde va un lugar nuevo
@@ -608,6 +615,7 @@ function construir() {
         <div><button type="button" class="oro" data-accion="lugar-aca">Elegir este punto</button><button type="button" data-accion="lugar-cancelar">Cancelar</button></div>
       </div>
       <div class="ogm-aviso hidden" data-ogm="aviso"></div>
+      <div class="ogm-sos hidden" data-ogm="sos" role="alert"></div>
       <div class="ogm-seg" role="group" aria-label="Qué recorrido mostrar">
         <button type="button" data-rango="vivo" class="on"><i></i>En vivo</button>
         <button type="button" data-rango="hoy">Hoy</button>
@@ -668,6 +676,8 @@ function construir() {
     if (accion === "llegar") return irConGoogle();
     if (accion === "lugar-aca") return elegirPuntoAviso();
     if (accion === "lugar-cancelar") return cancelarPuntoAviso();
+    if (accion === "sos-ver") return verSos(boton.dataset.sos);
+    if (accion === "sos-atendido") return atenderSos(boton);
     if (accion === "avisar") return abrirAviso(equipoElegido());
     if (accion === "aviso-cuando") { leerCamposAviso(); estado.dialogo.llegue = boton.dataset.llegue === "1"; return dibujarDialogo(); }
     if (accion === "aviso-donde") return elegirDondeAviso(boton.dataset.donde);
@@ -976,7 +986,7 @@ function dibujar() {
     const st = estadoDe(e);
     const bat = e.bateria === null ? "" : ` <span class="ogm-bat${e.bateria < 25 ? " baja" : ""}" title="Batería ${Math.round(e.bateria)}%"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span>`;
     const dist = textoDistancia(distanciaA(e));
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${etiquetaRol(e)}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${etiquetaRol(e)}${sosDe(e) ? '<u class="ogm-rol ogm-rol-sos">SOS</u>' : ""}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
   };
   $('[data-ogm="lista"]', raiz).innerHTML = personas.length
     ? `<li class="ogm-grupo">FAMILIA</li>${personas.map(fila).join("")}<li class="ogm-grupo">DISPOSITIVOS</li>${dispositivos.map(fila).join("")}`
@@ -985,6 +995,7 @@ function dibujar() {
     ? `<p class="ogm-grupo">INVITACIONES SIN USAR</p><ul class="ogm-invitaciones">${estado.invitaciones.map((i) => `<li><div><strong>${esc(i.name)}</strong> <u class="ogm-rol">${esc(ROLES[i.role] || i.role)}</u><small>Código <b>${esc(i.code)}</b> · vence ${esc(diaCorto(i.expiresAt))}</small></div><button type="button" data-accion="copiar" data-link="${esc(i.link)}">Copiar link</button><button type="button" class="quitar" data-accion="quitar-invitacion" data-id="${esc(i.id)}" aria-label="Anular invitación de ${esc(i.name)}">✕</button></li>`).join("")}</ul>`
     : "";
   $('[data-ogm="lugares"]', raiz).innerHTML = htmlLugares();
+  dibujarSos();
 
   // Marcadores
   const p = estado.proveedor;
@@ -1012,6 +1023,8 @@ function dibujar() {
     p.paradas(paradas(puntos), elementoParada);
     p.precision(elegido && elegido.lat !== null ? elegido : null, elegido?.precision && elegido.precision < 500 ? elegido.precision : 0);
     p.lugares(avisosDe(elegido), elementoAviso);
+    // La persona que pidio ayuda se ve con un aro rojo que late.
+    for (const e of equipos) estado.elementosMarcador.get(e.id)?.classList.toggle("ogm-sos-pin", Boolean(sosDe(e)));
   }
 
   // Tarjeta del elegido
@@ -1528,6 +1541,48 @@ async function quitarLugarAbierto(boton) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// SOS (Familia, etapa C): cuando alguien de tu familia pide ayuda desde su teléfono, arriba del mapa
+// aparece un cartel rojo hasta que alguien lo marca como atendido. Ver pedirSos en src/index.ts.
+// ---------------------------------------------------------------------------
+
+/** El SOS activo de esta persona del mapa (si lo hay). */
+const sosDe = (equipo) => (equipo?.tipo === "persona" ? estado.sos.find((s) => s.personId === equipo.idFamilia) : undefined);
+
+function dibujarSos() {
+  const caja = $('#og-mapa [data-ogm="sos"]');
+  if (!caja) return;
+  caja.classList.toggle("hidden", !estado.sos.length);
+  caja.innerHTML = estado.sos.map((s) => `<div class="ogm-sos-fila">
+      <div><strong>SOS · ${esc(s.personName || "Alguien")} pidió ayuda</strong><small>${esc(haceCuanto(s.createdAt))}${s.location?.address ? ` · ${esc(direccionCorta(s.location.address))}` : ""}</small></div>
+      <button type="button" class="oro" data-accion="sos-ver" data-sos="${esc(s.id)}">Ver en el mapa</button>
+      <button type="button" data-accion="sos-atendido" data-sos="${esc(s.id)}">Atendido</button>
+    </div>`).join("");
+}
+
+function verSos(id) {
+  const s = estado.sos.find((x) => x.id === id);
+  if (!s) return;
+  const persona = estado.equipos.find((e) => e.tipo === "persona" && e.idFamilia === s.personId);
+  if (persona) return elegir(persona.id, true);
+  if (s.location?.latitude !== undefined) estado.proveedor?.centrar({ lat: Number(s.location.latitude), lng: Number(s.location.longitude) }, CONFIG.zoomMaximo);
+}
+
+async function atenderSos(boton) {
+  boton.disabled = true;
+  boton.textContent = "Marcando…";
+  try {
+    await marcarSosAtendido(boton.dataset.sos);
+    estado.sos = estado.sos.filter((s) => s.id !== boton.dataset.sos);
+    dibujar();
+    return refrescar();
+  } catch {
+    boton.disabled = false;
+    boton.textContent = "Atendido";
+    aviso("No se pudo marcar el SOS como atendido. Probá de nuevo.");
+  }
+}
+
 // Salir de la familia de otro titular (cualquiera puede; al titular le llega un correo).
 function abrirSalida(equipo) {
   if (!equipo || equipo.rol !== "titular") return;
@@ -1646,7 +1701,7 @@ async function ordenar(tipo, boton, equipo = equipoElegido()) {
 function demoEquipos() {
   const ahora = Date.now();
   return [
-    { id: "persona:demo-sofi", tipo: "persona", rol: "menor", nombre: "Sofía", plataforma: "iOS", ordenable: true, lat: -34.5871, lng: -58.4302, precision: 15, direccion: "Guatemala 4600, Palermo", bateria: 70, enLinea: true, ubicadoEn: new Date(ahora - 4 * 60_000).toISOString(), conRecorrido: false, pausado: false },
+    { id: "persona:demo-sofi", tipo: "persona", rol: "menor", nombre: "Sofía", idFamilia: "demo-sofi", plataforma: "iOS", ordenable: true, lat: -34.5871, lng: -58.4302, precision: 15, direccion: "Guatemala 4600, Palermo", bateria: 70, enLinea: true, ubicadoEn: new Date(ahora - 4 * 60_000).toISOString(), conRecorrido: false, pausado: false },
     { id: "demo-1", tipo: "telefono", nombre: "Mi teléfono", plataforma: "Android", lat: -34.5800, lng: -58.4245, precision: 12, direccion: "Ugarteche 3178, Palermo", bateria: 64, enLinea: true, ubicadoEn: new Date(ahora - 5000).toISOString(), conRecorrido: true },
     { id: "demo-2", tipo: "telefono", nombre: "Teléfono de trabajo", plataforma: "iPhone", lat: -34.5871, lng: -58.4302, precision: 20, direccion: "Guatemala 4600, Palermo", bateria: 81, enLinea: true, ubicadoEn: new Date(ahora - 120000).toISOString(), conRecorrido: true },
     { id: "pulsera:demo", tipo: "pulsera", nombre: "Pulsera de Elsa", plataforma: "Pulsera SOS", lat: -34.5810, lng: -58.4210, precision: 30, direccion: "Plaza Italia", bateria: 47, enLinea: true, ubicadoEn: new Date(ahora - 360000).toISOString(), conRecorrido: false },
@@ -1655,6 +1710,10 @@ function demoEquipos() {
 
 function demoLugares() {
   return [{ id: "demo-colegio", name: "Colegio", latitude: -34.5871, longitude: -58.4302, radius: 200, canEdit: true }];
+}
+
+function demoSos() {
+  return [{ id: "demo-sos", personId: "demo-sofi", personName: "Sofía", createdAt: new Date(Date.now() - 2 * 60_000).toISOString(), location: { latitude: -34.5871, longitude: -58.4302, address: "Guatemala 4600, Palermo" } }];
 }
 
 function demoRecorrido(equipo) {

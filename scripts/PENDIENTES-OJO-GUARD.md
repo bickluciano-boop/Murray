@@ -4,6 +4,16 @@ Actualizado: 09/10/2026.
 
 ## En curso
 
+- [ ] **SOS (Familia, etapa C)** (11/10/2026, en curso). Hecho y probado
+  con una base de prueba: servidor (`family_sos` y `family_sos_to`; le llega
+  al titular y a los adultos, a un amigo solo al titular; push con sirena,
+  mail, SMS si lo tiene activado y ubicación en vivo 10 min; "Estoy bien"
+  cancela; "Atendido" desde el panel) y el cartel rojo en el mapa. Falta: el
+  botón en la app (mantener 3 s), los disparadores sin abrir la app (volumen
+  mantenido en Android con servicio de accesibilidad; en iPhone Siri, Atajos,
+  toque en la espalda y control de la pantalla de bloqueo con App Intents) y
+  el script del panel. Va en su propia build. iPhone 13 Pro de Lu: sin Botón
+  de acción; el iPhone de Mariana es más nuevo y quizás sí lo tiene.
 - [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
   probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
   Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
@@ -116,10 +126,12 @@ Actualizado: 09/10/2026.
 
 ## Familia, más adelante
 
-- [x] **Etapa B: avisos de ubicación por persona** (publicado el 11/10/2026
-  y probado con "LB iPhone": funcionó y llegó una notificación; falta una
-  captura de cada aviso: el de "te van a avisar" en el iPhone y el de "salió
-  de" en el Android). Hecho en
+- [ ] **Etapa B: avisos de ubicación por persona** (publicado el 11/10/2026).
+  **Falla en la prueba:** al caminar con el iPhone NO llegó el aviso de
+  "salió de Casa" / "llegó a Casa" (Lu lo avisó; antes lo había anotado como
+  probado por error). A investigar: ver en la base si el iPhone mandó
+  ubicaciones mientras caminaba (la ubicación en segundo plano del iPhone
+  nunca se probó en la calle) y si el aviso cambió de estado. Hecho en
   `aplicar-familia-avisos-persona.ps1` + tabla `family_alerts`; reemplaza a
   "lugares que avisan" tras la idea de Lu de hacerlo como Buscar de Apple.
   Desde la tarjeta de
