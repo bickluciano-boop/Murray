@@ -116,7 +116,15 @@ Actualizado: 09/10/2026.
 
 ## Familia, más adelante
 
-- [ ] Etapa B: lugares (casa, colegio) y avisos al llegar o salir.
+- [ ] **Etapa B: lugares** (hecho el 11/10/2026 en `aplicar-familia-lugares.ps1`
+  + dos tablas nuevas; falta aplicarlo, publicarlo y probarlo en la calle). El
+  titular marca lugares en el mapa del panel (mira en el centro, nombre y
+  tamaño de 100 a 500 m) y le llega un push cuando alguien de su familia
+  (adultos y menores, no amigos) llega o se va. Los de la familia ven los
+  lugares y reciben un push cuando se crea uno. Margen de 50 m para salir,
+  ignora ubicaciones con más de 300 m de error y no avisa dos veces en 5 min.
+  Más adelante: verlos en la app, y que los adultos también puedan recibir
+  los avisos.
 - [ ] Etapa C: SOS del menor.
 
 ## Negocio e inversores
