@@ -123,8 +123,9 @@ Actualizado: 09/10/2026.
   (adultos y menores, no amigos) llega o se va. Los de la familia ven los
   lugares y reciben un push cuando se crea uno. Margen de 50 m para salir,
   ignora ubicaciones con más de 300 m de error y no avisa dos veces en 5 min.
-  Más adelante: verlos en la app, y que los adultos también puedan recibir
-  los avisos.
+  Al elegir el punto muestra la calle y la altura de la mira
+  (`aplicar-lugares-direccion.ps1`, idea de Lu, 11/10/2026). Más adelante:
+  verlos en la app, y que los adultos también puedan recibir los avisos.
 - [ ] Etapa C: SOS del menor.
 
 ## Negocio e inversores
