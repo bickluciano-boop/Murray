@@ -376,6 +376,21 @@ const ICONO_SONAR = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden
 const ICONO_LUGAR = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/></svg>';
 const ICONO_INVITAR = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="10" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 19c.7-3.6 3.3-5.5 6.5-5.5 1.6 0 3 .4 4.1 1.2M18 13v6M15 16h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
+/** Marca del equipo, para no confundir dos teléfonos que se llaman igual ("Mi teléfono"). */
+function marcaDe(equipo) {
+  if (!equipo || equipo.tipo === "pulsera") return "";
+  const p = String(equipo.plataforma || "").toLowerCase();
+  const marca = /android/.test(p) ? "Android" : /ios|iphone|ipad/.test(p) ? "iPhone" : /windows/.test(p) ? "Windows" : /mac/.test(p) ? "Mac" : "";
+  // Si el nombre ya lo dice (por ejemplo "LB iPhone"), no se repite.
+  return marca && !String(equipo.nombre || "").toLowerCase().includes(marca.toLowerCase()) ? marca : "";
+}
+
+/** El nombre con la marca en gris al lado: "Mi teléfono · Android". */
+function nombreHtml(equipo) {
+  const marca = marcaDe(equipo);
+  return `${esc(equipo.nombre)}${marca ? `<span class="ogm-marca"> · ${marca}</span>` : ""}`;
+}
+
 function etiquetaRol(equipo) {
   return equipo.tipo === "persona" && ROLES[equipo.rol] ? `<u class="ogm-rol">${ROLES[equipo.rol]}</u>` : "";
 }
@@ -386,7 +401,7 @@ const ICONO_DETENER = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidd
 function botonSonar(equipo) {
   if (!puedeOrdenar(equipo)) return "";
   const sonando = estado.sonando?.id === equipo.id && Date.now() < estado.sonando.hasta;
-  return `<button type="button" class="ogm-sonar${sonando ? " on" : ""}" data-accion="${sonando ? "stop-ring" : "alarm"}" data-equipo="${esc(equipo.id)}" title="${sonando ? "Detener sonido" : "Hacer sonar"}" aria-label="${sonando ? "Detener sonido" : "Hacer sonar"} ${esc(equipo.nombre)}">${sonando ? ICONO_DETENER : ICONO_SONAR}</button>`;
+  return `<button type="button" class="ogm-sonar${sonando ? " on" : ""}" data-accion="${sonando ? "stop-ring" : "alarm"}" data-equipo="${esc(equipo.id)}" title="${sonando ? "Detener sonido" : "Hacer sonar"}" aria-label="${sonando ? "Detener sonido" : "Hacer sonar"} ${esc(equipo.nombre)}${marcaDe(equipo) ? ` (${marcaDe(equipo)})` : ""}">${sonando ? ICONO_DETENER : ICONO_SONAR}</button>`;
 }
 
 function estadoDe(equipo) {
@@ -950,7 +965,7 @@ function elementoMarcador(equipo, dy = 0) {
   const st = estadoDe(equipo);
   el.className = `ogm-pin ${st.clase}${equipo.id === estado.elegido ? " sel" : ""}`;
   el.style.marginTop = dy ? `${dy}px` : "";
-  el.innerHTML = `<span class="ogm-halo"></span>${avatarHtml(equipo)}<span class="ogm-etq">${esc(equipo.nombre)}<em>${esc(haceCuanto(equipo.ubicadoEn))}</em></span>`;
+  el.innerHTML = `<span class="ogm-halo"></span>${avatarHtml(equipo)}<span class="ogm-etq"><span>${nombreHtml(equipo)}</span><em>${esc(haceCuanto(equipo.ubicadoEn))}</em></span>`;
   if (!estado.elementosMarcador.has(equipo.id)) {
     el.addEventListener("click", (evento) => { evento.stopPropagation(); elegir(equipo.id, false); });
     estado.elementosMarcador.set(equipo.id, el);
@@ -986,7 +1001,7 @@ function dibujar() {
     const st = estadoDe(e);
     const bat = e.bateria === null ? "" : ` <span class="ogm-bat${e.bateria < 25 ? " baja" : ""}" title="Batería ${Math.round(e.bateria)}%"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span>`;
     const dist = textoDistancia(distanciaA(e));
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${etiquetaRol(e)}${sosDe(e) ? '<u class="ogm-rol ogm-rol-sos">SOS</u>' : ""}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${nombreHtml(e)}</strong>${etiquetaRol(e)}${sosDe(e) ? '<u class="ogm-rol ogm-rol-sos">SOS</u>' : ""}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
   };
   $('[data-ogm="lista"]', raiz).innerHTML = personas.length
     ? `<li class="ogm-grupo">FAMILIA</li>${personas.map(fila).join("")}<li class="ogm-grupo">DISPOSITIVOS</li>${dispositivos.map(fila).join("")}`
@@ -1043,7 +1058,7 @@ function dibujar() {
     <button type="button" class="ogm-asa" data-accion="cerrar-tarjeta" aria-label="Plegar o desplegar"></button>
     <div class="ogm-cab">
       <button type="button" class="ogm-foto" data-accion="foto" title="Cambiar foto" ${elegido.tipo !== "telefono" || DEMO ? "disabled" : ""}>${avatarHtml(elegido, "grande")}</button>
-      <div><strong>${esc(elegido.nombre)}</strong>${etiquetaRol(elegido)}<small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}${distanciaA(elegido) !== null ? ` · ${esc(textoDistancia(distanciaA(elegido)))}` : ""}`}</small></div>
+      <div><strong>${nombreHtml(elegido)}</strong>${etiquetaRol(elegido)}<small>${siguiendo && st.clase !== "vivo" ? `<b class="vivo">${esc(estado.vivo.texto || "Conectando con el teléfono…")}</b>` : `${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(elegido.ubicadoEn))}${distanciaA(elegido) !== null ? ` · ${esc(textoDistancia(distanciaA(elegido)))}` : ""}`}</small></div>
     </div>
     <p class="ogm-direc">${esc(elegido.direccion || (elegido.lat !== null ? `${elegido.lat.toFixed(5)}, ${elegido.lng.toFixed(5)}` : "Todavía sin ubicación"))}</p>
     <div class="ogm-datos">
@@ -1066,7 +1081,7 @@ function dibujar() {
     ${elegido.tipo === "persona" && elegido.rol === "titular" ? '<button type="button" class="ogm-administrar" data-accion="salir">Salir de esta familia</button>' : ""}
     ${estado.mensajeVivo ? `<p class="ogm-aviso-vivo">${esc(estado.mensajeVivo)}</p>` : ""}
     <p class="ogm-msj" data-ogm="msj">${esc(estado.mensajeOrden?.id === elegido.id ? estado.mensajeOrden.texto : "")}</p>
-    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${esc(e.nombre)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
+    ${otros.length ? `<ul class="ogm-otros">${otros.map((e) => `<li data-id="${esc(e.id)}">${avatarHtml(e, "mini")}<span>${nombreHtml(e)}${etiquetaRol(e)}</span><small>${esc([textoDistancia(distanciaA(e)), haceCuanto(e.ubicadoEn)].filter(Boolean).join(" · "))}</small>${botonSonar(e)}</li>`).join("")}</ul>` : ""}`;
 }
 
 // ---------------------------------------------------------------------------

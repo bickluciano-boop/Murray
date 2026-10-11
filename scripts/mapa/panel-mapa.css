@@ -304,3 +304,5 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 @media (max-width: 899px) {
   .ogm-sos { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
 }
+.ogm-marca { font-weight: 400; color: var(--ogm-suave); }
+.ogm-pin.sel .ogm-etq .ogm-marca { color: inherit; opacity: 0.7; }
