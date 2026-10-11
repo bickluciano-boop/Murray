@@ -167,6 +167,13 @@ async function quitarDeFamilia(id) {
   await pedir("/api/remote/family/remove", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
 }
 
+// Calle y altura de un punto (OpenStreetMap, por el servidor), para elegir un lugar justo.
+async function direccionDe(punto) {
+  if (DEMO) return "Guatemala 4600, Palermo (demostración)";
+  const r = await pedir(`/api/remote/address?lat=${encodeURIComponent(punto.lat)}&lng=${encodeURIComponent(punto.lng)}`);
+  return r.address || "";
+}
+
 async function guardarLugar(datos) {
   if (DEMO) return { place: { ...datos, id: `demo-${Date.now()}`, canEdit: true } };
   return pedir("/api/remote/family/places", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(datos) });
@@ -524,6 +531,7 @@ async function proveedorGoogle(contenedor, temaInicial) {
     redibujar() { g.event.trigger(mapa, "resize"); },
     alTocarMapa(accion) { mapa.addListener("click", accion); },
     alArrastrar(accion) { mapa.addListener("dragstart", accion); },
+    alQuieto(accion) { mapa.addListener("idle", accion); },
     alCambiarZoom(accion) { let espera; mapa.addListener("zoom_changed", () => { clearTimeout(espera); espera = setTimeout(accion, 250); }); },
     aPixel(punto) {
       const proy = proyector.getProjection();
@@ -583,6 +591,7 @@ function construir() {
       <div class="ogm-mira hidden" data-ogm="mira" aria-hidden="true"></div>
       <div class="ogm-elegir hidden" data-ogm="elegir">
         <p>Mové el mapa hasta que la mira quede sobre el lugar y tocá «Elegir este punto».</p>
+        <p class="ogm-elegir-dir">${ICONO_LUGAR}<span data-ogm="elegir-dir">Buscando la dirección…</span></p>
         <div><button type="button" class="oro" data-accion="lugar-aca">Elegir este punto</button><button type="button" data-accion="lugar-cancelar">Cancelar</button></div>
       </div>
       <div class="ogm-aviso hidden" data-ogm="aviso"></div>
@@ -764,6 +773,11 @@ async function abrir() {
       // Si la persona mueve el mapa a mano, se deja de centrar en el teléfono seguido.
       estado.proveedor.alArrastrar(() => { if (estado.vivo) estado.vivo.seguir = false; });
       estado.proveedor.alCambiarZoom(() => dibujar());
+      estado.proveedor.alArrastrar(() => { if (estado.eligiendoLugar) mostrarDireccionElegida("Buscando la dirección…"); });
+      estado.proveedor.alQuieto(() => {
+        clearTimeout(estado.esperaDireccion);
+        if (estado.eligiendoLugar) estado.esperaDireccion = setTimeout(actualizarDireccionElegida, 400);
+      });
     } catch {
       aviso("No se pudo cargar Google Maps. Revisá la conexión y volvé a abrir el mapa.");
     }
@@ -1131,6 +1145,7 @@ function dibujarDialogo() {
     caja.innerHTML = `<div class="ogm-dlg">
       <p class="ogm-ceja">FAMILIA Y AMIGOS · LUGARES</p>
       <h3>Nuevo lugar</h3>
+      ${d.direccion ? `<p class="ogm-dlg-txt" style="margin-bottom:10px">En ${esc(d.direccion)}</p>` : ""}
       <label class="ogm-campo">¿Cómo se llama?<input data-ogm="nombre-lugar" maxlength="30" placeholder="Casa, Colegio, Trabajo…" value="${esc(d.nombre)}"></label>
       <p class="ogm-dlg-sub">¿Qué tan grande?</p>
       <div class="ogm-radios">${LUGAR_RADIOS.map((r) => `<button type="button" class="${d.radio === r ? "on" : ""}" data-accion="lugar-radio" data-radio="${r}">${r} m</button>`).join("")}</div>
@@ -1305,6 +1320,25 @@ function dibujarEleccion() {
   $('[data-ogm="elegir"]', raiz).classList.toggle("hidden", !estado.eligiendoLugar);
 }
 
+function mostrarDireccionElegida(texto) {
+  const caja = $('#og-mapa [data-ogm="elegir-dir"]');
+  if (caja) caja.textContent = texto;
+}
+
+// Se pide solo cuando el mapa queda quieto, y si mientras tanto se movió de nuevo, la respuesta
+// vieja se descarta.
+async function actualizarDireccionElegida() {
+  if (!estado.eligiendoLugar) return;
+  const centro = estado.proveedor?.centroDelMapa();
+  if (!centro) return;
+  const numero = (estado.pedidoDireccion = (estado.pedidoDireccion || 0) + 1);
+  mostrarDireccionElegida("Buscando la dirección…");
+  const texto = await direccionDe(centro).catch(() => "");
+  if (numero !== estado.pedidoDireccion || !estado.eligiendoLugar) return;
+  estado.direccionElegida = texto;
+  mostrarDireccionElegida(texto || "No encontré una dirección para este punto.");
+}
+
 function iniciarEleccionLugar() {
   if (!puedeAgregarLugar()) {
     estado.dialogo = { paso: "lugar-nuevo", nombre: "", radio: 200, error: "Los lugares son para tu familia: primero invitá a alguien." };
@@ -1313,8 +1347,10 @@ function iniciarEleccionLugar() {
   estado.dialogo = null;
   dibujarDialogo();
   estado.eligiendoLugar = true;
+  estado.direccionElegida = "";
   if (esCelular()) plegar(true);
   dibujarEleccion();
+  actualizarDireccionElegida();
 }
 
 function elegirPuntoLugar() {
@@ -1322,7 +1358,7 @@ function elegirPuntoLugar() {
   estado.eligiendoLugar = false;
   dibujarEleccion();
   if (!centro) return;
-  estado.dialogo = { paso: "lugar-nuevo", lat: centro.lat, lng: centro.lng, nombre: "", radio: 200, error: "" };
+  estado.dialogo = { paso: "lugar-nuevo", lat: centro.lat, lng: centro.lng, direccion: estado.direccionElegida || "", nombre: "", radio: 200, error: "" };
   dibujarDialogo();
   setTimeout(() => $('#og-mapa [data-ogm="nombre-lugar"]')?.focus(), 50);
 }

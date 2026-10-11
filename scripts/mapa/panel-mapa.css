@@ -267,6 +267,8 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 .ogm-mira::after { top: 50%; left: -10px; right: -10px; height: 2px; transform: translateY(-50%); }
 .ogm-elegir { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); z-index: 4; width: min(420px, calc(100% - 32px)); background: var(--ogm-panel); border: 1px solid var(--ogm-oro-borde); border-radius: 14px; padding: 12px 14px; box-shadow: var(--ogm-sombra); display: grid; gap: 10px; }
 .ogm-elegir p { margin: 0; font-size: 0.86rem; line-height: 1.45; }
+.ogm-elegir .ogm-elegir-dir { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ogm-texto); }
+.ogm-elegir-dir svg { color: var(--ogm-lugar); flex: none; }
 .ogm-elegir div { display: flex; gap: 8px; }
 #og-mapa .ogm-elegir button { flex: 1 1 auto; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 9px 12px; font-weight: 600; }
 #og-mapa .ogm-elegir button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }
