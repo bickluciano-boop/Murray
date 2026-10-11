@@ -73,8 +73,9 @@ Actualizado: 09/10/2026.
   Nuevo aviso obligatorio: "Ingreso desde un equipo nuevo" (cookie `ojo_eq`;
   la primera vez que se entre desde cada navegador después de publicarlo,
   llega uno).
-- [ ] **Audio de la evidencia: unos 10 segundos reales** (`aplicar-audio-10s.ps1`
-  v2, próxima build): se graban 11 s porque el grabador pierde casi un
+- [ ] **Audio de la evidencia: unos 10 segundos reales** (probado el 11/10/2026
+  en Android con la versión de 10 s: el panel dice "Audio 10 s"; la v2 de
+  `aplicar-audio-10s.ps1`, con 11 s grabados, va en la próxima build): se graban 11 s porque el grabador pierde casi un
   segundo al arrancar y cortar (con 6 s el reproductor mostraba 0:05). Con la
   app abierta el audio arranca junto con las fotos y los primeros segundos
   traen el ruido de las cámaras.
