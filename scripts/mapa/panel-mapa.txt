@@ -148,6 +148,7 @@ async function cargarEquipos() {
     const familia = await pedir("/api/remote/family");
     estado.invitaciones = familia.invites || [];
     estado.lugares = familia.places || [];
+    estado.alertas = familia.alerts || [];
     estado.nombreTitular = familia.ownerName || estado.nombreTitular;
     return [...normalizarFamilia(familia), ...equipos];
   } catch {
@@ -172,6 +173,16 @@ async function direccionDe(punto) {
   if (DEMO) return "Guatemala 4600, Palermo (demostración)";
   const r = await pedir(`/api/remote/address?lat=${encodeURIComponent(punto.lat)}&lng=${encodeURIComponent(punto.lng)}`);
   return r.address || "";
+}
+
+async function guardarAviso(datos) {
+  if (DEMO) return { alert: { ...datos, id: `demo-${Date.now()}` } };
+  return pedir("/api/remote/family/alerts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(datos) });
+}
+
+async function quitarAviso(id) {
+  if (DEMO) return;
+  await pedir("/api/remote/family/alerts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "delete", id }) });
 }
 
 async function guardarLugar(datos) {
@@ -558,7 +569,9 @@ const estado = {
   vivo: null,           // { id, seguir, texto, renovador } mientras se sigue un teléfono en vivo
   yo: null,             // { lat, lng, precision }: dónde está quien mira el panel (si dio permiso)
   invitaciones: [],     // invitaciones a la familia que todavía nadie usó
-  lugares: [],          // lugares de la familia (Casa, Colegio): { id, name, latitude, longitude, radius, canEdit }
+  lugares: [],          // tus lugares guardados (Casa, Colegio): atajos para armar un aviso rápido
+  alertas: [],          // avisos que armaste: { id, personId, targetName, name, latitude, longitude, radius, onArrive, frequency }
+  borradorAviso: null,  // el aviso que se está armando mientras se elige un punto en el mapa
   eligiendoLugar: false, // mientras se mueve el mapa para elegir dónde va un lugar nuevo
   dialogo: null,        // { paso: "datos" | "listo", nombre, rol, invitacion, error }
   miReloj: null,
@@ -605,7 +618,6 @@ function construir() {
         <button type="button" data-ogm="menos" aria-label="Alejar">−</button>
         <button type="button" data-ogm="centrar" aria-label="Ver todos" class="oro">◎</button>
         <button type="button" data-ogm="invitar" aria-label="Invitar a la familia" class="solo-celular">${ICONO_INVITAR}</button>
-        <button type="button" data-accion="agregar-lugar" aria-label="Agregar un lugar" class="solo-celular">${ICONO_LUGAR}</button>
       </div>
       <div class="ogm-capas" role="group" aria-label="Tipo de mapa">
         <button type="button" data-capa="mapa" class="on">Mapa</button>
@@ -654,11 +666,15 @@ function construir() {
     if (accion === "vivo-parar") return detenerVivo().then(dibujar);
     if (accion === "foto") return $('[data-ogm="archivo"]', raiz).click();
     if (accion === "llegar") return irConGoogle();
-    if (accion === "agregar-lugar") return iniciarEleccionLugar();
-    if (accion === "lugar-aca") return elegirPuntoLugar();
-    if (accion === "lugar-cancelar") { estado.eligiendoLugar = false; return dibujarEleccion(); }
-    if (accion === "lugar-radio") { leerNombreLugar(); estado.dialogo.radio = Number(boton.dataset.radio); return dibujarDialogo(); }
-    if (accion === "lugar-guardar") return guardarLugarNuevo(boton);
+    if (accion === "lugar-aca") return elegirPuntoAviso();
+    if (accion === "lugar-cancelar") return cancelarPuntoAviso();
+    if (accion === "avisar") return abrirAviso(equipoElegido());
+    if (accion === "aviso-cuando") { leerCamposAviso(); estado.dialogo.llegue = boton.dataset.llegue === "1"; return dibujarDialogo(); }
+    if (accion === "aviso-donde") return elegirDondeAviso(boton.dataset.donde);
+    if (accion === "aviso-radio") { leerCamposAviso(); estado.dialogo.radio = Number(boton.dataset.radio); return dibujarDialogo(); }
+    if (accion === "aviso-frecuencia") { leerCamposAviso(); estado.dialogo.frecuencia = boton.dataset.frecuencia; return dibujarDialogo(); }
+    if (accion === "aviso-guardar") return guardarAvisoNuevo(boton);
+    if (accion === "quitar-aviso") return quitarAvisoDe(boton);
     if (accion === "ver-lugar") return abrirLugar(boton.dataset.lugar);
     if (accion === "lugar-quitar") return quitarLugarAbierto(boton);
     if (accion === "salir") return abrirSalida(equipoElegido());
@@ -995,7 +1011,7 @@ function dibujar() {
     p.recorrido(trazo);
     p.paradas(paradas(puntos), elementoParada);
     p.precision(elegido && elegido.lat !== null ? elegido : null, elegido?.precision && elegido.precision < 500 ? elegido.precision : 0);
-    p.lugares(estado.lugares, elementoLugar);
+    p.lugares(avisosDe(elegido), elementoAviso);
   }
 
   // Tarjeta del elegido
@@ -1031,6 +1047,7 @@ function dibujar() {
       ${elegido.lat !== null ? '<button type="button" data-accion="llegar">Cómo llegar</button>' : ""}
     </div>
     ${elegido.tipo === "persona" && elegido.ordenable ? `<p class="ogm-nota-menor">${esc(elegido.nombre)} ve en su teléfono cada pedido que hagas.</p>` : ""}
+    ${elegido.tipo === "persona" ? htmlAvisos(elegido) : ""}
     ${estado.evidencia?.id === elegido.id ? htmlEvidencia(estado.evidencia, elegido) : ""}
     ${elegido.tipo === "persona" && elegido.gestionable ? '<button type="button" class="ogm-administrar" data-accion="administrar">Cambiar rol o quitar</button>' : ""}
     ${elegido.tipo === "persona" && elegido.rol === "titular" ? '<button type="button" class="ogm-administrar" data-accion="salir">Salir de esta familia</button>' : ""}
@@ -1140,18 +1157,30 @@ function dibujarDialogo() {
   const d = estado.dialogo;
   caja.classList.toggle("hidden", !d);
   if (!d) { caja.innerHTML = ""; return; }
-  caja.setAttribute("aria-label", d.paso === "gestion" ? `Administrar a ${d.nombre}` : d.paso === "salir" ? "Salir de una familia" : d.paso.startsWith("lugar") ? "Lugares" : "Invitar a la familia");
-  if (d.paso === "lugar-nuevo") {
+  caja.setAttribute("aria-label", d.paso === "gestion" ? `Administrar a ${d.nombre}` : d.paso === "salir" ? "Salir de una familia" : d.paso === "aviso-nuevo" ? "Avisos de ubicación" : d.paso.startsWith("lugar") ? "Lugares guardados" : "Invitar a la familia");
+  if (d.paso === "aviso-nuevo") {
+    const opciones = [
+      ...estado.lugares.map((l) => ({ clave: `lugar:${l.id}`, texto: l.name })),
+      ...(Number.isFinite(d.equipoLat) ? [{ clave: "persona", texto: `Donde está ${d.persona} ahora` }] : []),
+      ...(estado.yo ? [{ clave: "yo", texto: "Donde estoy yo ahora" }] : []),
+      { clave: "otro", texto: "Otro lugar…" },
+    ];
     caja.innerHTML = `<div class="ogm-dlg">
-      <p class="ogm-ceja">FAMILIA Y AMIGOS · LUGARES</p>
-      <h3>Nuevo lugar</h3>
-      ${d.direccion ? `<p class="ogm-dlg-txt" style="margin-bottom:10px">En ${esc(d.direccion)}</p>` : ""}
-      <label class="ogm-campo">¿Cómo se llama?<input data-ogm="nombre-lugar" maxlength="30" placeholder="Casa, Colegio, Trabajo…" value="${esc(d.nombre)}"></label>
+      <p class="ogm-ceja">AVISOS DE UBICACIÓN</p>
+      <h3>Avisarme cuando ${esc(d.persona)}…</h3>
+      <div class="ogm-radios"><button type="button" class="${d.llegue ? "on" : ""}" data-accion="aviso-cuando" data-llegue="1">llegue a</button><button type="button" class="${d.llegue ? "" : "on"}" data-accion="aviso-cuando" data-llegue="0">salga de</button></div>
+      <p class="ogm-dlg-sub">¿Qué lugar?</p>
+      <div class="ogm-radios ogm-chips">${opciones.map((o) => `<button type="button" class="${d.eleccion === o.clave ? "on" : ""}" data-accion="aviso-donde" data-donde="${esc(o.clave)}">${esc(o.texto)}</button>`).join("")}</div>
+      ${d.punto ? `<p class="ogm-dlg-txt" style="margin-bottom:10px">${esc(d.punto.direccion || "Punto elegido en el mapa")}</p>
+      <label class="ogm-campo">Nombre del lugar<input data-ogm="nombre-lugar" maxlength="30" placeholder="Casa, Colegio, Trabajo…" value="${esc(d.nombre)}"></label>
       <p class="ogm-dlg-sub">¿Qué tan grande?</p>
-      <div class="ogm-radios">${LUGAR_RADIOS.map((r) => `<button type="button" class="${d.radio === r ? "on" : ""}" data-accion="lugar-radio" data-radio="${r}">${r} m</button>`).join("")}</div>
-      <p class="ogm-dlg-txt">Te llega un aviso al teléfono cuando alguien de tu familia llega o se va. Los de tu familia ven este lugar en su mapa y les avisamos que lo agregaste. Los amigos no.</p>
+      <div class="ogm-radios">${AVISO_RADIOS.map((r) => `<button type="button" class="${d.radio === r ? "on" : ""}" data-accion="aviso-radio" data-radio="${r}">${r} m</button>`).join("")}</div>` : ""}
+      <p class="ogm-dlg-sub">¿Cuántas veces?</p>
+      <div class="ogm-radios"><button type="button" class="${d.frecuencia === "once" ? "on" : ""}" data-accion="aviso-frecuencia" data-frecuencia="once">Solo una vez</button><button type="button" class="${d.frecuencia === "always" ? "on" : ""}" data-accion="aviso-frecuencia" data-frecuencia="always">Cada vez</button></div>
+      ${d.punto && !d.lugarId ? `<label class="ogm-check"><input type="checkbox" data-ogm="guardar-lugar" ${d.guardar ? "checked" : ""}> Guardar este lugar para usarlo otra vez</label>` : ""}
+      <p class="ogm-dlg-txt">Cuando lo guardes, ${esc(d.persona)} recibe una notificación en su teléfono avisándole que vas a recibir este aviso. Nada queda oculto.</p>
       ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
-      <div class="ogm-dlg-botones"><button type="button" class="oro" data-accion="lugar-guardar">Guardar</button><button type="button" data-accion="cerrar-dialogo">Cancelar</button></div>
+      <div class="ogm-dlg-botones"><button type="button" class="oro" data-accion="aviso-guardar">Guardar aviso</button><button type="button" data-accion="cerrar-dialogo">Cancelar</button></div>
     </div>`;
     return;
   }
@@ -1161,7 +1190,7 @@ function dibujarDialogo() {
     caja.innerHTML = `<div class="ogm-dlg">
       <p class="ogm-ceja">LUGAR</p>
       <h3>${esc(l.name)}</h3>
-      <p class="ogm-dlg-txt">${l.radius} m a la redonda. ${l.canEdit ? "Te llega un aviso cuando alguien de tu familia llega o se va." : "Lo agregó el titular de tu familia: le llega un aviso cuando llegás o te vas."}</p>
+      <p class="ogm-dlg-txt">${l.radius} m a la redonda. Es un atajo tuyo para armar avisos más rápido: quitarlo no borra los avisos que ya armaste.</p>
       ${d.error ? `<p class="ogm-aviso-vivo">${esc(d.error)}</p>` : ""}
       <div class="ogm-dlg-botones">${l.canEdit ? '<button type="button" class="peligro" data-accion="lugar-quitar">Quitar este lugar</button>' : ""}<button type="button" data-accion="cerrar-dialogo">Cerrar</button></div>
     </div>`;
@@ -1286,30 +1315,34 @@ async function quitarGestion(boton) {
 }
 
 // ---------------------------------------------------------------------------
-// Lugares (Familia, etapa B): el titular marca Casa, Colegio, etc. y le llega un aviso al
-// teléfono cuando alguien de su familia llega o se va (ver familyPlacesCheck en src/index.ts).
+// Avisos de ubicación por persona, como en Buscar: desde la tarjeta de alguien de tu familia armás
+// "avisame cuando llegue / salga de tal lugar". El aviso te llega a vos, y esa persona se entera
+// de que lo armaste (ver familyAlertsCheck y remoteFamilyAlerts en src/index.ts).
 // ---------------------------------------------------------------------------
 
-const LUGAR_RADIOS = [100, 200, 300, 500];
+const AVISO_RADIOS = [100, 200, 300, 500];
 
-// Se puede agregar un lugar si sos titular de una familia (alguien de tu familia en el mapa) o
-// si ya tenés lugares propios.
-const puedeAgregarLugar = () => DEMO || estado.lugares.some((l) => l.canEdit) || estado.equipos.some((e) => e.tipo === "persona" && e.gestionable);
-
+/** Tus lugares guardados: atajos para armar un aviso rápido (se pueden quitar). */
 function htmlLugares() {
-  const puede = puedeAgregarLugar();
-  if (!estado.lugares.length && !puede) return "";
-  return `<p class="ogm-grupo">LUGARES</p>
-    ${estado.lugares.length ? `<ul class="ogm-lugares">${estado.lugares.map((l) => `<li><button type="button" data-accion="ver-lugar" data-lugar="${esc(l.id)}">${ICONO_LUGAR}<span><strong>${esc(l.name)}</strong><small>${l.radius} m a la redonda</small></span></button></li>`).join("")}</ul>` : ""}
-    ${puede ? '<button type="button" class="ogm-agregar-lugar" data-accion="agregar-lugar">+ Agregar un lugar</button>' : ""}`;
+  if (!estado.lugares.length) return "";
+  return `<p class="ogm-grupo">LUGARES GUARDADOS</p>
+    <ul class="ogm-lugares">${estado.lugares.map((l) => `<li><button type="button" data-accion="ver-lugar" data-lugar="${esc(l.id)}">${ICONO_LUGAR}<span><strong>${esc(l.name)}</strong><small>${l.radius} m a la redonda</small></span></button></li>`).join("")}</ul>`;
 }
 
-function elementoLugar(lugar) {
-  const el = document.createElement("button");
-  el.type = "button";
+const avisosDe = (equipo) => (equipo?.tipo === "persona" ? estado.alertas.filter((a) => a.personId === equipo.idFamilia) : []);
+
+/** En la tarjeta de una persona: el botón para avisarte y los avisos que ya armaste sobre ella. */
+function htmlAvisos(persona) {
+  const lista = avisosDe(persona);
+  return `<button type="button" class="ogm-administrar ogm-avisar" data-accion="avisar">${ICONO_LUGAR}Avisarme cuando ${esc(persona.nombre)} llegue o salga…</button>
+    ${lista.length ? `<ul class="ogm-avisos-persona">${lista.map((a) => `<li><span>${a.onArrive ? "Cuando llegue a" : "Cuando salga de"} <strong>${esc(a.name)}</strong> · ${a.frequency === "always" ? "cada vez" : "una vez"}</span><button type="button" data-accion="quitar-aviso" data-aviso="${esc(a.id)}" aria-label="Quitar el aviso de ${esc(a.name)}">✕</button></li>`).join("")}</ul>` : ""}`;
+}
+
+/** La etiqueta con el nombre del lugar, al centro del círculo (no se toca). */
+function elementoAviso(aviso) {
+  const el = document.createElement("span");
   el.className = "ogm-lugar";
-  el.innerHTML = `${ICONO_LUGAR}<span>${esc(lugar.name)}</span>`;
-  el.addEventListener("click", (evento) => { evento.stopPropagation(); abrirLugar(lugar.id); });
+  el.innerHTML = `${ICONO_LUGAR}<span>${esc(aviso.name)}</span>`;
   return el;
 }
 
@@ -1339,11 +1372,60 @@ async function actualizarDireccionElegida() {
   mostrarDireccionElegida(texto || "No encontré una dirección para este punto.");
 }
 
-function iniciarEleccionLugar() {
-  if (!puedeAgregarLugar()) {
-    estado.dialogo = { paso: "lugar-nuevo", nombre: "", radio: 200, error: "Los lugares son para tu familia: primero invitá a alguien." };
-    return dibujarDialogo();
+function abrirAviso(equipo) {
+  if (!equipo || equipo.tipo !== "persona") return;
+  estado.dialogo = {
+    paso: "aviso-nuevo", personaId: equipo.idFamilia, persona: equipo.nombre, equipoLat: equipo.lat, equipoLng: equipo.lng,
+    llegue: true, eleccion: "", punto: null, lugarId: "", nombre: "", radio: 200, frecuencia: "once", guardar: false, error: "",
+  };
+  dibujarDialogo();
+}
+
+// Lo escrito en el diálogo del aviso, antes de volver a dibujarlo (si no, se perdería).
+function leerCamposAviso() {
+  const d = estado.dialogo;
+  if (!d) return;
+  const nombre = $('#og-mapa [data-ogm="nombre-lugar"]');
+  if (nombre) d.nombre = nombre.value.trim();
+  const guardar = $('#og-mapa [data-ogm="guardar-lugar"]');
+  if (guardar) d.guardar = guardar.checked;
+}
+
+function elegirDondeAviso(clave) {
+  const d = estado.dialogo;
+  if (!d) return;
+  leerCamposAviso();
+  d.error = "";
+  if (clave === "otro") return iniciarPuntoAviso();
+  let punto = null;
+  d.lugarId = "";
+  if (clave.startsWith("lugar:")) {
+    const l = estado.lugares.find((x) => x.id === clave.slice(6));
+    if (!l) return;
+    punto = { lat: l.latitude, lng: l.longitude, direccion: "" };
+    d.lugarId = l.id;
+    d.nombre = l.name;
+    d.radio = l.radius;
+  } else if (clave === "persona") {
+    punto = { lat: d.equipoLat, lng: d.equipoLng, direccion: "" };
+    d.guardar = false;
+  } else if (clave === "yo" && estado.yo) {
+    punto = { lat: estado.yo.lat, lng: estado.yo.lng, direccion: "" };
+    d.guardar = false;
   }
+  if (!punto) return;
+  d.eleccion = clave;
+  d.punto = punto;
+  dibujarDialogo();
+  // La calle y la altura de ese punto, para que se vea dónde queda.
+  direccionDe({ lat: punto.lat, lng: punto.lng }).then((texto) => {
+    if (estado.dialogo === d && d.punto === punto) { punto.direccion = texto; dibujarDialogo(); }
+  }).catch(() => undefined);
+}
+
+// "Otro lugar": se esconde el cuadro, se muestra la mira y la dirección del centro del mapa.
+function iniciarPuntoAviso() {
+  estado.borradorAviso = estado.dialogo;
   estado.dialogo = null;
   dibujarDialogo();
   estado.eligiendoLugar = true;
@@ -1353,38 +1435,70 @@ function iniciarEleccionLugar() {
   actualizarDireccionElegida();
 }
 
-function elegirPuntoLugar() {
-  const centro = estado.proveedor?.centroDelMapa();
+function cerrarEleccionDelPunto() {
   estado.eligiendoLugar = false;
   dibujarEleccion();
-  if (!centro) return;
-  estado.dialogo = { paso: "lugar-nuevo", lat: centro.lat, lng: centro.lng, direccion: estado.direccionElegida || "", nombre: "", radio: 200, error: "" };
+  const d = estado.borradorAviso;
+  estado.borradorAviso = null;
+  return d;
+}
+
+function cancelarPuntoAviso() {
+  const d = cerrarEleccionDelPunto();
+  if (!d) return;
+  estado.dialogo = d;
+  dibujarDialogo();
+}
+
+function elegirPuntoAviso() {
+  const centro = estado.proveedor?.centroDelMapa();
+  const d = cerrarEleccionDelPunto();
+  if (!d) return;
+  if (centro) {
+    d.punto = { lat: centro.lat, lng: centro.lng, direccion: estado.direccionElegida || "" };
+    d.eleccion = "otro";
+    d.lugarId = "";
+    d.guardar = true;
+  }
+  estado.dialogo = d;
   dibujarDialogo();
   setTimeout(() => $('#og-mapa [data-ogm="nombre-lugar"]')?.focus(), 50);
 }
 
-function leerNombreLugar() {
-  const campo = $('#og-mapa [data-ogm="nombre-lugar"]');
-  if (campo && estado.dialogo) estado.dialogo.nombre = campo.value.trim();
-}
-
-async function guardarLugarNuevo(boton) {
+async function guardarAvisoNuevo(boton) {
   const d = estado.dialogo;
   if (!d) return;
-  leerNombreLugar();
-  if (d.lat === undefined) { estado.dialogo = null; return dibujarDialogo(); }
+  leerCamposAviso();
+  if (!d.punto) { d.error = "Elegí el lugar: uno guardado, dónde está ahora o otro en el mapa."; return dibujarDialogo(); }
   if (!d.nombre) { d.error = "Escribí cómo se llama el lugar."; return dibujarDialogo(); }
   boton.disabled = true;
   boton.textContent = "Guardando…";
   try {
-    const r = await guardarLugar({ name: d.nombre, latitude: d.lat, longitude: d.lng, radius: d.radio });
-    if (DEMO && r.place) estado.lugares = [...estado.lugares, r.place];
+    const r = await guardarAviso({ personId: d.personaId, name: d.nombre, latitude: d.punto.lat, longitude: d.punto.lng, radius: d.radio, onArrive: d.llegue, frequency: d.frecuencia });
+    if (DEMO && r.alert) estado.alertas = [...estado.alertas, { ...r.alert, targetName: d.persona, onArrive: d.llegue }];
+    // Si la persona pidió guardar el lugar, queda como atajo (si falla, el aviso ya está igual).
+    if (d.guardar && !d.lugarId) {
+      const g = await guardarLugar({ name: d.nombre, latitude: d.punto.lat, longitude: d.punto.lng, radius: d.radio }).catch(() => null);
+      if (DEMO && g?.place) estado.lugares = [...estado.lugares, g.place];
+    }
     estado.dialogo = null;
     dibujarDialogo();
     return refrescar();
   } catch (error) {
-    d.error = error.status === 409 ? "Ya tenés 10 lugares: quitá alguno para agregar otro." : error.status === 403 ? "Para esto, entrá al panel con tu acceso normal (no con el de emergencia)." : "No se pudo guardar el lugar. Probá de nuevo.";
+    d.error = error.status === 409 ? "Ya tenés 30 avisos: quitá alguno para armar otro." : error.status === 403 ? "No podés armar este aviso: esa persona ya no está en tu familia, o entraste con el acceso de emergencia." : "No se pudo guardar el aviso. Probá de nuevo.";
     dibujarDialogo();
+  }
+}
+
+async function quitarAvisoDe(boton) {
+  boton.disabled = true;
+  try {
+    await quitarAviso(boton.dataset.aviso);
+    estado.alertas = estado.alertas.filter((a) => a.id !== boton.dataset.aviso);
+    dibujar();
+    return refrescar();
+  } catch {
+    boton.disabled = false;
   }
 }
 

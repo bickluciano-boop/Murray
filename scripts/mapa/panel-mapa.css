@@ -208,7 +208,8 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 #og-mapa .ogm-invitaciones button { font-size: 0.76rem; border: 1px solid var(--ogm-linea); border-radius: 9px; padding: 5px 8px; }
 #og-mapa .ogm-invitaciones button.quitar { border: 0; color: var(--ogm-tenue); padding: 5px; }
 #og-mapa .ogm-ctrl .solo-celular { display: none; }
-.ogm-dialogo { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.55); }
+/* Abajo queda lugar para la barra de secciones del panel, que si no tapa los botones del cuadro. */
+.ogm-dialogo { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px 16px 104px; background: rgba(0, 0, 0, 0.55); }
 .ogm-dialogo.hidden { display: none; }
 .ogm-dlg { width: min(440px, 100%); max-height: calc(100% - 32px); overflow-y: auto; background: var(--ogm-fondo); border: 1px solid var(--ogm-linea); border-radius: 22px; padding: 22px; box-shadow: var(--ogm-sombra); }
 .ogm-dlg h3 { font-size: 1.4rem; margin: 6px 0 14px; color: var(--ogm-texto); }
@@ -275,3 +276,14 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 @media (max-width: 899px) {
   .ogm-elegir { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
 }
+
+/* Avisos de ubicación por persona (como en Buscar). */
+#og-mapa .ogm-avisar { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--ogm-oro-vivo); text-decoration: none; font-size: 0.84rem; }
+.ogm-avisar svg { flex: none; }
+.ogm-avisos-persona { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.ogm-avisos-persona li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid var(--ogm-linea); border-radius: 10px; font-size: 0.8rem; }
+.ogm-avisos-persona li span { min-width: 0; }
+#og-mapa .ogm-avisos-persona button { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ogm-linea); font-size: 0.8rem; color: var(--ogm-suave); }
+#og-mapa .ogm-chips button { flex: 0 1 auto; padding: 8px 12px; }
+.ogm-check { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; font-size: 0.86rem; cursor: pointer; }
+.ogm-check input { width: 18px; height: 18px; accent-color: var(--ogm-oro); }
