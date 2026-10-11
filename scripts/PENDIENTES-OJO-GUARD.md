@@ -116,16 +116,20 @@ Actualizado: 09/10/2026.
 
 ## Familia, más adelante
 
-- [ ] **Etapa B: lugares** (hecho el 11/10/2026 en `aplicar-familia-lugares.ps1`
-  + dos tablas nuevas; falta aplicarlo, publicarlo y probarlo en la calle). El
-  titular marca lugares en el mapa del panel (mira en el centro, nombre y
-  tamaño de 100 a 500 m) y le llega un push cuando alguien de su familia
-  (adultos y menores, no amigos) llega o se va. Los de la familia ven los
-  lugares y reciben un push cuando se crea uno. Margen de 50 m para salir,
-  ignora ubicaciones con más de 300 m de error y no avisa dos veces en 5 min.
-  Al elegir el punto muestra la calle y la altura de la mira
-  (`aplicar-lugares-direccion.ps1`, idea de Lu, 11/10/2026). Más adelante:
-  verlos en la app, y que los adultos también puedan recibir los avisos.
+- [ ] **Etapa B: avisos de ubicación por persona** (11/10/2026, en
+  `aplicar-familia-avisos-persona.ps1` + tabla `family_alerts`; reemplaza a
+  "lugares que avisan" tras la idea de Lu de hacerlo como Buscar de Apple;
+  falta aplicarlo, publicarlo y probarlo en la calle). Desde la tarjeta de
+  alguien de la familia: "Avisarme cuando X llegue o salga de...", con el
+  lugar (guardado, donde está X ahora, donde estoy yo, u otro con la mira y
+  la calle y altura), tamaño de 100 a 500 m y una vez o cada vez. Los avisos
+  de esa persona se listan en su tarjeta (con ✕). La persona recibe un push
+  cuando se lo ponen; el aviso le llega a quien lo armó; cualquiera que vea a
+  la persona en su mapa puede armarlo (los amigos solo ven al titular).
+  Margen de 50 m para salir, ignora ubicaciones con más de 300 m de error, no
+  repite en 5 min, no avisa con la ubicación en pausa y se borra solo si la
+  persona sale de la familia. Más adelante: que la persona vea en su app quién
+  tiene avisos sobre ella, y verlos en la app.
 - [ ] Etapa C: SOS del menor.
 
 ## Negocio e inversores
