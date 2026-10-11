@@ -116,10 +116,13 @@ Actualizado: 09/10/2026.
 
 ## Familia, más adelante
 
-- [ ] **Etapa B: avisos de ubicación por persona** (11/10/2026, en
+- [x] **Etapa B: avisos de ubicación por persona** (publicado el 11/10/2026
+  y probado con "LB iPhone": funcionó y llegó una notificación; falta una
+  captura de cada aviso: el de "te van a avisar" en el iPhone y el de "salió
+  de" en el Android). Hecho en
   `aplicar-familia-avisos-persona.ps1` + tabla `family_alerts`; reemplaza a
   "lugares que avisan" tras la idea de Lu de hacerlo como Buscar de Apple;
-  falta aplicarlo, publicarlo y probarlo en la calle). Desde la tarjeta de
+  ). Desde la tarjeta de
   alguien de la familia: "Avisarme cuando X llegue o salga de...", con el
   lugar (guardado, donde está X ahora, donde estoy yo, u otro con la mira y
   la calle y altura), tamaño de 100 a 500 m y una vez o cada vez. Los avisos
