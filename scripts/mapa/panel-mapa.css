@@ -13,6 +13,7 @@
   --ogm-oro-borde: #4a3f1f;
   --ogm-vivo: #57d48a;
   --ogm-off: #e0806a;
+  --ogm-lugar: #9fc2e0;
   --ogm-pin-borde: #cfcabb;
   --ogm-pin-fondo: #0f0f10;
   --ogm-sombra: 0 18px 40px rgba(0, 0, 0, 0.5);
@@ -30,6 +31,7 @@
   --ogm-oro-borde: #e2cf93;
   --ogm-vivo: #1f9d55;
   --ogm-off: #c4553b;
+  --ogm-lugar: #3f6f96;
   --ogm-pin-borde: #ffffff;
   --ogm-pin-fondo: #1b1a17;
   --ogm-sombra: 0 14px 34px rgba(60, 50, 20, 0.18);
@@ -245,3 +247,29 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 }
 .ogm-nombre .ogm-rol { margin-right: auto; }
 .ogm-cab .ogm-rol { margin: 0 6px 0 0; }
+
+/* Lugares (Familia, etapa B): círculo en el mapa con el nombre al centro, lista y elección del punto. */
+#og-mapa .ogm-lugar { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 999px; background: var(--ogm-panel); border: 1px solid var(--ogm-lugar); color: var(--ogm-texto); font-size: 0.74rem; font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: var(--ogm-sombra); }
+.ogm-lugar svg { color: var(--ogm-lugar); }
+.ogm-lugares { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+#og-mapa .ogm-lugares button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--ogm-linea); text-align: left; }
+.ogm-lugares svg { color: var(--ogm-lugar); flex: none; }
+.ogm-lugares span { display: grid; min-width: 0; }
+.ogm-lugares strong { font-size: 0.88rem; }
+.ogm-lugares small { color: var(--ogm-suave); font-size: 0.76rem; }
+#og-mapa .ogm-agregar-lugar { width: 100%; margin: 8px 0 0; padding: 9px; border-radius: 12px; border: 1px dashed var(--ogm-linea); color: var(--ogm-suave); font-weight: 600; font-size: 0.86rem; }
+.ogm-radios { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+#og-mapa .ogm-radios button { flex: 1 1 0; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 9px 6px; font-weight: 600; }
+#og-mapa .ogm-radios button.on { border-color: var(--ogm-oro); background: var(--ogm-oro-fondo); }
+.ogm-mira { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; transform: translate(-50%, -50%); border: 2px solid var(--ogm-oro-vivo); border-radius: 50%; pointer-events: none; z-index: 2; box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.25); }
+.ogm-mira::before, .ogm-mira::after { content: ""; position: absolute; background: var(--ogm-oro-vivo); }
+.ogm-mira::before { left: 50%; top: -10px; bottom: -10px; width: 2px; transform: translateX(-50%); }
+.ogm-mira::after { top: 50%; left: -10px; right: -10px; height: 2px; transform: translateY(-50%); }
+.ogm-elegir { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); z-index: 4; width: min(420px, calc(100% - 32px)); background: var(--ogm-panel); border: 1px solid var(--ogm-oro-borde); border-radius: 14px; padding: 12px 14px; box-shadow: var(--ogm-sombra); display: grid; gap: 10px; }
+.ogm-elegir p { margin: 0; font-size: 0.86rem; line-height: 1.45; }
+.ogm-elegir div { display: flex; gap: 8px; }
+#og-mapa .ogm-elegir button { flex: 1 1 auto; border: 1px solid var(--ogm-linea); border-radius: 12px; padding: 9px 12px; font-weight: 600; }
+#og-mapa .ogm-elegir button.oro { background: var(--ogm-oro); border-color: var(--ogm-oro); color: #111; }
+@media (max-width: 899px) {
+  .ogm-elegir { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
+}
