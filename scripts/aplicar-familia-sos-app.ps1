@@ -144,6 +144,9 @@ if (-not $todoBien) {
     return
 }
 Write-Host ""
-Ok "TODO BIEN. Para revisar que compile:  powershell -ExecutionPolicy Bypass -Command ""npx tsc --noEmit""  (si no muestra nada, esta perfecto)"
-Ok "Sale en la PROXIMA build (Android y iPhone). Antes publica el panel con aplicar-familia-sos-panel.ps1."
+Ok "Archivos listos. Reviso que la app compile (puede tardar un minuto)..."
+& npx.cmd tsc --noEmit
+if ($LASTEXITCODE -ne 0) { Mal "La revision de tipos encontro errores (arriba). No hagas la build todavia: mandame esta pantalla."; return }
+Write-Host ""
+Ok "LISTO: la app compila bien. El SOS sale en la PROXIMA build (Android y iPhone)."
 Write-Host ""
