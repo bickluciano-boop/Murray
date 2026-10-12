@@ -4,9 +4,10 @@ Actualizado: 12/10/2026.
 
 ## En curso
 
-- [ ] **Avisos de llegada y salida por persona: geocercos en iPhone**
-  (12/10/2026, armado y probado con bases de prueba; falta aplicar, publicar,
-  hacer la build de iPhone y probar caminando). Causa del "no me avisó": el
+- [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
+  (12/10/2026, aplicado, publicado y probado: con la build 26 de iPhone y
+  los dos avisos de Casa, "salió de Casa" y "llegó a Casa" llegaron al
+  Android al salir y al volver). Causa del "no me avisó": el
   envío del aviso funciona (servidor, Expo, Google y Android; el aviso de
   prueba "LB iPhone llegó a Casa." quedó en la bandeja del Android), pero el
   iPhone manda un punto cada 150 m, cada ~5 min, y se pausa solo al quedar
@@ -19,14 +20,17 @@ Actualizado: 12/10/2026.
   que avisa al salir; iPhone despierta a la app al cruzarlos aunque esté
   cerrada). Límites: 10 lugares por iPhone, 1 a 3 minutos de demora, un aviso
   nuevo vale cuando ese teléfono renueva la lista (al abrir la app o al
-  moverse), solo iPhone. Después de la prueba: volver a LB iPhone a **Adulto**
-  (quedó Menor por las pruebas) y rehacer el aviso de Casa bien centrado (el
-  actual quedó desplazado ~190 m). Tabla `push_log` (anota lo que contesta
+  moverse), solo iPhone. LB iPhone ya está de nuevo como Adulto y el aviso
+  de Casa quedó rehecho con "Donde está LB iPhone ahora". Tabla `push_log` (anota lo que contesta
   Expo en cada aviso de lugar, 7 días) y los scripts `probar-aviso-*.ps1` y
   `ver-registro-avisos.ps1` son de diagnóstico: se pueden borrar cuando el
   aviso ande. Aparte: el cron de 15 min sigue creando pedidos `auto-locate`
   para el iPhone y nunca se ejecutan (hay más de 300 vencidos en `pending`):
   conviene no crearlos para iPhone y marcar los vencidos.
+- [x] **Panel: nombre de cada teléfono con su marca** (12/10/2026): en el
+  mapa y la tarjeta dice "Mi teléfono · Android", "Notebook LB · Windows"; en
+  la lista lateral va como etiqueta chica (ANDROID, IPHONE, WINDOWS) para que
+  no se corte el nombre (`actualizar-mapa.ps1`, solo panel, sin build).
 - [ ] **SOS (Familia, etapa C)** (11/10/2026, en curso). Hecho y probado
   con una base de prueba: servidor (`family_sos` y `family_sos_to`; le llega
   al titular y a los adultos, a un amigo solo al titular; push con sirena,
