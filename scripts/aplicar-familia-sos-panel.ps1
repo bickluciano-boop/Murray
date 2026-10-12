@@ -4,7 +4,7 @@
 # En el mapa del panel aparece un cartel rojo con "Ver en el mapa" y "Atendido".
 # De paso: el nombre que ve el titular de un integrante ya no sale del correo ("Mama") sino el que le puso.
 # Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\index.ts y actualiza src\panel-mapa.txt y src\panel-mapa.css.
-# Respaldos .bak-sos. Base de datos: dos tablas nuevas (family_sos y family_sos_to).
+# Respaldos .bak-sos. Base de datos: dos tablas nuevas (family_sos y family_sos_to). Al final crea las tablas y publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -327,7 +327,13 @@ if (-not $todoBien) {
     return
 }
 Write-Host ""
-Ok "TODO BIEN en los archivos. Faltan dos pasos, en este orden:"
-Write-Host "  1) npx.cmd wrangler d1 execute ojo-guard-ms --remote --command ""CREATE TABLE IF NOT EXISTS family_sos (id TEXT PRIMARY KEY, person_email TEXT NOT NULL, status TEXT NOT NULL, location_json TEXT, created_at TEXT NOT NULL, resolved_at TEXT, resolved_by TEXT); CREATE TABLE IF NOT EXISTS family_sos_to (sos_id TEXT NOT NULL, email TEXT NOT NULL, person_id TEXT, person_name TEXT, PRIMARY KEY (sos_id, email));"""
-Write-Host "  2) npx.cmd wrangler deploy"
+Ok "Archivos listos. Ahora creo las dos tablas del SOS en la base y publico el panel (todo solo)..."
+$sqlSos = 'CREATE TABLE IF NOT EXISTS family_sos (id TEXT PRIMARY KEY, person_email TEXT NOT NULL, status TEXT NOT NULL, location_json TEXT, created_at TEXT NOT NULL, resolved_at TEXT, resolved_by TEXT); CREATE TABLE IF NOT EXISTS family_sos_to (sos_id TEXT NOT NULL, email TEXT NOT NULL, person_id TEXT, person_name TEXT, PRIMARY KEY (sos_id, email));'
+& npx.cmd wrangler d1 execute ojo-guard-ms --remote --command $sqlSos
+if ($LASTEXITCODE -ne 0) { Mal "No se pudieron crear las tablas, asi que no publique nada. Mandame esta pantalla."; return }
+Ok "Tablas creadas"
+& npx.cmd wrangler deploy
+if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
+Write-Host ""
+Ok "LISTO: el panel quedo publicado con el SOS."
 Write-Host ""
