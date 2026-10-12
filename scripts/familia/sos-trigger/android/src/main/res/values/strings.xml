@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ojo_sos_service_label">Ojo Guard SOS</string>
+  <string name="ojo_sos_service_description">Permite pedir ayuda a tu familia manteniendo apretados los dos botones de volumen durante 3 segundos, aunque la pantalla este apagada. Solo se mira cuando se aprietan los botones de volumen: no se lee la pantalla ni lo que escribis.</string>
+</resources>

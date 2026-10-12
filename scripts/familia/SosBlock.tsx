@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, AppState, Easing, Pressable, StyleSheet, Text, Vibration, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, AppState, Easing, Platform, Pressable, Share, StyleSheet, Text, Vibration, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 
+import { isSosGestureEnabled, openSosAccessibilitySettings, openSosAppInfo, sosGestureAvailable } from "../modules/sos-trigger";
+import { markPendingSystemActivity } from "./pendingSystemActivity";
 import type { NativeEnrollment } from "./remoteStorage";
 import { cancelSos, fetchMySos, sendSos, SosError, type SosEstado } from "./sos";
+import { sosShortcutLink } from "./sosTask";
 
 /**
  * Botón de SOS dentro de "Familia y amigos". Hay que mantenerlo apretado 3 segundos (para que no salga por un toque
  * sin querer): vibra, manda el pedido y muestra a quién se le avisó, con "Estoy bien" para cancelarlo.
  *
  * Se ve solo si este teléfono está en una familia. Lo que pasa del otro lado (sirena, mail, mapa) está en sos.ts y en el
- * servidor. Más adelante el mismo pedido se podrá disparar sin abrir la app (volumen mantenido, Siri, toque en la espalda).
+ * servidor. Debajo del botón explica cómo pedir ayuda SIN abrir la app: en Android, mantener los dos botones de volumen
+ * (servicio de accesibilidad "Ojo Guard SOS"); en iPhone, un atajo con el enlace del SOS (Siri, toque en la espalda,
+ * pantalla de bloqueo). Los dos caminos terminan en sosTask.ts.
  */
 
 const MANTENER_MS = 3_000;
@@ -49,6 +54,8 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
   const [sos, setSos] = useState<SosEstado | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [gestoActivo, setGestoActivo] = useState(false);
+  const [enlace, setEnlace] = useState("");
   const avance = useRef(new Animated.Value(0)).current;
 
   const cargar = useCallback(async () => {
@@ -64,12 +71,22 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
     if (visible && enrollment) void cargar();
   }, [visible, enrollment, cargar]);
 
+  // El gesto de volumen se activa en Ajustes: al volver a la app se vuelve a mirar si quedó activado.
   useEffect(() => {
+    const revisar = () => setGestoActivo(isSosGestureEnabled());
+    revisar();
     const suscripcion = AppState.addEventListener("change", (estado) => {
-      if (estado === "active") void cargar();
+      if (estado === "active") {
+        revisar();
+        void cargar();
+      }
     });
     return () => suscripcion.remove();
   }, [cargar]);
+
+  useEffect(() => {
+    if (Platform.OS === "ios" && visible) void sosShortcutLink().then(setEnlace).catch(() => undefined);
+  }, [visible]);
 
   const empezar = () => {
     avance.setValue(0);
@@ -94,6 +111,12 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
       setTrabajando(false);
       soltar();
     }
+  }
+
+  function activarGesto() {
+    // Volver de Ajustes no tiene que mandar la app a la pantalla de bloqueo.
+    markPendingSystemActivity();
+    openSosAccessibilitySettings();
   }
 
   async function estoyBien() {
@@ -157,6 +180,60 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
         </>
       )}
       {mensaje ? <Text style={s.mensaje}>{mensaje}</Text> : null}
+
+      {Platform.OS === "android" && sosGestureAvailable() ? (
+        <View style={s.gesto}>
+          <Text style={s.gestoTitulo}>Pedir ayuda sin abrir la app</Text>
+          {gestoActivo ? (
+            <Text style={botones.ayuda}>
+              Activado: mantené apretados los dos botones de volumen durante 3 segundos, aunque la pantalla esté apagada. El teléfono vibra cuando sale el pedido.
+            </Text>
+          ) : (
+            <>
+              <Text style={botones.ayuda}>
+                Mantené apretados los dos botones de volumen durante 3 segundos, aunque la pantalla esté apagada. Para activarlo tocá el botón, buscá «Ojo Guard SOS» en Accesibilidad y activalo. Solo mira los botones de volumen: no lee la pantalla.
+              </Text>
+              <Pressable accessibilityRole="button" onPress={activarGesto} style={[botones.secundario, s.espacio]}>
+                <Text style={botones.secundarioTexto}>Activar el gesto de volumen</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  markPendingSystemActivity();
+                  openSosAppInfo();
+                }}
+                style={[botones.secundario, s.espacio]}
+              >
+                <Text style={botones.secundarioTexto}>El interruptor está gris</Text>
+              </Pressable>
+              <Text style={[botones.ayuda, s.ayuda]}>
+                Si el interruptor aparece gris: en la información de la app tocá los tres puntos de arriba y elegí «Permitir configuración restringida».
+              </Text>
+            </>
+          )}
+        </View>
+      ) : null}
+
+      {Platform.OS === "ios" ? (
+        <View style={s.gesto}>
+          <Text style={s.gestoTitulo}>Pedir ayuda sin buscar el botón</Text>
+          <Text style={botones.ayuda}>
+            1. En la app Atajos creá un atajo con la acción «Abrir URL», pegá este enlace y llamalo «SOS Ojo Guard».{"\n"}
+            2. Para dispararlo: decile a Siri «SOS Ojo Guard»; o en Ajustes › Accesibilidad › Tocar › Tocar atrás elegí ese atajo; o agregalo como control en la pantalla de bloqueo.{"\n"}
+            Con el iPhone bloqueado pide Face ID para abrir la app. Seguí teniendo configurado el SOS de emergencias de Apple.
+          </Text>
+          {enlace ? (
+            <>
+              <Text selectable style={s.enlace}>
+                {enlace}
+              </Text>
+              <Pressable accessibilityRole="button" onPress={() => void Share.share({ message: enlace })} style={[botones.secundario, s.espacio]}>
+                <Text style={botones.secundarioTexto}>Copiar o compartir el enlace</Text>
+              </Pressable>
+            </>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -177,5 +254,9 @@ function estilos(P: Paleta) {
     estoyBien: { marginTop: 12 },
     apagado: { opacity: 0.5 },
     mensaje: { color: P.doradoTexto, fontSize: 13, marginTop: 10, lineHeight: 18 },
+    gesto: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: P.borde },
+    gestoTitulo: { color: P.textoSuave, fontSize: 13, fontWeight: "600", marginBottom: 6 },
+    espacio: { marginTop: 10 },
+    enlace: { color: P.texto, fontSize: 13, marginTop: 10, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: P.borde },
   });
 }
