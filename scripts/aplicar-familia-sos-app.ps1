@@ -1,8 +1,14 @@
-﻿# aplicar-familia-sos-app.ps1 - SOS de Familia, parte de la app: un boton "SOS" dentro de Configuracion > Familia y amigos.
-# Hay que mantenerlo apretado 3 segundos; manda el pedido con la ubicacion, muestra a quien se le aviso y trae "Estoy bien" para
-# cancelarlo. Suma src\sos.ts y src\SosBlock.tsx, y toca src\FamilySection.tsx (dos lineas). Va en la carpeta de la APP (la que
-# tiene app.json). Respaldo .bak-sos. Sale en la PROXIMA build (iPhone y Android). Necesita antes el script del panel
-# (aplicar-familia-sos-panel.ps1) publicado: sin el, el boton avisa que no se pudo mandar.
+﻿# aplicar-familia-sos-app.ps1 - SOS de Familia, parte de la app.
+#  - Un boton "SOS" dentro de Configuracion > Familia y amigos: hay que mantenerlo apretado 3 segundos; manda el pedido con la
+#    ubicacion, muestra a quien se le aviso y trae "Estoy bien" para cancelarlo.
+#  - Android, sin abrir la app: mantener apretados los DOS botones de volumen 3 segundos (aunque la pantalla este apagada).
+#    Es un servicio de accesibilidad ("Ojo Guard SOS") que solo mira los botones de volumen; se activa a mano en Ajustes.
+#  - iPhone, sin buscar el boton: un enlace con clave para armar un atajo en Atajos, que se dispara con Siri, el toque en la
+#    espalda o un control de la pantalla de bloqueo.
+# Suma src\sos.ts, src\sosTask.ts, src\SosBlock.tsx y el modulo modules\sos-trigger (Android), y toca src\FamilySection.tsx
+# (dos lineas). Va en la carpeta de la APP (la que tiene app.json). Respaldo .bak-sos. Sale en la PROXIMA build: tiene codigo
+# nativo de Android, asi que hace falta build de Android (y la de iPhone para el boton y el enlace).
+# Necesita antes el script del panel (aplicar-familia-sos-panel.ps1) publicado: sin el, el boton avisa que no se pudo mandar.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -26,7 +32,8 @@ function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPat
 if (-not (Test-Path (Join-Path $raiz "app.json")) -or (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta de la APP (la que tiene app.json), no la del panel."; return }
 Ok "Carpeta correcta"
 if (-not (Test-Path (Join-Path $raiz "src\FamilySection.tsx"))) { Mal "Falta Familia en la app: primero corre aplicar-familia-app.ps1."; return }
-if ((Test-Path (Join-Path $raiz "src\SosBlock.tsx")) -or ((Contar (Leer (Join-Path $raiz "src\FamilySection.tsx")).texto 'SosBlock') -ne 0)) { Avi "El SOS ya estaba aplicado en la app. No toco nada."; return }
+if (-not (Test-Path (Join-Path $raiz "modules"))) { Mal "No encuentro la carpeta modules de la app. Mandame esta pantalla."; return }
+if ((Test-Path (Join-Path $raiz "src\SosBlock.tsx")) -or (Test-Path (Join-Path $raiz "modules\sos-trigger\index.ts")) -or ((Contar (Leer (Join-Path $raiz "src\FamilySection.tsx")).texto 'SosBlock') -ne 0)) { Avi "El SOS ya estaba aplicado en la app. No toco nada."; return }
 if (-not (Test-Path (Join-Path $raiz "src\liveLocation.ts"))) { Mal "Falta src\liveLocation.ts (la ubicacion en vivo): primero corre aplicar-en-vivo-app.ps1."; return }
 $cambios = @(
     @('src\FamilySection.tsx', 'importar el boton de SOS', 'import { markPendingSystemActivity } from "./pendingSystemActivity";
@@ -42,9 +49,22 @@ import { SosBlock } from "./SosBlock";
 ')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b320995/scripts/familia/sos.ts", "src\sos.ts", "cd7533142e047fe8f95ec3bf357a5d67ae56098dc8a500a6caed32e93983e82c"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b320995/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "57133355d7a1fd4a208ed8e5194e2583ee164842c142eaca89fcef68f5c6fe02")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos.ts", "src\sos.ts", "cd7533142e047fe8f95ec3bf357a5d67ae56098dc8a500a6caed32e93983e82c"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "88ffbb403a1afe6a817ceb3e82a6d82d3ea6db982cabdb37e58b898630f4804f"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sosTask.ts", "src\sosTask.ts", "e372627879135ffbf959c133981a335b44294bcb3bda33d13d16739838a54a2c"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/build.gradle", "modules\sos-trigger\android\build.gradle", "97013f55819e55c559a3d9c71114005e78676c0ddc554d9f5a4d80852018e270"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/AndroidManifest.xml", "modules\sos-trigger\android\src\main\AndroidManifest.xml", "3786f12e2f2defaf5bc634f6bd492d93d591582121e6c9d155bb625bf87f7d5c"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosAccessibilityService.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosAccessibilityService.kt", "707e0be7c819543283e0c555332c137054f29678839a1c7ab5aceee116de2b0a"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosTaskService.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosTaskService.kt", "38bd167022003fcc5a59d6aa2b2cac3db9fbf3bb1b3b7ae3e4bf6971fd53c3d5"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosTrigger.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosTrigger.kt", "3fb7f95d7242317777499fb4cca1999c7d4fd85c0d9ab83fdcb549ddeace3a8f"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosTriggerModule.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosTriggerModule.kt", "1d8b7369b0fada5fa00e606b8b0a89a4b02c1e88b8d89bbffd77105a5f1b10bf"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/res/values/strings.xml", "modules\sos-trigger\android\src\main\res\values\strings.xml", "b651aa945605220657442b694ad14c9ff2018a46209947e1153404910822a7ef"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/android/src/main/res/xml/ojo_sos_accessibility.xml", "modules\sos-trigger\android\src\main\res\xml\ojo_sos_accessibility.xml", "68f814cc24cfb05e8f481c2fc2787f9d6b20446f5b1cb64f871deb0a7bf15b0f"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/expo-module.config.json", "modules\sos-trigger\expo-module.config.json", "76b3fcc0a1fff86ac97f5415de9e8cc237ec62243fce6421c2bee044480e1ad0"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e6ab6ea/scripts/familia/sos-trigger/index.ts", "modules\sos-trigger\index.ts", "f4d30e61dd5e36781f60e78e1d11b479ead2412645ce564b6c2860b979d2744f")
 )
+# Las carpetas del modulo nuevo se crean antes de bajar los archivos.
+foreach ($d in $descargas) { $carpeta = Split-Path -Parent (Join-Path $raiz $d[1]); if (-not (Test-Path $carpeta)) { New-Item -ItemType Directory -Path $carpeta -Force | Out-Null } }
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
 $archivos = @{}
@@ -125,5 +145,5 @@ if (-not $todoBien) {
 }
 Write-Host ""
 Ok "TODO BIEN. Para revisar que compile:  powershell -ExecutionPolicy Bypass -Command ""npx tsc --noEmit""  (si no muestra nada, esta perfecto)"
-Ok "Sale en la PROXIMA build. Antes publica el panel con aplicar-familia-sos-panel.ps1."
+Ok "Sale en la PROXIMA build (Android y iPhone). Antes publica el panel con aplicar-familia-sos-panel.ps1."
 Write-Host ""

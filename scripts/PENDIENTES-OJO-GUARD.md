@@ -31,16 +31,29 @@ Actualizado: 12/10/2026.
   mapa y la tarjeta dice "Mi teléfono · Android", "Notebook LB · Windows"; en
   la lista lateral va como etiqueta chica (ANDROID, IPHONE, WINDOWS) para que
   no se corte el nombre (`actualizar-mapa.ps1`, solo panel, sin build).
-- [ ] **SOS (Familia, etapa C)** (11/10/2026, en curso). Hecho y probado
-  con una base de prueba: servidor (`family_sos` y `family_sos_to`; le llega
-  al titular y a los adultos, a un amigo solo al titular; push con sirena,
-  mail, SMS si lo tiene activado y ubicación en vivo 10 min; "Estoy bien"
-  cancela; "Atendido" desde el panel) y el cartel rojo en el mapa. Falta: el
-  botón en la app (mantener 3 s), los disparadores sin abrir la app (volumen
-  mantenido en Android con servicio de accesibilidad; en iPhone Siri, Atajos,
-  toque en la espalda y control de la pantalla de bloqueo con App Intents) y
-  el script del panel. Va en su propia build. iPhone 13 Pro de Lu: sin Botón
-  de acción; el iPhone de Mariana es más nuevo y quizás sí lo tiene.
+- [ ] **SOS (Familia, etapa C)** (12/10/2026, armado y probado con bases de
+  prueba; falta aplicar, publicar, hacer las builds y probar con los dos
+  teléfonos). Servidor y panel (`aplicar-familia-sos-panel.ps1` + dos tablas,
+  `family_sos` y `family_sos_to`): le llega al titular y a los adultos (a un
+  amigo, solo al titular); push con sirena, mail, SMS si lo tiene activado y
+  ubicación en vivo 10 min; "Estoy bien" lo cancela y avisa; cartel rojo en el
+  mapa con "Ver en el mapa" y "Atendido". App (`aplicar-familia-sos-app.ps1`,
+  próxima build de Android y iPhone): botón SOS en Configuración > Familia
+  (mantener 3 s, vibra, muestra a quién se le avisó, "Estoy bien"); Android
+  sin abrir la app: mantener los DOS botones de volumen 3 s (servicio de
+  accesibilidad "Ojo Guard SOS", módulo nativo `modules/sos-trigger`, tarea
+  headless `OjoGuardSosTask`; solo mira el volumen; se activa a mano en
+  Ajustes y en Android 13+ hay que permitir "configuración restringida"
+  porque la app va por APK); iPhone: enlace `ojoguard://sos?k=<clave>` (la
+  clave es de cada teléfono, para que nadie mande un SOS falso con un link
+  de afuera) que se pone en un atajo "Abrir URL" y se dispara con Siri, el
+  toque en la espalda o un control de la pantalla de bloqueo. Límites: con el
+  iPhone bloqueado el atajo pide Face ID; el código de Kotlin no se pudo
+  compilar en el entorno de trabajo (solo se revisó la sintaxis y se siguió
+  el molde de `theft-detection`): si falla la build de Android, mirar el log
+  de EAS. Probar con los dos teléfonos de Lu (SOS desde el iPhone al Android y
+  al revés) y después con el iPhone de Mariana. Más adelante, si lo del Face
+  ID molesta: App Intent nativo en Swift (corre sin desbloquear).
 - [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
   probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
   Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
