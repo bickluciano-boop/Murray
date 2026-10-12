@@ -1,9 +1,32 @@
 # Pendientes de Ojo Guard (app + Ojo Guard MS)
 
-Actualizado: 09/10/2026.
+Actualizado: 12/10/2026.
 
 ## En curso
 
+- [ ] **Avisos de llegada y salida por persona: geocercos en iPhone**
+  (12/10/2026, armado y probado con bases de prueba; falta aplicar, publicar,
+  hacer la build de iPhone y probar caminando). Causa del "no me avisó": el
+  envío del aviso funciona (servidor, Expo, Google y Android; el aviso de
+  prueba "LB iPhone llegó a Casa." quedó en la bandeja del Android), pero el
+  iPhone manda un punto cada 150 m, cada ~5 min, y se pausa solo al quedar
+  quieto: el 11/10 el último punto del viaje quedó a 245 m de casa y la
+  llegada nunca se reportó. Arreglo: `aplicar-familia-geocercos-panel.ps1`
+  (dirección `GET /api/native/family/regions` con los lugares a vigilar y un
+  solo aviso aunque lleguen dos ubicaciones a la vez; antes salía duplicado)
+  y `aplicar-familia-geocercos-app.ps1` (`src/familyGeofence.ts`: dos
+  geocercos del sistema por lugar, uno que avisa al entrar y otro más grande
+  que avisa al salir; iPhone despierta a la app al cruzarlos aunque esté
+  cerrada). Límites: 10 lugares por iPhone, 1 a 3 minutos de demora, un aviso
+  nuevo vale cuando ese teléfono renueva la lista (al abrir la app o al
+  moverse), solo iPhone. Después de la prueba: volver a LB iPhone a **Adulto**
+  (quedó Menor por las pruebas) y rehacer el aviso de Casa bien centrado (el
+  actual quedó desplazado ~190 m). Tabla `push_log` (anota lo que contesta
+  Expo en cada aviso de lugar, 7 días) y los scripts `probar-aviso-*.ps1` y
+  `ver-registro-avisos.ps1` son de diagnóstico: se pueden borrar cuando el
+  aviso ande. Aparte: el cron de 15 min sigue creando pedidos `auto-locate`
+  para el iPhone y nunca se ejecutan (hay más de 300 vencidos en `pending`):
+  conviene no crearlos para iPhone y marcar los vencidos.
 - [ ] **SOS (Familia, etapa C)** (11/10/2026, en curso). Hecho y probado
   con una base de prueba: servidor (`family_sos` y `family_sos_to`; le llega
   al titular y a los adultos, a un amigo solo al titular; push con sirena,
