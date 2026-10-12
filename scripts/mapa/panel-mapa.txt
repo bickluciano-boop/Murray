@@ -385,6 +385,12 @@ function marcaDe(equipo) {
   return marca && !String(equipo.nombre || "").toLowerCase().includes(marca.toLowerCase()) ? marca : "";
 }
 
+/** En la lista lateral (angosta) la marca va como una etiqueta chica, para que no se corte el nombre. */
+function chipMarca(equipo) {
+  const marca = marcaDe(equipo);
+  return marca ? `<u class="ogm-rol ogm-chip-marca">${marca.toUpperCase()}</u>` : "";
+}
+
 /** El nombre con la marca en gris al lado: "Mi teléfono · Android". */
 function nombreHtml(equipo) {
   const marca = marcaDe(equipo);
@@ -1001,7 +1007,7 @@ function dibujar() {
     const st = estadoDe(e);
     const bat = e.bateria === null ? "" : ` <span class="ogm-bat${e.bateria < 25 ? " baja" : ""}" title="Batería ${Math.round(e.bateria)}%"><i style="width:${Math.max(4, Math.min(100, e.bateria))}%"></i></span>`;
     const dist = textoDistancia(distanciaA(e));
-    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${nombreHtml(e)}</strong>${etiquetaRol(e)}${sosDe(e) ? '<u class="ogm-rol ogm-rol-sos">SOS</u>' : ""}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
+    return `<li data-id="${esc(e.id)}" class="${e.id === estado.elegido ? "sel" : ""}" tabindex="0">${avatarHtml(e, "chico")}<div><span class="ogm-nombre"><strong>${esc(e.nombre)}</strong>${chipMarca(e)}${etiquetaRol(e)}${sosDe(e) ? '<u class="ogm-rol ogm-rol-sos">SOS</u>' : ""}${dist ? `<em class="ogm-dist">${esc(dist)}</em>` : ""}</span><small>${st.texto ? `<b class="${st.clase}">${st.clase === "vivo" ? "● " : ""}${esc(st.texto)}</b> · ` : ""}${esc(haceCuanto(e.ubicadoEn))}${bat}</small>${e.direccion ? `<small class="ogm-dir">${esc(e.direccion)}</small>` : ""}</div>${botonSonar(e)}</li>`;
   };
   $('[data-ogm="lista"]', raiz).innerHTML = personas.length
     ? `<li class="ogm-grupo">FAMILIA</li>${personas.map(fila).join("")}<li class="ogm-grupo">DISPOSITIVOS</li>${dispositivos.map(fila).join("")}`

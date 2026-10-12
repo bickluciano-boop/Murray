@@ -306,3 +306,6 @@ html.og-mapa-abierto, body.og-mapa-abierto { overflow: hidden; overscroll-behavi
 }
 .ogm-marca { font-weight: 400; color: var(--ogm-suave); }
 .ogm-pin.sel .ogm-etq .ogm-marca { color: inherit; opacity: 0.7; }
+.ogm-rol.ogm-chip-marca { color: var(--ogm-suave); border-color: var(--ogm-linea); }
+/* Si detras de la marca viene la etiqueta del rol, quedan pegadas; si no, la marca queda junto al nombre y la distancia a la derecha. */
+.ogm-nombre .ogm-rol.ogm-chip-marca:has(+ .ogm-rol) { margin-right: 0; }
