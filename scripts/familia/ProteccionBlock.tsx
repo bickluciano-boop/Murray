@@ -9,7 +9,8 @@ import { revisarProteccion, type Arreglo, type EstadoItem, type ResultadoProtecc
 import type { NativeEnrollment } from "./remoteStorage";
 
 /**
- * Botón "Revisar mi protección" dentro de "Familia y amigos", justo arriba del SOS. Mira qué está prendido y qué no (ver
+ * "Mi protección" dentro de "Familia y amigos", justo arriba del SOS: un título que se despliega (cerrado, muestra el último
+ * porcentaje) con el botón "Revisar mi protección". Mira qué está prendido y qué no (ver
  * proteccion.ts), muestra un porcentaje y, en cada cosa que falta, un botón que lleva a la pantalla del sistema donde se
  * arregla. Si la persona vuelve de Ajustes, se revisa sola de nuevo para que el porcentaje suba al momento.
  */
@@ -81,8 +82,7 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
   const general: EstadoItem = !resultado ? "ok" : resultado.porcentaje >= 100 ? "ok" : resultado.porcentaje >= 60 ? "revisar" : "falta";
 
   return (
-    <View style={s.bloque}>
-      <Text style={s.titulo}>Mi protección</Text>
+    <Plegable titulo={resultado ? `Mi protección · ${resultado.porcentaje} %` : "Mi protección"} paleta={P}>
       {resultado ? (
         <>
           <View style={[s.resumen, { borderColor: borde(general), backgroundColor: fondo(general) }]}>
@@ -132,14 +132,12 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
       <Pressable accessibilityRole="button" disabled={revisando} onPress={() => void revisar()} style={[botones.secundario, s.espacio, revisando && s.apagado]}>
         {revisando ? <ActivityIndicator color={P.texto} /> : <Text style={botones.secundarioTexto}>{resultado ? "Volver a revisar" : "Revisar mi protección"}</Text>}
       </Pressable>
-    </View>
+    </Plegable>
   );
 }
 
 function estilos(P: Paleta) {
   return StyleSheet.create({
-    bloque: { marginTop: 18 },
-    titulo: { color: P.textoSuave, fontSize: 13, fontWeight: "600", marginBottom: 8 },
     espacio: { marginTop: 12 },
     apagado: { opacity: 0.5 },
     resumen: { padding: 14, borderRadius: 14, borderWidth: 1 },
