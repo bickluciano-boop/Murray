@@ -86,6 +86,26 @@ Actualizado: 12/10/2026.
   instalar por APK; se instaló apagando un momento Play Protect (en Play
   Store habría que justificar la accesibilidad o cambiar el gesto por un botón
   en la bandeja o un widget).
+- [ ] **Revisar mi protección** (13/10/2026, escrito y probado en mock, sin
+  aplicar todavía; idea de Lu: que la persona vea qué le falta y sea suya la
+  responsabilidad si no revisó). `aplicar-familia-proteccion-app.ps1` (solo
+  app, después de `aplicar-familia-sos-mejoras-app.ps1`; necesita build de
+  Android por el código nativo, el iPhone la recibe en su próxima build). Botón
+  "Revisar mi protección" en Configuración > Familia, arriba del SOS: da un
+  porcentaje (ok vale 1, revisar 0,5, falta 0; cada cosa pesa 1 o 2) y una
+  lista con avisos, ubicación "Siempre", conexión con el servidor, y en Android
+  gesto de volumen (apagado / prendido pero caído / funcionando), sirena del
+  canal `ojo-sos` (silenciado / sin atravesar No interrumpir), batería sin
+  restricciones; en iPhone el atajo (si alguna vez se abrió el enlace). Cada
+  cosa que falta trae un botón a la pantalla del sistema; al volver de Ajustes
+  se revisa sola. Lo que la app no puede ver (Concentración del iPhone) queda
+  como nota. Además, en Android avisa con una notificación si el gesto figura
+  prendido pero el servicio no responde (el "zombi" que se vio el 13/10): al
+  abrir la app, al volver al frente y con el trabajo de fondo (máx. una vez
+  cada 12 h). Nativo: `SosAccessibilityService.conectado` (se prende en
+  `onServiceConnected`, se apaga en `onUnbind`/`onDestroy`) y `isRunning()` en
+  `SosTriggerModule`. El Kotlin no se pudo compilar acá (solo sintaxis). Lo que
+  Android no deja: prender o apagar solo el servicio de accesibilidad.
 - [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
   probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
   Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
