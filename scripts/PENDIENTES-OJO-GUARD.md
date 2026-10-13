@@ -112,12 +112,17 @@ Actualizado: 12/10/2026.
   100 % al usar el atajo. Nativo: `SosAccessibilityService.conectado` e
   `isRunning()` en `SosTriggerModule`. Qué Android no deja: prender o apagar
   solo el servicio de accesibilidad.
-- [ ] **Renombrar "Mi protección" a "Dr. Ojo Guard"** (Lu lo aprobó el
-  13/10/2026: el nombre sonaba a antivirus). Título "Dr. Ojo Guard · 100 %",
-  botón "Hacer chequeo" / "Volver a hacer el chequeo", "Chequeo hecho a las
-  16:05" y el texto de la notificación del gesto caído (`sosTask.ts`,
-  `ProteccionBlock.tsx`, `proteccion.ts`). Va en la próxima build junto con lo
-  que haga falta.
+- [ ] **Dr. Ojo Guard (antes "Mi protección")** (13/10/2026, escrito y probado
+  en mock y en un navegador, sin aplicar: `aplicar-dr-ojo-guard-app.ps1`; hace
+  falta build de Android por una función nativa nueva, el iPhone recibe el
+  nombre en su próxima build). Título "Dr. Ojo Guard · 100 %", botón "Hacer
+  chequeo" / "Volver a hacer el chequeo", "Chequeo hecho a las…". Nuevo item en
+  Android "Auriculares Bluetooth" (peso 2, estado revisar si hay audio Bluetooth
+  conectado, con botón "Abrir el Bluetooth"; nativo `bluetoothAudio` en
+  `SosTriggerModule`) y botón "Probar la sirena" (alarma local por el canal
+  `ojo-sos`, `probarSirena` en `sosTask.ts`). Salió de que el 13/10 los avisos
+  no sonaban en el Android porque tenía unos auriculares Bluetooth (PLT_Legend)
+  conectados: al apagar el Bluetooth sonó el aviso de prueba.
 - [x] **SOS: tocar el aviso lleva al mapa + Configuración como acordeón**
   (13/10/2026, aplicado: panel publicado con `aplicar-sos-mapa-panel.ps1` y app
   con `aplicar-sos-mapa-configuracion-app.ps1`; builds de Android y iPhone
@@ -138,8 +143,15 @@ Actualizado: 12/10/2026.
   `bickluciano@gmail.com`) y después sí llegó el aviso "canceló el SOS", pero el
   aviso del SOS no apareció ni sonó. `probar-sos-android.ps1` mandó 3 avisos con
   el mismo formato del SOS (canal `ojo-sos`, datos del mapa) y Expo confirmó la
-  entrega de los 3: el camino Expo-Google-Android anda. El Android tenía No
-  interrumpir puesto (ícono ⊖). Falta repetir el SOS real. Para ver qué dice
+  entrega de los 3: el camino Expo-Google-Android anda. El Android tenía el
+  modo "Ojo guard" (Modos) puesto a propósito: permite las alarmas y las
+  notificaciones de Ojo Guard, así que no era eso. El SOS real de las 16:34
+  llegó (Expo entregó, recibo ok) pero mudo; los 3 avisos de prueba también
+  llegaban mudos, hasta que se apagó el Bluetooth (había unos auriculares
+  PLT_Legend conectados): ahí el aviso sonó. Falta repetir el SOS real del
+  iPhone con el Bluetooth apagado para confirmar que suena y que al tocar el
+  aviso abre Google Maps. El primer SOS de las 16:02 no apareció nunca en el
+  Android y no hay registro (el registro de SOS se agregó después). Para ver qué dice
   Expo de cada SOS, `aplicar-sos-registro-panel.ps1` anota cada aviso de SOS
   en `push_log` y `ver-registro-avisos.ps1` muestra el ticket y el recibo. El
   atajo del iPhone quedó armado (acción "Abrir direcciones URL" con el enlace
