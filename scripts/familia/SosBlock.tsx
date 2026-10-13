@@ -3,8 +3,10 @@ import { ActivityIndicator, Animated, AppState, Easing, Platform, Pressable, Sha
 
 import { isSosGestureEnabled, openSosAccessibilitySettings, openSosAppInfo, openSosChannelSettings, sosGestureAvailable } from "../modules/sos-trigger";
 import { markPendingSystemActivity } from "./pendingSystemActivity";
+import { Plegable } from "./Plegable";
 import type { NativeEnrollment } from "./remoteStorage";
 import { cancelSos, fetchMySos, sendSos, SosError, type SosEstado } from "./sos";
+import "./sosMapa";
 import { sosShortcutLink } from "./sosTask";
 
 /**
@@ -182,8 +184,7 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
       {mensaje ? <Text style={s.mensaje}>{mensaje}</Text> : null}
 
       {Platform.OS === "android" && sosGestureAvailable() ? (
-        <View style={s.gesto}>
-          <Text style={s.gestoTitulo}>Pedir ayuda sin abrir la app</Text>
+        <Plegable key={gestoActivo ? "gesto-listo" : "gesto-falta"} titulo="Pedir ayuda sin abrir la app" paleta={P} abiertoInicial={!gestoActivo}>
           {gestoActivo ? (
             <Text style={botones.ayuda}>
               Activado: mantené apretados los dos botones de volumen durante 3 segundos, aunque la pantalla esté apagada. El teléfono vibra cuando sale el pedido.
@@ -224,12 +225,11 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
           >
             <Text style={botones.secundarioTexto}>Que la sirena suene con No interrumpir</Text>
           </Pressable>
-        </View>
+        </Plegable>
       ) : null}
 
       {Platform.OS === "ios" ? (
-        <View style={s.gesto}>
-          <Text style={s.gestoTitulo}>Pedir ayuda sin buscar el botón</Text>
+        <Plegable titulo="Pedir ayuda sin buscar el botón" paleta={P}>
           <Text style={botones.ayuda}>
             1. En la app Atajos creá un atajo con la acción «Abrir URL», pegá este enlace y llamalo «SOS Ojo Guard».{"\n"}
             2. Para dispararlo: decile a Siri «SOS Ojo Guard»; o en Ajustes › Accesibilidad › Tocar › Tocar atrás elegí ese atajo; o agregalo como control en la pantalla de bloqueo.{"\n"}
@@ -245,7 +245,7 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
               </Pressable>
             </>
           ) : null}
-        </View>
+        </Plegable>
       ) : null}
     </View>
   );
@@ -257,9 +257,9 @@ function estilos(P: Paleta) {
     titulo: { color: P.textoSuave, fontSize: 13, fontWeight: "600", marginBottom: 8 },
     boton: { height: 68, borderRadius: 16, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: ROJO },
     relleno: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: ROJO_OSCURO },
-    botonTextos: { alignItems: "center" },
+    botonTextos: { alignItems: "center", alignSelf: "stretch", paddingHorizontal: 12 },
     botonTexto: { color: "#ffffff", fontSize: 24, fontWeight: "800", letterSpacing: 4 },
-    botonSub: { color: "#ffd9d4", fontSize: 12, marginTop: 1 },
+    botonSub: { color: "#ffd9d4", fontSize: 12, marginTop: 1, textAlign: "center" },
     ayuda: { marginTop: 8 },
     enCurso: { padding: 14, borderRadius: 14, borderWidth: 1, borderColor: P.peligroBorde ?? ROJO, backgroundColor: P.peligroFondo ?? "#261313" },
     enCursoTitulo: { color: P.peligroFuerte ?? "#ff9d9d", fontSize: 16, fontWeight: "800" },
@@ -267,8 +267,6 @@ function estilos(P: Paleta) {
     estoyBien: { marginTop: 12 },
     apagado: { opacity: 0.5 },
     mensaje: { color: P.doradoTexto, fontSize: 13, marginTop: 10, lineHeight: 18 },
-    gesto: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: P.borde },
-    gestoTitulo: { color: P.textoSuave, fontSize: 13, fontWeight: "600", marginBottom: 6 },
     espacio: { marginTop: 10 },
     enlace: { color: P.texto, fontSize: 13, marginTop: 10, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: P.borde },
   });

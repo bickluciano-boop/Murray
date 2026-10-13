@@ -4,6 +4,7 @@ import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, Text, View
 import { openBatterySettings } from "../modules/exact-alarm";
 import { openSosAccessibilitySettings, openSosChannelSettings } from "../modules/sos-trigger";
 import { markPendingSystemActivity } from "./pendingSystemActivity";
+import { Plegable } from "./Plegable";
 import { revisarProteccion, type Arreglo, type EstadoItem, type ResultadoProteccion } from "./proteccion";
 import type { NativeEnrollment } from "./remoteStorage";
 
@@ -95,31 +96,33 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
                 : "Hay cosas para arreglar. Tocá el botón de cada una."}
             </Text>
           </View>
-          {resultado.items.map((item) => (
-            <View key={item.id} style={s.item}>
-              <View style={[s.marca, { borderColor: borde(item.estado), backgroundColor: fondo(item.estado) }]}>
-                <Text style={[s.marcaTexto, { color: color(item.estado) }]}>{MARCA[item.estado]}</Text>
+          <Plegable key={resultado.porcentaje >= 100 ? "detalle-ok" : "detalle-falta"} titulo="Ver el detalle" paleta={P} abiertoInicial={resultado.porcentaje < 100}>
+            {resultado.items.map((item) => (
+              <View key={item.id} style={s.item}>
+                <View style={[s.marca, { borderColor: borde(item.estado), backgroundColor: fondo(item.estado) }]}>
+                  <Text style={[s.marcaTexto, { color: color(item.estado) }]}>{MARCA[item.estado]}</Text>
+                </View>
+                <View style={s.itemCuerpo}>
+                  <Text style={s.itemTitulo}>{item.titulo}</Text>
+                  <Text style={s.itemDetalle}>{item.detalle}</Text>
+                  {item.estado !== "ok" && item.arreglo ? (
+                    <Pressable accessibilityRole="button" onPress={() => arreglar(item.arreglo as Arreglo)} style={[botones.secundario, s.arreglo]}>
+                      <Text style={botones.secundarioTexto}>{TEXTO_ARREGLO[item.arreglo]}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
-              <View style={s.itemCuerpo}>
-                <Text style={s.itemTitulo}>{item.titulo}</Text>
-                <Text style={s.itemDetalle}>{item.detalle}</Text>
-                {item.estado !== "ok" && item.arreglo ? (
-                  <Pressable accessibilityRole="button" onPress={() => arreglar(item.arreglo as Arreglo)} style={[botones.secundario, s.arreglo]}>
-                    <Text style={botones.secundarioTexto}>{TEXTO_ARREGLO[item.arreglo]}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ))}
-          {resultado.notas.map((nota) => (
-            <Text key={nota} style={[botones.ayuda, s.nota]}>
-              {nota}
+            ))}
+            {resultado.notas.map((nota) => (
+              <Text key={nota} style={[botones.ayuda, s.nota]}>
+                {nota}
+              </Text>
+            ))}
+            <Text style={[botones.ayuda, s.nota]}>
+              Revisado a las {dosDigitos(resultado.revisadoEn.getHours())}:{dosDigitos(resultado.revisadoEn.getMinutes())}. Esta revisión mira lo que el teléfono permite
+              mirar: igual conviene probar el SOS de vez en cuando.
             </Text>
-          ))}
-          <Text style={[botones.ayuda, s.nota]}>
-            Revisado a las {dosDigitos(resultado.revisadoEn.getHours())}:{dosDigitos(resultado.revisadoEn.getMinutes())}. Esta revisión mira lo que el teléfono permite
-            mirar: igual conviene probar el SOS de vez en cuando.
-          </Text>
+          </Plegable>
         </>
       ) : (
         <Text style={botones.ayuda}>
