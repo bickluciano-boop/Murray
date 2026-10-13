@@ -149,9 +149,13 @@ function notas(): string[] {
   if (Platform.OS === "ios") {
     return [
       "Esto la app no lo puede revisar: en Ajustes › Concentración, en cada modo que uses (No molestar, Trabajo, Dormir…), permití las notificaciones de Ojo Guard. Si no, el SOS puede llegar mudo.",
+      "Tampoco puede ver el interruptor de silencio (el botón de al costado del iPhone). Con el teléfono en silencio, el SOS aparece en pantalla pero no suena: revisá que no esté silenciado.",
     ];
   }
-  return ["Después de actualizar la app o de reiniciar el teléfono, volvé a revisar: Android a veces apaga solo los servicios de Accesibilidad."];
+  return [
+    "La sirena del SOS sale por el volumen de alarma: revisá en Ajustes › Sonido que no esté en cero.",
+    "Después de actualizar la app o de reiniciar el teléfono, volvé a revisar: Android a veces apaga solo los servicios de Accesibilidad.",
+  ];
 }
 
 /** Hace todas las comprobaciones y arma el resultado. No lanza errores: lo que no se pudo comprobar queda como «revisar». */
