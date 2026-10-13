@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, AppState, Easing, Platform, Pressable, Share, StyleSheet, Text, Vibration, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 
-import { isSosGestureEnabled, openSosAccessibilitySettings, openSosAppInfo, sosGestureAvailable } from "../modules/sos-trigger";
+import { isSosGestureEnabled, openSosAccessibilitySettings, openSosAppInfo, openSosChannelSettings, sosGestureAvailable } from "../modules/sos-trigger";
 import { markPendingSystemActivity } from "./pendingSystemActivity";
 import type { NativeEnrollment } from "./remoteStorage";
 import { cancelSos, fetchMySos, sendSos, SosError, type SosEstado } from "./sos";
@@ -211,6 +211,19 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
               </Text>
             </>
           )}
+          <Text style={[botones.ayuda, s.ayuda]}>
+            Los SOS de tu familia te llegan con una sirena. Si tu teléfono está en No interrumpir y no suena, abrí esta pantalla y activá «Anular No interrumpir».
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              markPendingSystemActivity();
+              openSosChannelSettings();
+            }}
+            style={[botones.secundario, s.espacio]}
+          >
+            <Text style={botones.secundarioTexto}>Que la sirena suene con No interrumpir</Text>
+          </Pressable>
         </View>
       ) : null}
 

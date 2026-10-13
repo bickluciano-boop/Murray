@@ -36,6 +36,22 @@ class SosTriggerModule : Module() {
       }
     }
 
+    // Abre la pantalla del canal "SOS de la familia": ahi se ve la sirena y se activa "Anular No interrumpir".
+    Function("openSosChannelSettings") {
+      val context = appContext.reactContext ?: return@Function "no_context"
+      try {
+        val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+          putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+          putExtra(Settings.EXTRA_CHANNEL_ID, "ojo-sos")
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        "ok"
+      } catch (error: Exception) {
+        "error:${error.javaClass.simpleName}:${error.message}"
+      }
+    }
+
     // En Android 13+ una app instalada fuera de Play Store tiene los servicios de accesibilidad bloqueados hasta que el
     // dueño toque "Permitir configuracion restringida" en la informacion de la app.
     Function("openAppInfo") {

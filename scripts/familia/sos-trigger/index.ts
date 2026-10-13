@@ -4,6 +4,7 @@ type SosTriggerNativeModule = {
   isEnabled(): boolean;
   openAccessibilitySettings(): string;
   openAppInfo(): string;
+  openSosChannelSettings(): string;
 };
 
 function loadNativeModule(): SosTriggerNativeModule | null {
@@ -41,6 +42,15 @@ export function isSosGestureEnabled(): boolean {
 export function openSosAccessibilitySettings(): string {
   try {
     return nativeModule()?.openAccessibilitySettings() ?? "sin_modulo";
+  } catch (error) {
+    return `error:${String(error)}`;
+  }
+}
+
+/** Abre la pantalla del canal "SOS de la familia" (sirena y "Anular No interrumpir"). */
+export function openSosChannelSettings(): string {
+  try {
+    return nativeModule()?.openSosChannelSettings() ?? "sin_modulo";
   } catch (error) {
     return `error:${String(error)}`;
   }

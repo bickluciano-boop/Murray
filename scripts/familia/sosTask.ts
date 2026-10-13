@@ -30,6 +30,29 @@ const CLAVE_ENLACE = "ojo-guard-sos-link-key-v1";
 let enCurso = false;
 let ultimo = 0;
 
+// Android: el canal por el que llegan los SOS de la familia. Siempre suena con la sirena de Ojo Guard (la misma del
+// "Hacer sonar", ya incluida en la app) y con volumen de alarma, y pide atravesar "No interrumpir". Si el sistema no
+// deja pedirlo por programa, en Configuración > Familia hay un botón que abre esta pantalla para activarlo a mano.
+// Se crea al cargar el módulo (también en un arranque headless) y el servidor manda los SOS con este mismo id.
+export const SOS_CHANNEL = "ojo-sos";
+if (Platform.OS === "android") {
+  void Notifications.setNotificationChannelAsync(SOS_CHANNEL, {
+    name: "SOS de la familia",
+    description: "Pedidos de ayuda de tu familia. Suenan con sirena aunque el teléfono esté en silencio o en No interrumpir.",
+    importance: Notifications.AndroidImportance.MAX,
+    sound: "ojo_sirena.wav",
+    vibrationPattern: [0, 700, 250, 700, 250, 1200],
+    enableVibrate: true,
+    bypassDnd: true,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    audioAttributes: {
+      usage: Notifications.AndroidAudioUsage.ALARM,
+      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      flags: { enforceAudibility: true, requestHardwareAudioVideoSynchronization: false },
+    },
+  }).catch(() => undefined);
+}
+
 const pausa = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 async function avisar(titulo: string, texto: string) {
