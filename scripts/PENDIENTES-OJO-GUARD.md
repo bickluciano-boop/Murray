@@ -123,6 +123,11 @@ Actualizado: 12/10/2026.
   `ojo-sos`, `probarSirena` en `sosTask.ts`). Salió de que el 13/10 los avisos
   no sonaban en el Android porque tenía unos auriculares Bluetooth (PLT_Legend)
   conectados: al apagar el Bluetooth sonó el aviso de prueba.
+- [ ] **Texto del botón "Que la sirena suene con No interrumpir"** (13/10/2026,
+  Lu creyó que hacía sonar la sirena; solo abre los ajustes del canal): en
+  `SosBlock.tsx` cambiarlo por "Abrir los ajustes de la sirena" y aclarar que la
+  prueba de sonido es "Probar la sirena" del Dr. Ojo Guard. Para la próxima
+  actualización de la app.
 - [x] **SOS: tocar el aviso lleva al mapa + Configuración como acordeón**
   (13/10/2026, aplicado: panel publicado con `aplicar-sos-mapa-panel.ps1` y app
   con `aplicar-sos-mapa-configuracion-app.ps1`; builds de Android y iPhone
