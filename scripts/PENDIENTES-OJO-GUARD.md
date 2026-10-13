@@ -26,7 +26,9 @@ Actualizado: 12/10/2026.
   `ver-registro-avisos.ps1` son de diagnóstico: se pueden borrar cuando el
   aviso ande. Aparte: el cron de 15 min sigue creando pedidos `auto-locate`
   para el iPhone y nunca se ejecutan (hay más de 300 vencidos en `pending`):
-  conviene no crearlos para iPhone y marcar los vencidos.
+  arreglado el 13/10/2026 con `aplicar-limpieza-pedidos-automaticos.ps1` (el
+  cron ya no les crea pedidos a los iPhone y borra los vencidos sin ejecutar de
+  más de un día y los automáticos de más de una semana).
 - [x] **Panel: nombre de cada teléfono con su marca** (12/10/2026): en el
   mapa y la tarjeta dice "Mi teléfono · Android", "Notebook LB · Windows"; en
   la lista lateral va como etiqueta chica (ANDROID, IPHONE, WINDOWS) para que
