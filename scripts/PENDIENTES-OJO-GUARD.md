@@ -97,15 +97,17 @@ Actualizado: 12/10/2026.
   min no, para no sonar diez veces por apretar de más) y el viejo pasa a estado
   `reemplazado` para que el mapa no muestre dos carteles. Probado con base de
   mentira (4 min repite sin avisar, 6 min avisa de nuevo, queda un solo cartel).
-  Falta correrlo. (2) iPhone: con el interruptor lateral de
+  **Aplicado y publicado el 13/10/2026.** (2) iPhone: con el interruptor lateral de
   silencio puesto, el aviso urgente (Time Sensitive) pasa No molestar y se ve,
   pero no suena; lo único que atraviesa el interruptor son las Critical Alerts
   (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena sale por
   el volumen de alarma. "Revisar mi protección" ya trae la nota del
   interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
   de alarma en Android.
-- [ ] **Revisar mi protección** (13/10/2026, escrito y probado en mock, sin
-  aplicar todavía; idea de Lu: que la persona vea qué le falta y sea suya la
+- [ ] **Revisar mi protección** (13/10/2026, aplicado en la carpeta de la app
+  y compila; falta correr `actualizar-proteccion-notas-app.ps1` (las dos notas
+  del final) y hacer la build de Android; el iPhone la recibe en su próxima
+  build. Antes estaba escrito y probado en mock; idea de Lu: que la persona vea qué le falta y sea suya la
   responsabilidad si no revisó). `aplicar-familia-proteccion-app.ps1` (solo
   app, después de `aplicar-familia-sos-mejoras-app.ps1`; necesita build de
   Android por el código nativo, el iPhone la recibe en su próxima build). Botón
