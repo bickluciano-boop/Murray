@@ -66,6 +66,14 @@ Actualizado: 12/10/2026.
   `interruptionLevel: "time-sensitive"` en el push y el permiso
   `com.apple.developer.usernotifications.time-sensitive` en la build de
   iPhone) o, mejor, Critical Alerts (pendiente de Apple, ID 7R4MM73U2Y).
+  **Arreglos armados el 13/10/2026** (`aplicar-familia-sos-mejoras-app.ps1` y
+  `aplicar-sos-sirena-panel.ps1`; falta aplicar, build y probar): bloque SOS
+  también para el titular; canal Android `ojo-sos` con la sirena
+  (`ojo_sirena.wav`), volumen de alarma y `bypassDnd` + botón que abre esa
+  pantalla; SOS al iPhone como aviso urgente (`interruptionLevel:
+  "time-sensitive"` + permiso en `app.json`; si la build de iPhone falla por
+  credenciales, sacar ese permiso). El script del panel se corre DESPUÉS de
+  instalar la app nueva en el Android (el canal se crea al abrirla).
   Lo de Play Protect: la app con el servicio de accesibilidad se bloquea al
   instalar por APK; se instaló apagando un momento Play Protect (en Play
   Store habría que justificar la accesibilidad o cambiar el gesto por un botón
