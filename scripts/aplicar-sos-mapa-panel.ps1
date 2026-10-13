@@ -1,7 +1,7 @@
 ﻿# aplicar-sos-mapa-panel.ps1 - SOS de Familia, mejora del servidor: el aviso del SOS lleva datos (quien es y donde esta) para que, al
 # tocarlo, la app abra el mapa del telefono con su ubicacion. Hace falta ademas la app nueva (build); con la app vieja el aviso
 # se ve igual que antes y al tocarlo solo se abre la app.
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\index.ts. Respaldo .bak-mapa. No cambia la base de datos.
+# Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\index.ts. Respaldo .bak-sosmapa. No cambia la base de datos.
 # Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
@@ -66,14 +66,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-mapa")) { Mal ("Ya existe " + $t + ".bak-mapa. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-sosmapa")) { Mal ("Ya existe " + $t + ".bak-sosmapa. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-mapa"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-sosmapa"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-mapa): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-sosmapa): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -106,7 +106,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-mapa") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-sosmapa") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."
