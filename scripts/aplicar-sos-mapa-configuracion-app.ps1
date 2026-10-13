@@ -91,10 +91,10 @@ function Field({ label, ...inputProps }: FieldProps) {
       title="Familia y amigos"')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/ff9c95852976cc10edb2e742901ce2464389d2a6/scripts/familia/Plegable.tsx", "src\Plegable.tsx", "5c61329eaabc09991704a22c30b4997c5e7d059d2aebdd18a43f60b99ce2910f"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/ff9c95852976cc10edb2e742901ce2464389d2a6/scripts/familia/sosMapa.ts", "src\sosMapa.ts", "bfee75b99ebb5a2c62a6845ded6b777f11897dbff05aebbf6fc8c2bce737969d"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/ff9c95852976cc10edb2e742901ce2464389d2a6/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "16bf39ba21ea9e116f61007100e16cd9f393e23cbd7c908a698ad2675fe1c775"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/ff9c95852976cc10edb2e742901ce2464389d2a6/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "f2aad5a1cdbeb28964806647a37e391d83b6a7b97ecc5945ed8e114afc6752b9")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/eb85f96a2614c04201d42432899891743e8be163/scripts/familia/Plegable.tsx", "src\Plegable.tsx", "5c61329eaabc09991704a22c30b4997c5e7d059d2aebdd18a43f60b99ce2910f"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/eb85f96a2614c04201d42432899891743e8be163/scripts/familia/sosMapa.ts", "src\sosMapa.ts", "bfee75b99ebb5a2c62a6845ded6b777f11897dbff05aebbf6fc8c2bce737969d"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/eb85f96a2614c04201d42432899891743e8be163/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "16bf39ba21ea9e116f61007100e16cd9f393e23cbd7c908a698ad2675fe1c775"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/eb85f96a2614c04201d42432899891743e8be163/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "b0e03e399b3d7fb965a44c88049da42e66bed791d7fbc5ac4fb5285e4a8af2b1")
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---

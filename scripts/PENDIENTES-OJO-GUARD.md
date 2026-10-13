@@ -119,7 +119,8 @@ Actualizado: 12/10/2026.
   Apple Maps en iPhone / Google Maps en Android con la ubicación más nueva de
   la persona al tocar el aviso (app abierta, en segundo plano o cerrada, sin
   repetirse); `Plegable.tsx` pliega las instrucciones del SOS y el detalle de
-  "Mi protección" (sale abierto solo si algo falla); arregla el texto cortado
+  "Mi protección" (sale abierto solo si algo falla) y "Mi protección" mismo es un
+  título que se despliega, con el botón rojo SOS siempre a la vista; arregla el texto cortado
   del botón rojo; y Configuración pasa a acordeón en `App.tsx`
   (`CollapsibleSection` con `useSeccionAbierta`: todo cerrado, abrir una cierra
   las otras, solo la primera con `defaultOpen` arranca abierta, la guía de
