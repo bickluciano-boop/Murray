@@ -24,6 +24,19 @@ class SosAccessibilityService : AccessibilityService() {
     SosTrigger.start(applicationContext, "volumen")
   }
 
+  // Android deja "prendido" el interruptor aunque el servicio se haya caido o no se haya vuelto a enganchar (por ejemplo
+  // despues de actualizar la app). `conectado` dice si de verdad esta recibiendo los botones: la app lo muestra en
+  // "Revisar mi protección".
+  override fun onServiceConnected() {
+    super.onServiceConnected()
+    conectado = true
+  }
+
+  override fun onDestroy() {
+    conectado = false
+    super.onDestroy()
+  }
+
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
     // No se usa: el servicio solo existe para recibir los botones de volumen.
   }
@@ -55,6 +68,7 @@ class SosAccessibilityService : AccessibilityService() {
 
   override fun onUnbind(intent: android.content.Intent?): Boolean {
     cancelar()
+    conectado = false
     return super.onUnbind(intent)
   }
 
@@ -67,5 +81,8 @@ class SosAccessibilityService : AccessibilityService() {
 
   companion object {
     const val MANTENER_MS = 3000L
+
+    @Volatile
+    var conectado: Boolean = false
   }
 }

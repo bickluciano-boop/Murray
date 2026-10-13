@@ -24,6 +24,11 @@ class SosTriggerModule : Module() {
       activados.split(':').any { it.equals(largo, ignoreCase = true) || it.equals(corto, ignoreCase = true) }
     }
 
+    // ¿El servicio esta realmente conectado y recibiendo los botones? (distinto de "esta prendido el interruptor")
+    Function("isRunning") {
+      SosAccessibilityService.conectado
+    }
+
     // Devuelve "ok" o "error:<Excepcion>:<mensaje>", como requestDeviceAdmin en theft-detection.
     Function("openAccessibilitySettings") {
       val context = appContext.reactContext ?: return@Function "no_context"

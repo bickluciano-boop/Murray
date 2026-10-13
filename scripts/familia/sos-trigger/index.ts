@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 
 type SosTriggerNativeModule = {
   isEnabled(): boolean;
+  isRunning?: () => boolean;
   openAccessibilitySettings(): string;
   openAppInfo(): string;
   openSosChannelSettings(): string;
@@ -35,6 +36,20 @@ export function isSosGestureEnabled(): boolean {
     return Boolean(nativeModule()?.isEnabled());
   } catch {
     return false;
+  }
+}
+
+/**
+ * ¿El servicio está de verdad conectado y recibiendo los botones? Android puede dejar el interruptor "prendido" con el
+ * servicio caído. Devuelve `null` si no se puede saber (build vieja sin esta función): no es lo mismo que "caído".
+ */
+export function isSosGestureRunning(): boolean | null {
+  const modulo = nativeModule();
+  if (!modulo || typeof modulo.isRunning !== "function") return null;
+  try {
+    return Boolean(modulo.isRunning());
+  } catch {
+    return null;
   }
 }
 

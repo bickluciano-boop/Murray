@@ -1,8 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert, AppRegistry, AppState, Linking, Platform } from "react-native";
 import * as Crypto from "expo-crypto";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 
+import { isSosGestureEnabled, isSosGestureRunning, sosGestureAvailable } from "../modules/sos-trigger";
 import { loadNativeEnrollment } from "./remoteStorage";
 import { sendSos, SosError } from "./sos";
 
@@ -26,6 +28,11 @@ const REINTENTOS = 3;
 const ESPERA_REINTENTO_MS = 3_000;
 const CANAL = "ojo-alertas";
 const CLAVE_ENLACE = "ojo-guard-sos-link-key-v1";
+const CLAVE_USO_ATAJO = "ojo-guard-sos-atajo-uso-v1";
+const CLAVE_AVISO_GESTO = "ojo-guard-sos-gesto-aviso-v1";
+const AVISO_GESTO_CADA_MS = 12 * 3_600_000;
+const GESTO_INTENTOS = 3;
+const GESTO_ESPERA_MS = 3_000;
 
 let enCurso = false;
 let ultimo = 0;
@@ -128,6 +135,56 @@ export async function triggerSos() {
   }
 }
 
+/** Cuándo se abrió por última vez el enlace del atajo de iPhone (ISO), o null si nunca. Lo usa "Revisar mi protección". */
+export async function ultimoUsoDelAtajo() {
+  return AsyncStorage.getItem(CLAVE_USO_ATAJO).catch(() => null);
+}
+
+/**
+ * Android: avisa si el gesto de volumen figura prendido en Accesibilidad pero el servicio no está funcionando (pasa a veces
+ * después de actualizar la app o por el ahorro de batería: el interruptor sigue en "Activado" y no hace nada). Sin aviso,
+ * la persona se entera cuando lo necesita. Se mira al abrir la app, al volver al frente y con el trabajo periódico de
+ * fondo; el servicio puede tardar unos segundos en engancharse, por eso mira varias veces antes de avisar. Como mucho un
+ * aviso cada 12 horas. Si el interruptor está apagado a propósito no dice nada.
+ */
+export async function vigilarGesto() {
+  if (Platform.OS !== "android" || !sosGestureAvailable() || !isSosGestureEnabled()) return;
+  for (let intento = 0; intento < GESTO_INTENTOS; intento += 1) {
+    const funcionando = isSosGestureRunning();
+    // null: esta build no sabe decirlo, no se puede acusar al servicio.
+    if (funcionando === null) return;
+    if (funcionando) {
+      await AsyncStorage.removeItem(CLAVE_AVISO_GESTO).catch(() => undefined);
+      await Notifications.dismissNotificationAsync("ojo-guard-sos-gesto").catch(() => undefined);
+      return;
+    }
+    if (intento < GESTO_INTENTOS - 1) await pausa(GESTO_ESPERA_MS);
+  }
+  const ultimoAviso = Number(await AsyncStorage.getItem(CLAVE_AVISO_GESTO).catch(() => null)) || 0;
+  if (Date.now() - ultimoAviso < AVISO_GESTO_CADA_MS) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: "ojo-guard-sos-gesto",
+      content: {
+        title: "El gesto de volumen del SOS no está funcionando",
+        body: "Android lo muestra activado pero no responde. Apagalo y volvelo a prender en Accesibilidad, o tocá «Revisar mi protección» en Ojo Guard.",
+        sound: "default",
+      },
+      trigger: { channelId: CANAL },
+    });
+    await AsyncStorage.setItem(CLAVE_AVISO_GESTO, String(Date.now())).catch(() => undefined);
+  } catch {
+    // Sin permiso de notificaciones no hay cómo avisar: "Revisar mi protección" lo muestra igual.
+  }
+}
+
+if (Platform.OS === "android") {
+  if (AppState.currentState === "active") void vigilarGesto();
+  AppState.addEventListener("change", (estado) => {
+    if (estado === "active") void vigilarGesto();
+  });
+}
+
 // Android: la tarea que arranca el servicio nativo (SosTaskService.kt). El nombre tiene que coincidir exactamente.
 if (Platform.OS === "android") {
   AppRegistry.registerHeadlessTask("OjoGuardSosTask", () => async () => {
@@ -148,6 +205,7 @@ async function alAbrirEnlace(url: string | null | undefined) {
     Alert.alert("Enlace de SOS no válido", "Abrí Ojo Guard, andá a Configuración > Familia y copiá de nuevo el enlace del SOS.");
     return;
   }
+  await AsyncStorage.setItem(CLAVE_USO_ATAJO, new Date().toISOString()).catch(() => undefined);
   void triggerSos();
 }
 
