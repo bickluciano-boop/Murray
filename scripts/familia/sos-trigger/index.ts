@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 type SosTriggerNativeModule = {
   isEnabled(): boolean;
   isRunning?: () => boolean;
+  bluetoothAudio?: () => string | null;
   openAccessibilitySettings(): string;
   openAppInfo(): string;
   openSosChannelSettings(): string;
@@ -48,6 +49,21 @@ export function isSosGestureRunning(): boolean | null {
   if (!modulo || typeof modulo.isRunning !== "function") return null;
   try {
     return Boolean(modulo.isRunning());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nombre del audio Bluetooth (auriculares, parlante) conectado ahora; "" si no hay ninguno; `null` si no se puede saber (iPhone o una
+ * build vieja). Con uno conectado, Android puede mandar la sirena del SOS ahí y no al teléfono.
+ */
+export function bluetoothAudioConectado(): string | null {
+  const modulo = nativeModule();
+  if (!modulo || typeof modulo.bluetoothAudio !== "function") return null;
+  try {
+    const nombre = modulo.bluetoothAudio();
+    return typeof nombre === "string" ? nombre : null;
   } catch {
     return null;
   }

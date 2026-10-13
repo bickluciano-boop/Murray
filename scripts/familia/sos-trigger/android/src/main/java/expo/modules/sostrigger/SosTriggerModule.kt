@@ -1,7 +1,9 @@
 package expo.modules.sostrigger
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.net.Uri
 import android.provider.Settings
 import expo.modules.kotlin.modules.Module
@@ -27,6 +29,26 @@ class SosTriggerModule : Module() {
     // ¿El servicio esta realmente conectado y recibiendo los botones? (distinto de "esta prendido el interruptor")
     Function("isRunning") {
       SosAccessibilityService.conectado
+    }
+
+    // Nombre del audio Bluetooth (auriculares, parlante, audifono) conectado ahora, "" si no hay ninguno, null si no se puede saber.
+    // Con uno conectado, Android puede mandar los sonidos de los avisos ahi y no al telefono: la sirena del SOS no se oiria. No pide
+    // permiso de Bluetooth. Tipos de AudioDeviceInfo: 7 BLUETOOTH_SCO, 8 BLUETOOTH_A2DP, 23 HEARING_AID, 26 BLE_HEADSET, 27 BLE_SPEAKER.
+    Function("bluetoothAudio") {
+      val context = appContext.reactContext ?: return@Function null
+      try {
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return@Function null
+        val tipos = setOf(7, 8, 23, 26, 27)
+        val conectado = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type in tipos }
+        if (conectado == null) {
+          ""
+        } else {
+          val nombre = conectado.productName?.toString()?.trim().orEmpty()
+          if (nombre.isEmpty()) "Bluetooth" else nombre
+        }
+      } catch (error: Exception) {
+        null
+      }
     }
 
     // Devuelve "ok" o "error:<Excepcion>:<mensaje>", como requestDeviceAdmin en theft-detection.

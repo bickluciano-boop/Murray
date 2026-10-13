@@ -3,13 +3,13 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { readBatteryUnrestricted } from "../modules/exact-alarm";
-import { isSosGestureEnabled, isSosGestureRunning, sosGestureAvailable } from "../modules/sos-trigger";
+import { bluetoothAudioConectado, isSosGestureEnabled, isSosGestureRunning, sosGestureAvailable } from "../modules/sos-trigger";
 import type { NativeEnrollment } from "./remoteStorage";
 import { fetchMySos, SosError } from "./sos";
 import { SOS_CHANNEL, ultimoUsoDelAtajo } from "./sosTask";
 
 /**
- * "Revisar mi protección": mira, con lo que el teléfono deja mirar, si el SOS y los avisos de la familia están listos, y le
+ * "Dr. Ojo Guard" (el chequeo del teléfono): mira, con lo que el teléfono deja mirar, si el SOS y los avisos de la familia están listos, y le
  * dice a la persona qué tiene que tocar si falta algo. Da un porcentaje: 100 % es "no encuentro nada que arreglar".
  *
  * Lo que no se puede revisar desde la app (por ejemplo que el modo Concentración del iPhone deje pasar a Ojo Guard) queda
@@ -24,7 +24,7 @@ import { SOS_CHANNEL, ultimoUsoDelAtajo } from "./sosTask";
 export type EstadoItem = "ok" | "revisar" | "falta";
 
 /** Qué botón ofrece cada item para arreglarlo (la pantalla del sistema que corresponde). */
-export type Arreglo = "ajustes" | "gesto" | "canal" | "bateria";
+export type Arreglo = "ajustes" | "gesto" | "canal" | "bateria" | "bluetooth";
 
 export type ItemProteccion = {
   id: string;
@@ -70,7 +70,7 @@ async function itemServidor(enrollment: NativeEnrollment): Promise<ItemProteccio
     if (error instanceof SosError && error.code === "unauthorized") {
       return { ...base, estado: "falta", peso: 2, detalle: "Este teléfono ya no está vinculado con Ojo Guard MS. Hay que vincularlo de nuevo desde el panel." };
     }
-    return { ...base, estado: "revisar", detalle: "No pude hablar con el servidor ahora. Revisá que tengas internet y volvé a revisar." };
+    return { ...base, estado: "revisar", detalle: "No pude hablar con el servidor ahora. Revisá que tengas internet y volvé a hacer el chequeo." };
   }
 }
 
@@ -113,7 +113,7 @@ async function itemSirena(): Promise<ItemProteccion | null> {
   const base = { id: "sirena", titulo: "Sirena del SOS", peso: 1, arreglo: "canal" as const };
   const canal = await Notifications.getNotificationChannelAsync(SOS_CHANNEL).catch(() => null);
   if (!canal) {
-    return { ...base, estado: "revisar", detalle: "El canal de la sirena todavía no se creó. Abrí Ojo Guard una vez y volvé a revisar." };
+    return { ...base, estado: "revisar", detalle: "El canal de la sirena todavía no se creó. Abrí Ojo Guard una vez y volvé a hacer el chequeo." };
   }
   if (canal.importance < IMPORTANCIA_ALTA || !canal.sound) {
     return { ...base, estado: "falta", detalle: "Silenciaste el canal «SOS de la familia»: un SOS llegaría sin sonido. Subí la importancia y dejá el sonido activado." };
@@ -122,6 +122,22 @@ async function itemSirena(): Promise<ItemProteccion | null> {
     return { ...base, estado: "revisar", detalle: "Si el teléfono está en No interrumpir, la sirena no suena. Activá «Anular No interrumpir» en este canal." };
   }
   return { ...base, estado: "ok", detalle: "Suena con sirena y atraviesa No interrumpir." };
+}
+
+function itemBluetooth(): ItemProteccion | null {
+  if (Platform.OS !== "android") return null;
+  const nombre = bluetoothAudioConectado();
+  // null: esta versión no sabe decirlo. No es lo mismo que "no hay": mejor no mostrar nada.
+  if (nombre === null) return null;
+  const base = { id: "bluetooth", titulo: "Auriculares Bluetooth", peso: 2, arreglo: "bluetooth" as const };
+  if (nombre) {
+    return {
+      ...base,
+      estado: "revisar",
+      detalle: `Tenés «${nombre}» conectado por Bluetooth: Android puede mandar la sirena del SOS ahí y que en el teléfono no se oiga nada. Desconectalo para que suene en el teléfono.`,
+    };
+  }
+  return { ...base, estado: "ok", detalle: "No hay auriculares ni parlantes Bluetooth conectados: la sirena suena en el teléfono." };
 }
 
 function itemBateria(): ItemProteccion | null {
@@ -154,7 +170,7 @@ function notas(): string[] {
   }
   return [
     "La sirena del SOS sale por el volumen de alarma: revisá en Ajustes › Sonido que no esté en cero.",
-    "Después de actualizar la app o de reiniciar el teléfono, volvé a revisar: Android a veces apaga solo los servicios de Accesibilidad.",
+    "Después de actualizar la app o de reiniciar el teléfono, volvé a hacer el chequeo: Android a veces apaga solo los servicios de Accesibilidad.",
   ];
 }
 
@@ -167,6 +183,6 @@ export async function revisarProteccion(enrollment: NativeEnrollment): Promise<R
     itemSirena(),
     itemAtajo(),
   ]);
-  const items = [servidor, avisos, ubicacion, itemGesto(), sirena, itemBateria(), atajo].filter((item): item is ItemProteccion => item !== null);
+  const items = [servidor, avisos, ubicacion, itemGesto(), sirena, itemBluetooth(), itemBateria(), atajo].filter((item): item is ItemProteccion => item !== null);
   return { items, porcentaje: puntuar(items), revisadoEn: new Date(), notas: notas() };
 }

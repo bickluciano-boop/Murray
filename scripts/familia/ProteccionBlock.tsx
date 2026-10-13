@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 
 import { openBatterySettings } from "../modules/exact-alarm";
 import { openSosAccessibilitySettings, openSosChannelSettings } from "../modules/sos-trigger";
@@ -7,12 +7,14 @@ import { markPendingSystemActivity } from "./pendingSystemActivity";
 import { Plegable } from "./Plegable";
 import { revisarProteccion, type Arreglo, type EstadoItem, type ResultadoProteccion } from "./proteccion";
 import type { NativeEnrollment } from "./remoteStorage";
+import { probarSirena } from "./sosTask";
 
 /**
- * "Mi protección" dentro de "Familia y amigos", justo arriba del SOS: un título que se despliega (cerrado, muestra el último
- * porcentaje) con el botón "Revisar mi protección". Mira qué está prendido y qué no (ver
- * proteccion.ts), muestra un porcentaje y, en cada cosa que falta, un botón que lleva a la pantalla del sistema donde se
- * arregla. Si la persona vuelve de Ajustes, se revisa sola de nuevo para que el porcentaje suba al momento.
+ * "Dr. Ojo Guard" dentro de "Familia y amigos", justo arriba del SOS: un título que se despliega (cerrado, muestra el último
+ * porcentaje) con el botón "Hacer chequeo". Mira qué está prendido y qué no (ver proteccion.ts), muestra un porcentaje y, en cada
+ * cosa que falta, un botón que lleva a la pantalla del sistema donde se arregla. Si la persona vuelve de Ajustes, se chequea sola
+ * de nuevo para que el porcentaje suba al momento. En Android además tiene "Probar la sirena": hace sonar una alarma de prueba por
+ * el mismo canal del SOS, para comprobar de verdad que se oye.
  */
 
 type Paleta = { [clave: string]: string };
@@ -33,6 +35,7 @@ const TEXTO_ARREGLO: Record<Arreglo, string> = {
   gesto: "Abrir Accesibilidad",
   canal: "Abrir el canal de la sirena",
   bateria: "Abrir la batería",
+  bluetooth: "Abrir el Bluetooth",
 };
 
 const MARCA: Record<EstadoItem, string> = { ok: "✓", revisar: "!", falta: "✕" };
@@ -44,6 +47,7 @@ function dosDigitos(n: number) {
 export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Props) {
   const [resultado, setResultado] = useState<ResultadoProteccion | null>(null);
   const [revisando, setRevisando] = useState(false);
+  const [avisoSirena, setAvisoSirena] = useState("");
   const yaRevisado = useRef(false);
 
   const revisar = useCallback(async () => {
@@ -71,7 +75,12 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
     if (arreglo === "gesto") openSosAccessibilitySettings();
     else if (arreglo === "canal") openSosChannelSettings();
     else if (arreglo === "bateria") openBatterySettings();
+    else if (arreglo === "bluetooth") void Linking.sendIntent("android.settings.BLUETOOTH_SETTINGS").catch(() => Linking.openSettings());
     else void Linking.openSettings();
+  }
+
+  async function sirena() {
+    setAvisoSirena((await probarSirena()) ? "Mandé una alarma de prueba. Si no la oís, revisá el volumen de alarma y que no tengas auriculares Bluetooth conectados." : "No pude mandar la prueba. Revisá que las notificaciones estén permitidas.");
   }
 
   if (!visible || !enrollment) return null;
@@ -82,7 +91,7 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
   const general: EstadoItem = !resultado ? "ok" : resultado.porcentaje >= 100 ? "ok" : resultado.porcentaje >= 60 ? "revisar" : "falta";
 
   return (
-    <Plegable titulo={resultado ? `Mi protección · ${resultado.porcentaje} %` : "Mi protección"} paleta={P}>
+    <Plegable titulo={resultado ? `Dr. Ojo Guard · ${resultado.porcentaje} %` : "Dr. Ojo Guard"} paleta={P}>
       {resultado ? (
         <>
           <View style={[s.resumen, { borderColor: borde(general), backgroundColor: fondo(general) }]}>
@@ -119,19 +128,27 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
               </Text>
             ))}
             <Text style={[botones.ayuda, s.nota]}>
-              Revisado a las {dosDigitos(resultado.revisadoEn.getHours())}:{dosDigitos(resultado.revisadoEn.getMinutes())}. Esta revisión mira lo que el teléfono permite
+              Chequeo hecho a las {dosDigitos(resultado.revisadoEn.getHours())}:{dosDigitos(resultado.revisadoEn.getMinutes())}. Este chequeo mira lo que el teléfono permite
               mirar: igual conviene probar el SOS de vez en cuando.
             </Text>
           </Plegable>
         </>
       ) : (
         <Text style={botones.ayuda}>
-          Revisa que el SOS, los avisos y la ubicación estén listos en este teléfono. Si algo falla, te dice qué tocar.
+          El Dr. Ojo Guard revisa que el SOS, los avisos y la ubicación estén listos en este teléfono. Si algo falla, te dice qué tocar.
         </Text>
       )}
       <Pressable accessibilityRole="button" disabled={revisando} onPress={() => void revisar()} style={[botones.secundario, s.espacio, revisando && s.apagado]}>
-        {revisando ? <ActivityIndicator color={P.texto} /> : <Text style={botones.secundarioTexto}>{resultado ? "Volver a revisar" : "Revisar mi protección"}</Text>}
+        {revisando ? <ActivityIndicator color={P.texto} /> : <Text style={botones.secundarioTexto}>{resultado ? "Volver a hacer el chequeo" : "Hacer chequeo"}</Text>}
       </Pressable>
+      {Platform.OS === "android" ? (
+        <>
+          <Pressable accessibilityRole="button" onPress={() => void sirena()} style={botones.secundario}>
+            <Text style={botones.secundarioTexto}>Probar la sirena</Text>
+          </Pressable>
+          {avisoSirena ? <Text style={botones.ayuda}>{avisoSirena}</Text> : null}
+        </>
+      ) : null}
     </Plegable>
   );
 }

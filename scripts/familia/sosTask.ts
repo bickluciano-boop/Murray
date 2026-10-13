@@ -135,9 +135,27 @@ export async function triggerSos() {
   }
 }
 
-/** Cuándo se abrió por última vez el enlace del atajo de iPhone (ISO), o null si nunca. Lo usa "Revisar mi protección". */
+/** Cuándo se abrió por última vez el enlace del atajo de iPhone (ISO), o null si nunca. Lo usa el chequeo del Dr. Ojo Guard. */
 export async function ultimoUsoDelAtajo() {
   return AsyncStorage.getItem(CLAVE_USO_ATAJO).catch(() => null);
+}
+
+/**
+ * Android: hace sonar un aviso de prueba por el mismo canal que usa el SOS de la familia, para que la persona compruebe que se oye
+ * (volumen de alarma, No interrumpir, auriculares Bluetooth conectados). Devuelve false si no se pudo mandar el aviso.
+ */
+export async function probarSirena() {
+  if (Platform.OS !== "android") return false;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: "ojo-guard-sirena-prueba",
+      content: { title: "Prueba de la sirena", body: "Si estás oyendo la sirena, un SOS de tu familia va a sonar así." },
+      trigger: { channelId: SOS_CHANNEL },
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -167,14 +185,14 @@ export async function vigilarGesto() {
       identifier: "ojo-guard-sos-gesto",
       content: {
         title: "El gesto de volumen del SOS no está funcionando",
-        body: "Android lo muestra activado pero no responde. Apagalo y volvelo a prender en Accesibilidad, o tocá «Revisar mi protección» en Ojo Guard.",
+        body: "Android lo muestra activado pero no responde. Apagalo y volvelo a prender en Accesibilidad, o hacé el chequeo del Dr. Ojo Guard en Configuración > Familia.",
         sound: "default",
       },
       trigger: { channelId: CANAL },
     });
     await AsyncStorage.setItem(CLAVE_AVISO_GESTO, String(Date.now())).catch(() => undefined);
   } catch {
-    // Sin permiso de notificaciones no hay cómo avisar: "Revisar mi protección" lo muestra igual.
+    // Sin permiso de notificaciones no hay cómo avisar: el chequeo del Dr. Ojo Guard lo muestra igual.
   }
 }
 
