@@ -104,6 +104,10 @@ Actualizado: 12/10/2026.
   el volumen de alarma. "Revisar mi protección" ya trae la nota del
   interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
   de alarma en Android.
+- [ ] **Detalle visual del botón SOS** (13/10/2026, visto en la build 158 de
+  Android): el texto chico del botón rojo se corta en "Mantené apretado 3"
+  (falta "segundos"); en `SosBlock.tsx` el `botonSub` tiene que poder ocupar
+  todo el ancho y centrarse (`botonTextos`). Para la próxima build, sin apuro.
 - [ ] **Revisar mi protección** (13/10/2026, aplicado en la carpeta de la app
   y compila; falta correr `actualizar-proteccion-notas-app.ps1` (las dos notas
   del final) y hacer la build de Android; el iPhone la recibe en su próxima
