@@ -86,127 +86,65 @@ Actualizado: 12/10/2026.
   instalar por APK; se instaló apagando un momento Play Protect (en Play
   Store habría que justificar la accesibilidad o cambiar el gesto por un botón
   en la bandeja o un widget).
-- [ ] **SOS: dos límites encontrados el 13/10/2026** (hablado con Lu, sin
-  arreglar todavía). (1) Un SOS queda "activo" 3 horas en el servidor
-  (`SOS_ACTIVE_MS`) hasta que alguien toque "Estoy bien", y mientras tanto otro
-  SOS de la misma persona NO vuelve a avisar (solo renueva la ubicación en
-  vivo): por eso un día "no llegaba" al iPhone (había uno viejo sin cancelar).
-  **Arreglo escrito el 13/10/2026** (Lu dijo que sí):
-  `aplicar-sos-reaviso-panel.ps1` (solo panel, publica solo): pasados 5 minutos
-  del último aviso, un SOS nuevo vuelve a avisar con sirena (dentro de los 5
-  min no, para no sonar diez veces por apretar de más) y el viejo pasa a estado
-  `reemplazado` para que el mapa no muestre dos carteles. Probado con base de
-  mentira (4 min repite sin avisar, 6 min avisa de nuevo, queda un solo cartel).
-  **Aplicado y publicado el 13/10/2026.** (2) iPhone: con el interruptor lateral de
-  silencio puesto, el aviso urgente (Time Sensitive) pasa No molestar y se ve,
-  pero no suena; lo único que atraviesa el interruptor son las Critical Alerts
-  (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena sale por
-  el volumen de alarma. "Revisar mi protección" ya trae la nota del
-  interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
-  de alarma en Android.
-- [x] **Revisar mi protección, probado en Android** (13/10/2026, build 158 de
-  Android instalada): da 100 % con los seis puntos en verde, y el gesto de
-  volumen con la app cerrada mandó el SOS al iPhone y sonó. Falta que el
-  iPhone la reciba (próxima build de iPhone).
-- [ ] **SOS: tocar el aviso lleva al mapa + Configuración más corta** (13/10/2026,
-  escrito y probado en mock y renderizado en un navegador, sin aplicar; salió
-  de lo que vio Lu: el aviso decía "Abrí el mapa" y al tocarlo no pasaba
-  nada, y Configuración quedó como "papel higiénico"; Lu pidió que uno vaya
-  abriendo las secciones). Dos scripts: `aplicar-sos-mapa-panel.ps1` (panel,
-  publica solo: el aviso del SOS lleva `data: { type: "sos", personId, name,
-  latitude, longitude }`) y `aplicar-sos-mapa-configuracion-app.ps1` (app,
-  solo JS, sale en la próxima build de Android y iPhone): `sosMapa.ts` abre
-  Apple Maps en iPhone / Google Maps en Android con la ubicación más nueva de
-  la persona al tocar el aviso (app abierta, en segundo plano o cerrada, sin
-  repetirse); `Plegable.tsx` pliega las instrucciones del SOS y el detalle de
-  "Mi protección" (sale abierto solo si algo falla) y "Mi protección" mismo es un
-  título que se despliega, con el botón rojo SOS siempre a la vista; arregla el texto cortado
-  del botón rojo; y Configuración pasa a acordeón en `App.tsx`
-  (`CollapsibleSection` con `useSeccionAbierta`: todo cerrado, abrir una cierra
-  las otras, solo la primera con `defaultOpen` arranca abierta, la guía de
-  Android solo en el primer arranque, `maintainVisibleContentPosition` para que
-  la pantalla no salte). Probar en el teléfono: que el scroll no salte al
-  abrir una sección con otra larga abierta arriba, y tocar un SOS de verdad.
-- [ ] **SOS: dos límites encontrados el 13/10/2026** (hablado con Lu, sin
-  arreglar todavía). (1) Un SOS queda "activo" 3 horas en el servidor
-  (`SOS_ACTIVE_MS`) hasta que alguien toque "Estoy bien", y mientras tanto otro
-  SOS de la misma persona NO vuelve a avisar (solo renueva la ubicación en
-  vivo): por eso un día "no llegaba" al iPhone (había uno viejo sin cancelar).
-  **Arreglo escrito el 13/10/2026** (Lu dijo que sí):
-  `aplicar-sos-reaviso-panel.ps1` (solo panel, publica solo): pasados 5 minutos
-  del último aviso, un SOS nuevo vuelve a avisar con sirena (dentro de los 5
-  min no, para no sonar diez veces por apretar de más) y el viejo pasa a estado
-  `reemplazado` para que el mapa no muestre dos carteles. Probado con base de
-  mentira (4 min repite sin avisar, 6 min avisa de nuevo, queda un solo cartel).
-  **Aplicado y publicado el 13/10/2026.** (2) iPhone: con el interruptor lateral de
-  silencio puesto, el aviso urgente (Time Sensitive) pasa No molestar y se ve,
-  pero no suena; lo único que atraviesa el interruptor son las Critical Alerts
-  (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena sale por
-  el volumen de alarma. "Revisar mi protección" ya trae la nota del
-  interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
-  de alarma en Android.
-- [x] **Revisar mi protección, probado en Android** (13/10/2026, build 158 de
-  Android instalada): da 100 % con los seis puntos en verde, y el gesto de
-  volumen con la app cerrada mandó el SOS al iPhone y sonó. Falta que el
-  iPhone la reciba (próxima build de iPhone).
-- [ ] **SOS: tocar el aviso lleva al mapa + Configuración más corta** (13/10/2026,
-  escrito y probado en mock, sin aplicar; salió de lo que vio Lu: el aviso
-  decía "Abrí el mapa" y al tocarlo no pasaba nada, y Configuración quedó
-  como "papel higiénico"). Dos scripts: `aplicar-sos-mapa-panel.ps1` (panel,
-  publica solo: el aviso del SOS lleva `data: { type: "sos", personId, name,
-  latitude, longitude }`) y `aplicar-sos-mapa-plegables-app.ps1` (app, solo
-  JS: `sosMapa.ts` abre Apple Maps en iPhone / Google Maps en Android con la
-  ubicación más nueva de la persona al tocar el aviso, con la app abierta,
-  en segundo plano o cerrada y sin repetirse; `Plegable.tsx` pliega las
-  instrucciones del SOS y el detalle de "Mi protección", que sale abierto solo
-  si algo falla; arregla el texto cortado del botón rojo). Sale en la próxima
-  build de Android y iPhone. Idea pendiente que Lu todavía no aprobó: que en
-  toda Configuración (App.tsx, `CollapsibleSection`) abrir una sección cierre
-  las otras y arranque todo cerrado (acordeón).
-- [ ] **SOS: dos límites encontrados el 13/10/2026** (hablado con Lu, sin
-  arreglar todavía). (1) Un SOS queda "activo" 3 horas en el servidor
-  (`SOS_ACTIVE_MS`) hasta que alguien toque "Estoy bien", y mientras tanto otro
-  SOS de la misma persona NO vuelve a avisar (solo renueva la ubicación en
-  vivo): por eso un día "no llegaba" al iPhone (había uno viejo sin cancelar).
-  **Arreglo escrito el 13/10/2026** (Lu dijo que sí):
-  `aplicar-sos-reaviso-panel.ps1` (solo panel, publica solo): pasados 5 minutos
-  del último aviso, un SOS nuevo vuelve a avisar con sirena (dentro de los 5
-  min no, para no sonar diez veces por apretar de más) y el viejo pasa a estado
-  `reemplazado` para que el mapa no muestre dos carteles. Probado con base de
-  mentira (4 min repite sin avisar, 6 min avisa de nuevo, queda un solo cartel).
-  **Aplicado y publicado el 13/10/2026.** (2) iPhone: con el interruptor lateral de
-  silencio puesto, el aviso urgente (Time Sensitive) pasa No molestar y se ve,
-  pero no suena; lo único que atraviesa el interruptor son las Critical Alerts
-  (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena sale por
-  el volumen de alarma. "Revisar mi protección" ya trae la nota del
-  interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
-  de alarma en Android.
-- [ ] **Detalle visual del botón SOS** (13/10/2026, visto en la build 158 de
-  Android): el texto chico del botón rojo se corta en "Mantené apretado 3"
-  (falta "segundos"); en `SosBlock.tsx` el `botonSub` tiene que poder ocupar
-  todo el ancho y centrarse (`botonTextos`). Para la próxima build, sin apuro.
-- [ ] **Revisar mi protección** (13/10/2026, aplicado en la carpeta de la app
-  y compila; falta correr `actualizar-proteccion-notas-app.ps1` (las dos notas
-  del final) y hacer la build de Android; el iPhone la recibe en su próxima
-  build. Antes estaba escrito y probado en mock; idea de Lu: que la persona vea qué le falta y sea suya la
-  responsabilidad si no revisó). `aplicar-familia-proteccion-app.ps1` (solo
-  app, después de `aplicar-familia-sos-mejoras-app.ps1`; necesita build de
-  Android por el código nativo, el iPhone la recibe en su próxima build). Botón
-  "Revisar mi protección" en Configuración > Familia, arriba del SOS: da un
-  porcentaje (ok vale 1, revisar 0,5, falta 0; cada cosa pesa 1 o 2) y una
-  lista con avisos, ubicación "Siempre", conexión con el servidor, y en Android
-  gesto de volumen (apagado / prendido pero caído / funcionando), sirena del
-  canal `ojo-sos` (silenciado / sin atravesar No interrumpir), batería sin
+- [x] **SOS: re-aviso a los 5 minutos** (13/10/2026, aplicado y publicado con
+  `aplicar-sos-reaviso-panel.ps1`). Un SOS quedaba "activo" 3 horas en el
+  servidor (`SOS_ACTIVE_MS`) hasta que alguien tocara "Estoy bien", y mientras
+  tanto otro SOS de la misma persona NO volvía a avisar (solo renovaba la
+  ubicación en vivo): un día "no llegaba" al iPhone porque había uno viejo sin
+  cancelar. Ahora, pasados 5 minutos del último aviso, un SOS nuevo vuelve a
+  avisar con sirena (antes no, para no sonar diez veces por apretar de más) y
+  el viejo pasa a estado `reemplazado`. Límite que queda: en iPhone, con el
+  interruptor lateral de silencio puesto, el aviso urgente (Time Sensitive)
+  pasa No molestar y se ve pero no suena; solo lo atraviesan las Critical
+  Alerts (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena
+  sale por el volumen de alarma.
+- [x] **Revisar mi protección** (13/10/2026, aplicado y probado). Botón en
+  Configuración > Familia, arriba del SOS: da un porcentaje (ok vale 1, revisar
+  0,5, falta 0; cada cosa pesa 1 o 2) y una lista con avisos, ubicación
+  "Siempre", conexión con el servidor, y en Android gesto de volumen (apagado /
+  prendido pero caído / funcionando), sirena del canal `ojo-sos` y batería sin
   restricciones; en iPhone el atajo (si alguna vez se abrió el enlace). Cada
   cosa que falta trae un botón a la pantalla del sistema; al volver de Ajustes
-  se revisa sola. Lo que la app no puede ver (Concentración del iPhone) queda
-  como nota. Además, en Android avisa con una notificación si el gesto figura
-  prendido pero el servicio no responde (el "zombi" que se vio el 13/10): al
-  abrir la app, al volver al frente y con el trabajo de fondo (máx. una vez
-  cada 12 h). Nativo: `SosAccessibilityService.conectado` (se prende en
-  `onServiceConnected`, se apaga en `onUnbind`/`onDestroy`) y `isRunning()` en
-  `SosTriggerModule`. El Kotlin no se pudo compilar acá (solo sintaxis). Lo que
-  Android no deja: prender o apagar solo el servicio de accesibilidad.
+  se revisa sola. Lo que la app no puede ver (Concentración del iPhone, el
+  interruptor de silencio) queda como nota. Además, en Android avisa con una
+  notificación si el gesto figura prendido pero el servicio no responde (máx.
+  una vez cada 12 h). Probado: Android 100 % (build 158) e iPhone 86 % y luego
+  100 % al usar el atajo. Nativo: `SosAccessibilityService.conectado` e
+  `isRunning()` en `SosTriggerModule`. Qué Android no deja: prender o apagar
+  solo el servicio de accesibilidad.
+- [ ] **Renombrar "Mi protección" a "Dr. Ojo Guard"** (Lu lo aprobó el
+  13/10/2026: el nombre sonaba a antivirus). Título "Dr. Ojo Guard · 100 %",
+  botón "Hacer chequeo" / "Volver a hacer el chequeo", "Chequeo hecho a las
+  16:05" y el texto de la notificación del gesto caído (`sosTask.ts`,
+  `ProteccionBlock.tsx`, `proteccion.ts`). Va en la próxima build junto con lo
+  que haga falta.
+- [x] **SOS: tocar el aviso lleva al mapa + Configuración como acordeón**
+  (13/10/2026, aplicado: panel publicado con `aplicar-sos-mapa-panel.ps1` y app
+  con `aplicar-sos-mapa-configuracion-app.ps1`; builds de Android y iPhone
+  instaladas). El aviso del SOS lleva `data: { type: "sos", personId, name,
+  latitude, longitude }`; `sosMapa.ts` abre Apple Maps en iPhone / Google Maps
+  en Android con la ubicación más nueva de la persona al tocar el aviso (con
+  la app abierta, en segundo plano o cerrada, sin repetirse). `Plegable.tsx`
+  pliega "Mi protección" y las instrucciones del SOS (el botón rojo queda a la
+  vista), y Configuración pasa a acordeón en `App.tsx` (`CollapsibleSection`
+  con `useSeccionAbierta`: todo cerrado, abrir una cierra las otras, solo la
+  primera con `defaultOpen` arranca abierta, la guía de Android solo en el
+  primer arranque, `maintainVisibleContentPosition`). También arregla el texto
+  cortado del botón rojo. Probado: en el iPhone, tocar el aviso abre Apple Maps
+  con el pin. Falta probar: Google Maps en el Android, y que el scroll no salte
+  al abrir una sección con otra larga abierta arriba.
+- [ ] **SOS del iPhone que no llegó al Android** (13/10/2026, 16:02): el
+  servidor lo guardó (`family_sos` + `family_sos_to` con
+  `bickluciano@gmail.com`) y después sí llegó el aviso "canceló el SOS", pero el
+  aviso del SOS no apareció ni sonó. `probar-sos-android.ps1` mandó 3 avisos con
+  el mismo formato del SOS (canal `ojo-sos`, datos del mapa) y Expo confirmó la
+  entrega de los 3: el camino Expo-Google-Android anda. El Android tenía No
+  interrumpir puesto (ícono ⊖). Falta repetir el SOS real. Para ver qué dice
+  Expo de cada SOS, `aplicar-sos-registro-panel.ps1` anota cada aviso de SOS
+  en `push_log` y `ver-registro-avisos.ps1` muestra el ticket y el recibo. El
+  atajo del iPhone quedó armado (acción "Abrir direcciones URL" con el enlace
+  `ojoguard://sos?k=…`, nombre "SOS Ojo Guard") y manda el SOS; falta probar
+  el "Tocar atrás" con tres toques y el iPhone bloqueado (Face ID).
 - [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
   probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
   Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
