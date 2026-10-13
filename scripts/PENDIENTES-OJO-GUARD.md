@@ -54,6 +54,22 @@ Actualizado: 12/10/2026.
   de EAS. Probar con los dos teléfonos de Lu (SOS desde el iPhone al Android y
   al revés) y después con el iPhone de Mariana. Más adelante, si lo del Face
   ID molesta: App Intent nativo en Swift (corre sin desbloquear).
+  **Probado el 12/10/2026:** el gesto de volumen en Android funciona (con la
+  pantalla bloqueada sale "SOS enviado" y le avisa a LB iPhone). Fallas
+  encontradas: (1) el bloque SOS no se ve en el Android del titular porque
+  `visible={me.memberships > 0}` cuenta solo a quien se unió a una familia;
+  tiene que ser `me.memberships > 0 || people.length > 0` (sin el bloque no
+  hay "Estoy bien" ni el botón para activar el gesto; se canceló por la base
+  con `UPDATE family_sos SET status='cancelado'`); (2) en el iPhone el aviso
+  del SOS llega en silencio si hay un modo de concentración activo (le pasó a
+  Lu con "Yo"): para atravesarlo hace falta aviso "urgente" (Time Sensitive:
+  `interruptionLevel: "time-sensitive"` en el push y el permiso
+  `com.apple.developer.usernotifications.time-sensitive` en la build de
+  iPhone) o, mejor, Critical Alerts (pendiente de Apple, ID 7R4MM73U2Y).
+  Lo de Play Protect: la app con el servicio de accesibilidad se bloquea al
+  instalar por APK; se instaló apagando un momento Play Protect (en Play
+  Store habría que justificar la accesibilidad o cambiar el gesto por un botón
+  en la bandeja o un widget).
 - [x] **Familia, menores, parte 1** (aplicado y publicado el 09/10/2026;
   probado: el iPhone como menor recibió "Luciano pidió tu ubicación desde Ojo
   Guard MS" con el teléfono bloqueado). Desde el panel, el titular y los adultos de la
