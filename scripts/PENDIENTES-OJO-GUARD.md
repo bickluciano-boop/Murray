@@ -31,9 +31,11 @@ Actualizado: 12/10/2026.
   mapa y la tarjeta dice "Mi teléfono · Android", "Notebook LB · Windows"; en
   la lista lateral va como etiqueta chica (ANDROID, IPHONE, WINDOWS) para que
   no se corte el nombre (`actualizar-mapa.ps1`, solo panel, sin build).
-- [ ] **SOS (Familia, etapa C)** (12/10/2026, armado y probado con bases de
-  prueba; falta aplicar, publicar, hacer las builds y probar con los dos
-  teléfonos). Servidor y panel (`aplicar-familia-sos-panel.ps1` + dos tablas,
+- [x] **SOS (Familia, etapa C)** (12 y 13/10/2026, aplicado, publicado y
+  probado con los dos teléfonos de Lu: botón en la app, gesto de volumen en
+  Android, "Estoy bien", sirena en Android por el canal `ojo-sos` y en
+  iPhone atravesando No molestar con el aviso urgente; falta probar el atajo
+  de Siri / toque en la espalda y probar con el iPhone de Mariana). Servidor y panel (`aplicar-familia-sos-panel.ps1` + dos tablas,
   `family_sos` y `family_sos_to`): le llega al titular y a los adultos (a un
   amigo, solo al titular); push con sirena, mail, SMS si lo tiene activado y
   ubicación en vivo 10 min; "Estoy bien" lo cancela y avisa; cartel rojo en el
