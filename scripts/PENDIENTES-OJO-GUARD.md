@@ -91,15 +91,19 @@ Actualizado: 12/10/2026.
   (`SOS_ACTIVE_MS`) hasta que alguien toque "Estoy bien", y mientras tanto otro
   SOS de la misma persona NO vuelve a avisar (solo renueva la ubicación en
   vivo): por eso un día "no llegaba" al iPhone (había uno viejo sin cancelar).
-  Propuesta pendiente de que Lu diga sí: pasados 5 minutos del último aviso, un
-  SOS nuevo vuelve a avisar con sirena (dentro de los 5 min no, para no sonar
-  diez veces por apretar de más). Solo servidor (`familySosOf` /
-  `nativeFamilySos`), sin build. (2) iPhone: con el interruptor lateral de
+  **Arreglo escrito el 13/10/2026** (Lu dijo que sí):
+  `aplicar-sos-reaviso-panel.ps1` (solo panel, publica solo): pasados 5 minutos
+  del último aviso, un SOS nuevo vuelve a avisar con sirena (dentro de los 5
+  min no, para no sonar diez veces por apretar de más) y el viejo pasa a estado
+  `reemplazado` para que el mapa no muestre dos carteles. Probado con base de
+  mentira (4 min repite sin avisar, 6 min avisa de nuevo, queda un solo cartel).
+  Falta correrlo. (2) iPhone: con el interruptor lateral de
   silencio puesto, el aviso urgente (Time Sensitive) pasa No molestar y se ve,
   pero no suena; lo único que atraviesa el interruptor son las Critical Alerts
   (pendiente de Apple, ID 7R4MM73U2Y). En Android no pasa: la sirena sale por
-  el volumen de alarma. Cuando se actualice "Revisar mi protección", agregar
-  la nota del interruptor de silencio en iPhone (la app no puede leerlo).
+  el volumen de alarma. "Revisar mi protección" ya trae la nota del
+  interruptor de silencio en iPhone (la app no puede leerlo) y la del volumen
+  de alarma en Android.
 - [ ] **Revisar mi protección** (13/10/2026, escrito y probado en mock, sin
   aplicar todavía; idea de Lu: que la persona vea qué le falta y sea suya la
   responsabilidad si no revisó). `aplicar-familia-proteccion-app.ps1` (solo

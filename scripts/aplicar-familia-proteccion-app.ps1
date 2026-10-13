@@ -31,7 +31,10 @@ if (-not (Test-Path (Join-Path $raiz "app.json")) -or (Test-Path (Join-Path $rai
 Ok "Carpeta correcta"
 if (-not (Test-Path (Join-Path $raiz "src\SosBlock.tsx"))) { Mal "Primero corre aplicar-familia-sos-app.ps1."; return }
 if ((Contar (Leer (Join-Path $raiz "modules\sos-trigger\index.ts")).texto 'openSosChannelSettings') -eq 0) { Mal "Primero corre aplicar-familia-sos-mejoras-app.ps1."; return }
-if (Test-Path (Join-Path $raiz "src\proteccion.ts")) { Avi "Revisar mi proteccion ya estaba aplicado. No toco nada."; return }
+if (Test-Path (Join-Path $raiz "src\proteccion.ts")) {
+    if ((Contar (Leer (Join-Path $raiz "src\proteccion.ts")).texto 'volumen de alarma') -ne 0) { Avi "Revisar mi proteccion ya estaba aplicado. No toco nada."; return }
+    Mal "Ya tenias aplicada una version anterior de Revisar mi proteccion. No toco nada: avisame y te paso la actualizacion."; return
+}
 if (-not (Test-Path (Join-Path $raiz "modules\exact-alarm\index.ts")) -or (Contar (Leer (Join-Path $raiz "modules\exact-alarm\index.ts")).texto 'readBatteryUnrestricted') -eq 0) { Mal "Falta la lectura de bateria de la app (modules\exact-alarm). Mandame esta pantalla."; return }
 $cambios = @(
     @('src\FamilySection.tsx', 'import del bloque de proteccion', 'import { SosBlock } from "./SosBlock";
@@ -52,12 +55,12 @@ import { vigilarGesto } from "./sosTask";
 ')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/proteccion.ts", "src\proteccion.ts", "0ff59c4ad4bc82436715d57c14debaeb3debaa841beda971ac003aa237872034"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "e21bf5aff34bcef2540e74100fdf9c7097a08b9cfcb331107d958f39af7f9d46"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/sosTask.ts", "src\sosTask.ts", "367c88b9a4f762b57c4c0e81e647ea379af81253a87a162333c015795755b951"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/sos-trigger/index.ts", "modules\sos-trigger\index.ts", "f8234df578fa2ce3fc4e8e4306eac15df7cff886e57fc486f8efc504b14932cc"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosAccessibilityService.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosAccessibilityService.kt", "3a5c9ee2a49048693a9d715e37f2ad229150a48b667823172a139d817b3ed19b"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7079dea977d21dd56f35883585862040fab6d523/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosTriggerModule.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosTriggerModule.kt", "9a93321508447220616a1ddbefcc1a452e9d41c788f5f3cd919ad397bd3aa5ab")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/proteccion.ts", "src\proteccion.ts", "57a2c008a68093a72227dc58e35491c134fa6e5180e872a068f3074bee300cf5"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "e21bf5aff34bcef2540e74100fdf9c7097a08b9cfcb331107d958f39af7f9d46"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/sosTask.ts", "src\sosTask.ts", "367c88b9a4f762b57c4c0e81e647ea379af81253a87a162333c015795755b951"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/sos-trigger/index.ts", "modules\sos-trigger\index.ts", "f8234df578fa2ce3fc4e8e4306eac15df7cff886e57fc486f8efc504b14932cc"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosAccessibilityService.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosAccessibilityService.kt", "3a5c9ee2a49048693a9d715e37f2ad229150a48b667823172a139d817b3ed19b"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/2b1caa184d75874ef2f64a02bc2cebf30ffedb95/scripts/familia/sos-trigger/android/src/main/java/expo/modules/sostrigger/SosTriggerModule.kt", "modules\sos-trigger\android\src\main\java\expo\modules\sostrigger\SosTriggerModule.kt", "9a93321508447220616a1ddbefcc1a452e9d41c788f5f3cd919ad397bd3aa5ab")
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
