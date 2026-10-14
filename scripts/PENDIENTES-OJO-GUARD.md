@@ -112,17 +112,18 @@ Actualizado: 12/10/2026.
   100 % al usar el atajo. Nativo: `SosAccessibilityService.conectado` e
   `isRunning()` en `SosTriggerModule`. Qué Android no deja: prender o apagar
   solo el servicio de accesibilidad.
-- [ ] **Dr. Ojo Guard (antes "Mi protección")** (13/10/2026, escrito y probado
-  en mock y en un navegador, sin aplicar: `aplicar-dr-ojo-guard-app.ps1`; hace
-  falta build de Android por una función nativa nueva, el iPhone recibe el
-  nombre en su próxima build). Título "Dr. Ojo Guard · 100 %", botón "Hacer
-  chequeo" / "Volver a hacer el chequeo", "Chequeo hecho a las…". Nuevo item en
-  Android "Auriculares Bluetooth" (peso 2, estado revisar si hay audio Bluetooth
-  conectado, con botón "Abrir el Bluetooth"; nativo `bluetoothAudio` en
-  `SosTriggerModule`) y botón "Probar la sirena" (alarma local por el canal
-  `ojo-sos`, `probarSirena` en `sosTask.ts`). Salió de que el 13/10 los avisos
-  no sonaban en el Android porque tenía unos auriculares Bluetooth (PLT_Legend)
-  conectados: al apagar el Bluetooth sonó el aviso de prueba.
+- [x] **Dr. Ojo Guard (antes "Mi protección")** (13/10/2026, aplicado con
+  `aplicar-dr-ojo-guard-app.ps1`, build 160 de Android instalada y probada).
+  Título "Dr. Ojo Guard · 100 %", botón "Hacer chequeo" / "Volver a hacer el
+  chequeo", "Chequeo hecho a las…". Item de Android "Auriculares Bluetooth"
+  (peso 2, estado revisar si hay audio Bluetooth conectado, con botón "Abrir el
+  Bluetooth"; nativo `bluetoothAudio` en `SosTriggerModule`) y botón "Probar la
+  sirena" (alarma local por el canal `ojo-sos`, `probarSirena` en
+  `sosTask.ts`). Probado: con los auriculares PLT_Legend conectados (0 % de
+  batería, pero Android los tomaba como conectados) da 91 % con el aviso y la
+  sirena de prueba no se oye; al desconectarlos vuelve a 100 % y suena. Salió
+  de que el 13/10 los avisos no sonaban en el Android por esos auriculares. El
+  iPhone recibe el nombre nuevo en su próxima build.
 - [ ] **Texto del botón "Que la sirena suene con No interrumpir"** (13/10/2026,
   Lu creyó que hacía sonar la sirena; solo abre los ajustes del canal): en
   `SosBlock.tsx` cambiarlo por "Abrir los ajustes de la sirena" y aclarar que la
@@ -143,6 +144,11 @@ Actualizado: 12/10/2026.
   cortado del botón rojo. Probado: en el iPhone, tocar el aviso abre Apple Maps
   con el pin. Falta probar: Google Maps en el Android, y que el scroll no salte
   al abrir una sección con otra larga abierta arriba.
+- [ ] **Pruebas del SOS que faltan** (14/10/2026): (1) SOS del iPhone al Android
+  con el Bluetooth apagado y el teléfono bloqueado, para confirmar que suena la
+  sirena y que al tocar el aviso abre Google Maps (en el iPhone ya se probó que
+  abre Apple Maps); (2) "Tocar atrás" con tres toques en el iPhone bloqueado
+  (¿pide Face ID?, ¿cuánto tarda?); (3) probar con el iPhone de Mariana.
 - [ ] **SOS del iPhone que no llegó al Android** (13/10/2026, 16:02): el
   servidor lo guardó (`family_sos` + `family_sos_to` con
   `bickluciano@gmail.com`) y después sí llegó el aviso "canceló el SOS", pero el
