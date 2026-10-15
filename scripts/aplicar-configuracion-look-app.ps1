@@ -3,7 +3,7 @@
 #    Quien ya eligio un tema lo conserva. La barra de arriba del telefono (hora, bateria) se ve bien en los dos temas. La pantalla
 #    de bloqueo sigue oscura.
 #  - Portada de Configuracion: tarjeta del telefono (nombre, "En linea", bateria, correo), banda de permisos ("Permisos de Android:
-#    4/4 OK") y cuatro tarjetas grandes con icono (llave, camara, radar, telefono). El texto de presentacion y el cartel de
+#    4/4 OK") y seis tarjetas grandes con icono (familia, llave, camara, radar, telefono, enlace). El texto de presentacion y el cartel de
 #    administrador salen de la portada (el de administrador queda al pie); en el primer arranque todo sigue como siempre.
 # Cambia src\GruposConfiguracion.tsx, suma cuatro iconos en assets\ y toca App.tsx. Va en la carpeta de la APP (la que tiene
 # app.json). Respaldo .bak-look. Es solo codigo de la app (nada nativo): sale en la PROXIMA build, en Android y en iPhone.
@@ -40,6 +40,7 @@ $cambios = @(
               nombre={draft.deviceName}
               correo={draft.alertEmail}
               enLinea={isOnline}
+              conexion={remoteState}
               permisosEnOrden={
 '),
     @('App.tsx', 'portada: sin texto de presentacion fuera del primer arranque (abre)', '          <Text style={styles.setupIntro}>
@@ -111,14 +112,48 @@ let P: Paleta = PALETAS.claro;
               />
             </View>
             <View style={styles.wallpaperSettings}>
+'),
+    @('App.tsx', 'Familia y SOS: tarjeta propia (solo se arma en su grupo)', '          {!firstRun && grupoActual === null ? (
+            <FamilySection
+              paleta={P}
+              Seccion={CollapsibleSection}
+', '          {!firstRun && enGrupo(grupoActual, "familia") ? (
+            <FamilySection
+              paleta={P}
+              Seccion={SeccionDeFamilia}
+'),
+    @('App.tsx', 'Familia y SOS: la seccion se marca con su grupo', 'function SeccionPlegable({
+  title,
+  subtitle,
+  defaultOpen,
+  children,
+}: {', '// Familia y amigos arma su propia seccion; esto la marca con su grupo para que solo se vea al abrir la tarjeta "Familia y SOS".
+function SeccionDeFamilia(props: { title: string; subtitle?: string; defaultOpen?: boolean; children: ReactNode }) {
+  return <CollapsibleSection grupo="familia" {...props} />;
+}
+
+function SeccionPlegable({
+  title,
+  subtitle,
+  defaultOpen,
+  children,
+}: {'),
+    @('App.tsx', 'Ojo Guard MS: tarjeta propia', '          <CollapsibleSection
+            title="Ojo Guard MS', '          <CollapsibleSection
+            grupo="conexion"
+            title="Ojo Guard MS'),
+    @('App.tsx', 'Ojo Guard MS: abierta al entrar a su tarjeta', '            defaultOpen={remoteState === "not-linked"}
+', '            defaultOpen
 ')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/a674571aeec11f3d12a0d0c2c612664ecc80c381/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "9515e9e2757b85930ddc896b88c8aa7124ea1fbf967c239167082101b8e48349"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/a674571aeec11f3d12a0d0c2c612664ecc80c381/scripts/familia/iconos/config-llave.png", "assets\config-llave.png", "3255284eae4e8adb39be86692ba08b0517985d7fbe24aeb7149238433e424ce1"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/a674571aeec11f3d12a0d0c2c612664ecc80c381/scripts/familia/iconos/config-camara.png", "assets\config-camara.png", "933f354c25932801711d57cf51cf9589b34b445222ae43d6bd1c92f26baa5377"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/a674571aeec11f3d12a0d0c2c612664ecc80c381/scripts/familia/iconos/config-radar.png", "assets\config-radar.png", "4b2b69dd74533ffc8defcc3a9c5425cd1c9585d3c83fc03665bfbd0c3e438528"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/a674571aeec11f3d12a0d0c2c612664ecc80c381/scripts/familia/iconos/config-telefono.png", "assets\config-telefono.png", "52dd9b444477cca9fa5dcf3e6b03f6a92b0590d811c8a3e0f7faa2653fcf6453")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "444fcc072af6f74b6d819d9222b5c605e15391a7ff84aaec682d3409d4c3ec13"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-llave.png", "assets\config-llave.png", "3255284eae4e8adb39be86692ba08b0517985d7fbe24aeb7149238433e424ce1"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-camara.png", "assets\config-camara.png", "933f354c25932801711d57cf51cf9589b34b445222ae43d6bd1c92f26baa5377"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-radar.png", "assets\config-radar.png", "4b2b69dd74533ffc8defcc3a9c5425cd1c9585d3c83fc03665bfbd0c3e438528"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-telefono.png", "assets\config-telefono.png", "52dd9b444477cca9fa5dcf3e6b03f6a92b0590d811c8a3e0f7faa2653fcf6453"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-familia.png", "assets\config-familia.png", "e0decb903f354fba3bb14dc665f742e28f74555c9b58456e57a75cc7a1a453c4"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/e8aa016bc54ffed87862d57a5fe877cec48c9fd2/scripts/familia/iconos/config-conexion.png", "assets\config-conexion.png", "9be6817990b4946911a6bdb16d5f537a90995cbdc56942a5f4d0777a54924e44")
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---

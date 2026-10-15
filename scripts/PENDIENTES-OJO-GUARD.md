@@ -40,11 +40,15 @@ Actualizado: 15/10/2026.
     (`aplicar-configuracion-look-app.ps1`, respaldo `.bak-look`; sale en la
     próxima build, falta aplicar). Pedido por Luciano con una imagen de
     ejemplo (crema, tarjeta del teléfono con "En línea · 66 %", banda verde
-    "Permisos de Android: 4/4 OK", cuatro tarjetas grandes con ícono dorado).
+    "Permisos de Android: 4/4 OK", tarjetas grandes con ícono dorado). Son seis
+    tarjetas: Familia y SOS (la sección Familia y amigos con el Dr. Ojo Guard
+    y el SOS), Claves y Seguridad, Fotos de Intrusos, Modo Perdido y
+    Cercanía, Mi Teléfono y Fondo y Ojo Guard MS (la vinculación); con cuatro
+    quedaban dos filas sueltas.
     La app abre clara por defecto y el oscuro queda como "Modo noche"
     (interruptor en Mi Teléfono y Fondo > Apariencia; el del "?" sigue); la
-    barra de arriba del teléfono cambia según el tema. Íconos propios (llave,
-    cámara, radar, teléfono), sin escudos ni candados (manual de marca), como
+    barra de arriba del teléfono cambia según el tema. Íconos propios (familia,
+    llave, cámara, radar, teléfono, enlace), sin escudos ni candados (manual de marca), como
     PNG en `assets/` (sin librerías nuevas). Quien ya eligió tema lo conserva.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
