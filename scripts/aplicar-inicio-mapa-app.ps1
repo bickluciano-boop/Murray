@@ -96,6 +96,7 @@ function SeccionPlegable({
           onFamilia={() => elegirGrupo("familia")}
           onConfiguracion={() => elegirGrupo("configuracion")}
           onVincular={() => elegirGrupo("conexion")}
+          onPanel={onOpenMs}
           botones={{
             secundario: styles.secondaryButton,
             secundarioTexto: styles.secondaryButtonText,
@@ -140,11 +141,11 @@ function SeccionPlegable({
     body: JSON.stringify({ deviceId: enrollment.deviceId, destino }),')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7278be2932be113d2d01fa1eee8ecd9bf7514d91/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "81f7b7e042062dc2364b067e8b2e5f1e64f94a86a00bdc41692869dddfc9ba6f"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7278be2932be113d2d01fa1eee8ecd9bf7514d91/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "be2c2ca865b11072ad859e60953c8b778ac73d2fecf19d0080b395ccedcec3aa"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7278be2932be113d2d01fa1eee8ecd9bf7514d91/scripts/familia/MapaEnApp.tsx", "src\MapaEnApp.tsx", "bdd5edb8da96738cf1a41c60692ebc7b3b107e7f5a1b6fac9783fb7e61186bb3"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7278be2932be113d2d01fa1eee8ecd9bf7514d91/scripts/familia/InicioMapa.tsx", "src\InicioMapa.tsx", "efca449425af801c0ee6f77261dc63208481e78598faa499ea531bc5a081dab4"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/7278be2932be113d2d01fa1eee8ecd9bf7514d91/scripts/familia/iconos/config-familia.png", "assets\config-familia.png", "e0decb903f354fba3bb14dc665f742e28f74555c9b58456e57a75cc7a1a453c4")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/9d718195ec4af3de4bfcb7593750994cd9cd40bd/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "5f9c60a4c078c6ca58fffc6d1589bbaba4f0e6d3f22440bff7d82b88445b752b"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/9d718195ec4af3de4bfcb7593750994cd9cd40bd/scripts/familia/SosBlock.tsx", "src\SosBlock.tsx", "be2c2ca865b11072ad859e60953c8b778ac73d2fecf19d0080b395ccedcec3aa"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/9d718195ec4af3de4bfcb7593750994cd9cd40bd/scripts/familia/MapaEnApp.tsx", "src\MapaEnApp.tsx", "bdd5edb8da96738cf1a41c60692ebc7b3b107e7f5a1b6fac9783fb7e61186bb3"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/9d718195ec4af3de4bfcb7593750994cd9cd40bd/scripts/familia/InicioMapa.tsx", "src\InicioMapa.tsx", "08d61525b1247e35f8126a69cade5c6d0a1401d897fb37f18aa714595d122e79"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/9d718195ec4af3de4bfcb7593750994cd9cd40bd/scripts/familia/iconos/config-familia.png", "assets\config-familia.png", "e0decb903f354fba3bb14dc665f742e28f74555c9b58456e57a75cc7a1a453c4")
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---

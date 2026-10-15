@@ -121,7 +121,12 @@ Actualizado: 15/10/2026.
     Mi perfil / Familia / Configuración, mapa del panel en un WebView y SOS en
     una franja baja; pantalla nueva "Familia" con lo que estaba abajo del
     Inicio: lista, unirse con un código, pausar, salir y el SOS completo con sus
-    ayudas; instala `react-native-webview` con `npx expo install`). Falta
+    ayudas; instala `react-native-webview` con `npx expo install`). Pedido
+    extra de Luciano (muy importante): **entrar al panel a un toque desde lo
+    primero que se ve**, sin pasar por Configuración > Ojo Guard MS ni por la
+    pantalla de sincronización: botón "Abrir panel" arriba a la derecha del
+    Inicio (usa el mismo acceso directo de `openOjoGuardMs`; dice "Abriendo…"
+    mientras pide el enlace). Falta
     aplicarlos (primero el del panel), hacer la build de Android y probar:
     el mapa entra solo, "Cómo llegar" abre afuera y vuelve sin pedir la clave,
     el mapa se ve en claro y en noche, el SOS funciona desde la franja, y
