@@ -27,7 +27,7 @@ Actualizado: 15/10/2026.
     estando, en su tarjeta, con sus botones.
   - [ ] **Paso 2: limpieza chica**
     (`aplicar-configuracion-limpieza-app.ps1`, respaldo `.bak-limpcfg`; sale
-    en la próxima build, falta aplicar). Solo cambia lo que se ve: los tres
+    en la próxima build; aplicado el 15/10/2026 y compila bien, falta la build y probar). Solo cambia lo que se ve: los tres
     registros técnicos (rastro del aviso, historial de segundo plano,
     diagnóstico nativo de cámara) quedan en un renglón plegado "Registros
     técnicos (para soporte)" dentro de "Preparar autonomía"; "Estado del
