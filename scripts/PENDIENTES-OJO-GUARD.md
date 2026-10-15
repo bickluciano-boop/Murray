@@ -111,8 +111,21 @@ Actualizado: 15/10/2026.
     llegar en cada apertura: como mucho uno cada 12 h para este uso). Requiere
     el módulo `react-native-webview` (nativo: **build nueva de Android y la
     primera de iPhone con esto adentro**). La build de iPhone se espera hasta
-    tener el Inicio v2. Falta decidir con Luciano: mapa con WebView (recomendado)
-    o clave de Google Maps.
+    tener el Inicio v2. Elegido el camino del WebView (Luciano no puso
+    objeciones y se quejó de que "Mapa ›" abría Google Maps con un pin suelto
+    y coordenadas). Armado y probado (sin teléfono): panel
+    `aplicar-mapa-en-app-panel.ps1` (`/acceso-v7?app=mapa`, enlace del acceso
+    directo con destino "mapa", aviso por correo como mucho cada 12 h; tabla
+    `panel_handoff_aviso` y columna `purpose` las crea el propio panel) y app
+    `aplicar-inicio-mapa-app.ps1` (Inicio nuevo: línea con el teléfono, botones
+    Mi perfil / Familia / Configuración, mapa del panel en un WebView y SOS en
+    una franja baja; pantalla nueva "Familia" con lo que estaba abajo del
+    Inicio: lista, unirse con un código, pausar, salir y el SOS completo con sus
+    ayudas; instala `react-native-webview` con `npx expo install`). Falta
+    aplicarlos (primero el del panel), hacer la build de Android y probar:
+    el mapa entra solo, "Cómo llegar" abre afuera y vuelve sin pedir la clave,
+    el mapa se ve en claro y en noche, el SOS funciona desde la franja, y
+    "Familia" tiene todo lo de antes. Después, la build de iPhone.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
