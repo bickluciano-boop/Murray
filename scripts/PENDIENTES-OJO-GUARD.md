@@ -128,6 +128,21 @@ Actualizado: 15/10/2026.
     sonando (para un solo botón Hacer sonar / Detener sonido), y frases
     como "cifrados" o "métricas de salud" de pulseras. Autoguardado: solo
     interruptores; las claves de 6 números mantienen su botón Guardar.
+    - [ ] **Paso 1 de la consola: claro por defecto, 4 pestañas**
+      (`aplicar-consola-pestanas-panel.ps1`, respaldo `.bak-pestanas`, publica
+      solo; falta aplicar y probar). Decidido por Luciano el 15/10/2026: abre
+      claro y el oscuro es "Modo noche" (quien ya eligió un tema lo conserva).
+      Pestañas: Mapa y Familia (lo primero que se ve; es el Mapa de hoy), Mis
+      Equipos (dispositivos + pulseras + artículos), Evidencias (última e
+      historial juntos, con la cantidad) y Cuenta; desaparecen Inicio y los 5
+      contadores; la explicación de cada botón de equipo va en un "?" que se
+      despliega al tocar; botones en pastilla; en pantalla ancha las pestañas
+      van arriba. Probado en un navegador con los archivos reales y datos de
+      ejemplo (compu y celular, claro y noche). Siguientes pasos: Mis Equipos
+      más limpio (un solo botón sonar/detener cuando el panel sepa el estado
+      real, "Más" para lo menos usado, Pedir foto/evidencia también en el
+      Mapa), estética de las tarjetas, login con Passkey arriba y Cuenta en
+      tarjetas.
 
 - [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
   (12/10/2026, aplicado, publicado y probado: con la build 26 de iPhone y
