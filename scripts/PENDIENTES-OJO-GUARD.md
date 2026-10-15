@@ -147,7 +147,11 @@ Actualizado: 15/10/2026.
     Familia trae las ayudas "sin abrir la app" y un recordatorio. De paso: en
     Familia, "Mapa ›" lleva al mapa del Inicio y ya no abre Google Maps con un
     pin suelto. App: `aplicar-barra-superior-app.ps1` (necesita antes el del
-    Inicio con mapa; es solo JS, pero hace falta build para verlo). Pendiente
+    Inicio con mapa; es solo JS, pero hace falta build para verlo). Aplicado
+    por Luciano el 15/10/2026 y compila bien; el panel compacto y el "sin
+    saltos" también están aplicados. Falta la build de Android (una sola, con
+    todo) y probar la barra fija, el SOS sin repetir, "Mapa ›" de Familia y
+    "Abrir panel" con la pantalla "Abriendo…". Pendiente
     para después: que "Mapa ›" enfoque a esa persona en el mapa; textos y
     tamaños finos de la barra; iPhone.
   - [ ] **"Abrir panel" sin saltos** (fotos de Luciano, 15/10/2026: al
