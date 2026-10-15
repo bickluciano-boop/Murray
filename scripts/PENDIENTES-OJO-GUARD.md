@@ -13,7 +13,7 @@ Actualizado: 15/10/2026.
   - [ ] **Paso 1: Configuración en tarjetas**
     (`aplicar-configuracion-tarjetas-app.ps1`, archivo nuevo
     `src/GruposConfiguracion.tsx`, respaldo `.bak-grupos`; sale en la próxima
-    build, falta aplicar y probar en el teléfono). Cinco tarjetas: Claves y
+    build; aplicado el 15/10/2026 y compila bien, falta la build y probar en el teléfono). Cinco tarjetas: Claves y
     Seguridad (Claves de acceso, Evidencia y ubicación, Detección de intentos),
     Fotos de Intrusos (Protección sin internet, Intentos de entrada), Modo
     Perdido y Cercanía (mensaje de recuperación, Modo cercanía, Personas,
