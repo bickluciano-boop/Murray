@@ -121,7 +121,8 @@ Actualizado: 15/10/2026.
     Mi perfil / Familia / Configuración, mapa del panel en un WebView y SOS en
     una franja baja; pantalla nueva "Familia" con lo que estaba abajo del
     Inicio: lista, unirse con un código, pausar, salir y el SOS completo con sus
-    ayudas; instala `react-native-webview` con `npx expo install`). Pedido
+    ayudas; instala `react-native-webview` con `npx expo install`). El del
+    panel quedó aplicado y publicado el 15/10/2026 (versión 1b64d1c0). Pedido
     extra de Luciano (muy importante): **entrar al panel a un toque desde lo
     primero que se ve**, sin pasar por Configuración > Ojo Guard MS ni por la
     pantalla de sincronización: botón "Abrir panel" arriba a la derecha del
@@ -212,7 +213,14 @@ Actualizado: 15/10/2026.
       había abierto la app 17 min antes. Ahora "Sin conexión" solo sale si no
       hubo ni ubicación ni señal de vida en 3 h; si hubo señal: "visto hace 17
       min · ubicación hace 23 h".
-    - [ ] **Paso 3 de la consola: Mis Equipos más limpio**
+    - [ ] **Paso 3b de la consola: en el celular, la explicación al mantener
+      el dedo** (`aplicar-consola-toque-panel.ps1`, respaldo `.bak-toque`,
+      publica solo; falta aplicar). Pedido de Luciano al ver las "i" en el
+      celular: que al poner el dedo aparezca la observación y no la "i". Mantener
+      apretado un cuarto de segundo muestra el globito (queda 2 s después de
+      soltar) y NO hace la acción; un toque corto la hace. Probado con toques
+      reales simulados (mantener: globito y 0 órdenes; toque corto: 1 orden).
+    - [x] **Paso 3 de la consola: Mis Equipos más limpio**
       (`aplicar-consola-equipos-panel.ps1`, respaldo `.bak-equipos`, publica
       solo; aplicado y publicado el 15/10/2026, versión 108f6f90; falta verlo
       en pantalla). A la vista: Solicitar evidencia, Localizar ahora,
