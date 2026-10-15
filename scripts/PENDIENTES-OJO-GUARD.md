@@ -103,12 +103,20 @@ Actualizado: 15/10/2026.
     conserva (se guarda en `ojo-guard-tema`); solo cambia el de quien nunca
     eligió. La pantalla de guardia sigue oscura.
   - [ ] **Ordenar la consola (panel Ojo Guard MS)** con el mismo método.
-    Regla de Luciano (15/10/2026): las imágenes y textos del pack de Drive
-    ("00. LEER PRIMERO — Pack Completo para Programación", imágenes 07 a 09)
-    **valen solo como línea estética** (crema, tarjetas suaves, botones
-    dorados en pastilla, barra superior con pestañas): no se toma de ahí la
-    información ni los textos como algo a cambiar, y **no se omite ninguna
-    utilidad que hoy da Ojo Guard**. Plan: paso 0 `foto-panel.ps1` (copia
+    Regla de Luciano (15/10/2026): del pack de Drive ("00. LEER PRIMERO —
+    Pack Completo para Programación", imágenes y PDFs) se toma **lo mejor**:
+    la estética (crema, tarjetas suaves, botones dorados en pastilla, barra
+    superior con pestañas), algunas frases y lo simplificado. Lo que
+    se toma, a confirmar con él: pestañas 6 a 4 con Mapa y Familia de inicio;
+    login con "Entrar con Passkey / Huella digital" arriba; "Sumar familiar,
+    equipo o pulsera/artículo" como un solo botón (app y consola); botones
+    de equipo "Pedir foto/audio", "Localizar", "Hacer sonar"; ocultar la
+    cámara no disponible; "Permisos de Android: 4/4 OK ✓"; "Todo listo ✓";
+    "Guardado automático ✓" (solo en interruptores); "¿Qué hace Ojo Guard
+    por vos y tu familia?" en el "?"; panel de soporte con toque largo en la
+    versión (app). **No se omite ninguna utilidad que hoy da Ojo Guard**: lo
+    que sale de la vista (por ejemplo Detener sonido o Detectar cerca) queda
+    en un "Más". Plan: paso 0 `foto-panel.ps1` (copia
     de respaldo + archivos de la pantalla de la consola para subirlos a
     Drive + inventario con huellas), después el inventario de utilidades de
     la consola (como `FOTO-APP-NATIVA-14-10-2026.md`), y de a poco: 4
