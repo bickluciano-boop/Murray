@@ -160,7 +160,8 @@ Actualizado: 15/10/2026.
     para evitarlo del todo, que "Panel" abra el panel **adentro de la app**
     (WebView con la misma sesión del mapa); riesgos a mirar: passkeys no andan
     en WebView (la sesión "device" no las necesita), subir archivos (búsqueda
-    de caras) y descargas. Propuesto a Luciano, falta su sí.
+    de caras) y descargas. Propuesto a Luciano el 15/10/2026: dijo que no;
+    "Panel" sigue abriendo el panel en Chrome (con la pantalla "Abriendo…").
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
