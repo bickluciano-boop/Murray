@@ -165,6 +165,14 @@ Actualizado: 15/10/2026.
       consola pide la calle a `/api/remote/address` (OpenStreetMap, de a una y
       sin repetir) en Mis Equipos y en el Mapa. Y cuando el equipo está activo
       pero la ubicación es vieja, dice "activo hace 3 min · ubicación hace 23 h".
+    - [ ] **Paso 2d de la consola: "Sin conexión" solo sin señales**
+      (`aplicar-consola-estado-panel.ps1`, respaldo `.bak-estado`, publica
+      solo; falta aplicar). Fotos del 15/10/2026 con el 2c: "Mi teléfono" ya
+      muestra la calle ("Ugarteche 3167, Palermo") y la Notebook dice "activo
+      hace 7 s"; el iPhone seguía en rojo "Sin conexión hace 23 h" aunque se
+      había abierto la app 17 min antes. Ahora "Sin conexión" solo sale si no
+      hubo ni ubicación ni señal de vida en 3 h; si hubo señal: "visto hace 17
+      min · ubicación hace 23 h".
     - [ ] **iPhone "Sin conexión hace 23 h" en el mapa** (15/10/2026): el
       iPhone tenía 5% de batería en el último reporte y ahora 45% y en uso.
       Hipótesis: se reinició y la app no vuelve sola a mandar datos hasta que
