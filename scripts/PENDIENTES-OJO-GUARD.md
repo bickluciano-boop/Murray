@@ -102,7 +102,24 @@ Actualizado: 15/10/2026.
     sale del "?" y pasa a "Mi Teléfono y Fondo". Quien ya eligió un tema lo
     conserva (se guarda en `ojo-guard-tema`); solo cambia el de quien nunca
     eligió. La pantalla de guardia sigue oscura.
-  - [ ] Después: la consola (panel), con las capturas que mande Luciano.
+  - [ ] **Ordenar la consola (panel Ojo Guard MS)** con el mismo método.
+    Regla de Luciano (15/10/2026): las imágenes y textos del pack de Drive
+    ("00. LEER PRIMERO — Pack Completo para Programación", imágenes 07 a 09)
+    **valen solo como línea estética** (crema, tarjetas suaves, botones
+    dorados en pastilla, barra superior con pestañas): no se toma de ahí la
+    información ni los textos como algo a cambiar, y **no se omite ninguna
+    utilidad que hoy da Ojo Guard**. Plan: paso 0 `foto-panel.ps1` (copia
+    de respaldo + archivos de la pantalla de la consola para subirlos a
+    Drive + inventario con huellas), después el inventario de utilidades de
+    la consola (como `FOTO-APP-NATIVA-14-10-2026.md`), y de a poco: 4
+    pestañas con Mapa y Familia como inicio; Mis Equipos más limpio (las
+    explicaciones largas en un "?" que se despliega al tocar, no al pasar el
+    mouse, porque el celular no tiene mouse); Evidencias (ocultar el
+    recuadro de cámara no disponible); login con Passkey arriba y Cuenta.
+    A verificar antes de prometer: si el panel sabe que un equipo está
+    sonando (para un solo botón Hacer sonar / Detener sonido), y frases
+    como "cifrados" o "métricas de salud" de pulseras. Autoguardado: solo
+    interruptores; las claves de 6 números mantienen su botón Guardar.
 
 - [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
   (12/10/2026, aplicado, publicado y probado: con la build 26 de iPhone y
