@@ -1,0 +1,181 @@
+﻿# aplicar-configuracion-limpieza-app.ps1 - Configuracion mas limpia (paso 2 de ordenar la app). Solo cambia lo que se ve: no se
+# saca ni se cambia ninguna funcion.
+#  - Los registros tecnicos (rastro del aviso de pantalla completa, historial de segundo plano y diagnostico nativo de camara) quedan
+#    en un solo renglon plegado, "Registros tecnicos (para soporte)", dentro de "Preparar autonomia".
+#  - "Estado del dispositivo" muestra el nombre que le pusiste al telefono (el de "Datos del telefono") en vez del de fabrica.
+#  - Textos mas cortos: el encabezado y el cartel de administrador (el texto largo se sigue viendo en el primer arranque) y los
+#    subtitulos de la guia de Android y de "Preparar autonomia".
+# Toca App.tsx. Va en la carpeta de la APP (la que tiene app.json). Respaldo .bak-limpcfg. Es solo codigo de la app (nada nativo):
+# sale en la PROXIMA build, en Android y en iPhone.
+$ErrorActionPreference = "Continue"
+function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
+function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
+function Avi($t) { Write-Host ("AVISO " + $t) -ForegroundColor Yellow }
+$raiz = (Get-Location).Path
+function Contar([string]$donde, [string]$que) {
+    if ([string]::IsNullOrEmpty($que)) { return 0 }
+    $n = 0; $i = 0
+    while ($true) { $i = $donde.IndexOf($que, $i, [System.StringComparison]::Ordinal); if ($i -lt 0) { break }; $n = $n + 1; $i = $i + $que.Length }
+    return $n
+}
+function Leer([string]$ruta) {
+    $bytes = [System.IO.File]::ReadAllBytes($ruta)
+    $bom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+    $texto = [System.IO.File]::ReadAllText($ruta, [System.Text.Encoding]::UTF8)
+    return @{ texto = $texto; bom = $bom; crlf = $texto.Contains("`r`n") }
+}
+function Ajustar([string]$t, [bool]$crlf) { $x = ($t -replace "`r`n", "`n"); if ($crlf) { $x = $x -replace "`n", "`r`n" }; return $x }
+function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPath $ruta).Hash.ToLower() }
+
+if (-not (Test-Path (Join-Path $raiz "app.json")) -or (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta de la APP (la que tiene app.json), no la del panel."; return }
+Ok "Carpeta correcta"
+if (-not (Test-Path (Join-Path $raiz "src\GruposConfiguracion.tsx"))) { Mal "Primero corre aplicar-configuracion-tarjetas-app.ps1."; return }
+if (-not (Test-Path (Join-Path $raiz "App.tsx"))) { Mal "No encuentro App.tsx en esta carpeta."; return }
+if ((Contar (Leer (Join-Path $raiz "App.tsx")).texto 'import { Plegable } from "./src/Plegable";') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+$cambios = @(
+    @('App.tsx', 'import de Plegable', 'import { CabeceraGrupo, enGrupo, GrupoActual, TarjetasConfiguracion, useSeVe, type GrupoConfiguracion } from "./src/GruposConfiguracion";
+', 'import { CabeceraGrupo, enGrupo, GrupoActual, TarjetasConfiguracion, useSeVe, type GrupoConfiguracion } from "./src/GruposConfiguracion";
+import { Plegable } from "./src/Plegable";
+'),
+    @('App.tsx', 'registros tecnicos: abre el plegable', '                <Text style={[styles.fieldHelp, { marginTop: 10, fontWeight: "700" }]}>
+                  {describirRastroDeAviso(', ('              </>
+            ) : null}
+            <Plegable titulo="Registros t' + [char]0x00e9 + 'cnicos (para soporte)" paleta={P}>
+            {Platform.OS === "android" ? (
+              <>
+                <Text style={[styles.fieldHelp, { marginTop: 10, fontWeight: "700" }]}>
+                  {describirRastroDeAviso(')),
+    @('App.tsx', 'registros tecnicos: cierra el plegable', '            ))}
+            <Pressable onPress={onPermissions} style={[styles.secondaryButton, { marginTop: 14 }]}>
+', '            ))}
+            </Plegable>
+            <Pressable onPress={onPermissions} style={[styles.secondaryButton, { marginTop: 14 }]}>
+'),
+    @('App.tsx', 'estado del dispositivo: recibe el nombre', 'function DeviceStatusCard({
+  isOnline,
+', 'function DeviceStatusCard({
+  deviceName,
+  isOnline,
+'),
+    @('App.tsx', 'estado del dispositivo: tipo del nombre', '}: {
+  isOnline: boolean | null;
+', '}: {
+  deviceName: string;
+  isOnline: boolean | null;
+'),
+    @('App.tsx', 'estado del dispositivo: muestra el nombre que le pusiste', ('<Text style={styles.deviceName}>{deviceLabel || "Tel' + [char]0x00e9 + 'fono protegido"}</Text>'), ('<Text style={styles.deviceName}>{deviceName.trim() || deviceLabel || "Tel' + [char]0x00e9 + 'fono protegido"}</Text>')),
+    @('App.tsx', 'estado del dispositivo: se le pasa el nombre', '            <DeviceStatusCard
+              isOnline={isOnline}
+', '            <DeviceStatusCard
+              deviceName={draft.deviceName}
+              isOnline={isOnline}
+'),
+    @('App.tsx', 'encabezado: texto corto fuera del primer arranque', ('          <Text style={styles.setupIntro}>
+            La configuraci' + [char]0x00f3 + 'n queda guardada de forma segura en este tel' + [char]0x00e9 + 'fono.
+            La empresa puede habilitar administradores y usuarios autorizados.
+          </Text>
+'), ('          <Text style={styles.setupIntro}>
+            {firstRun
+              ? "La configuraci' + [char]0x00f3 + 'n queda guardada de forma segura en este tel' + [char]0x00e9 + 'fono. La empresa puede habilitar administradores y usuarios autorizados."
+              : "Todo queda guardado de forma segura en este tel' + [char]0x00e9 + 'fono."}
+          </Text>
+')),
+    @('App.tsx', 'cartel de administrador: texto corto fuera del primer arranque', ('            <Text style={styles.fieldHelp}>
+              Esta pantalla solo se abre con la clave correcta. La clave de
+              administrador nunca activa la c' + [char]0x00e1 + 'mara ni registra una evidencia.
+            </Text>
+'), ('            <Text style={styles.fieldHelp}>
+              {firstRun
+                ? "Esta pantalla solo se abre con la clave correcta. La clave de administrador nunca activa la c' + [char]0x00e1 + 'mara ni registra una evidencia."
+                : "Solo se abre con tu clave de administrador, que nunca saca fotos ni registra evidencia."}
+            </Text>
+')),
+    @('App.tsx', 'subtitulo corto: guia de Android', 'subtitle="Cuatro ajustes de Android que, si no se tocan, frenan todo en silencio, y uno opcional"', 'subtitle="Cuatro ajustes para que Android no frene la app, y uno opcional"'),
+    @('App.tsx', 'subtitulo corto: preparar autonomia', ('subtitle="Bater' + [char]0x00ed + 'a, alarmas exactas, avisos de pantalla completa y diagn' + [char]0x00f3 + 'stico"'), ('subtitle="Bater' + [char]0x00ed + 'a, alarmas y avisos de pantalla completa"'))
+)
+$descargas = @()
+
+# --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
+$archivos = @{}
+foreach ($c in $cambios) {
+    $ruta = Join-Path $raiz $c[0]
+    if (-not (Test-Path $ruta)) { Mal ("No encuentro " + $c[0]); return }
+    if (-not $archivos.ContainsKey($c[0])) { $archivos[$c[0]] = Leer $ruta }
+}
+$ok = $true
+foreach ($c in $cambios) {
+    $f = $archivos[$c[0]]
+    $ancla = Ajustar $c[2] $f.crlf
+    $cuantos = Contar $f.texto $ancla
+    if ($cuantos -eq 1) { Ok ($c[0] + ": " + $c[1] + ": 1") } else { Mal ($c[0] + ": " + $c[1] + ": " + $cuantos + " (esperaba 1)"); $ok = $false }
+}
+if (-not $ok) { Mal "Alguna ancla no coincide. No toco nada. Mandame esta pantalla."; return }
+
+# --- Descargar archivos nuevos y verificar que llegaron completos ---
+foreach ($d in $descargas) {
+    $tmp = (Join-Path $raiz $d[1]) + ".descarga"
+    try { Invoke-WebRequest -UseBasicParsing $d[0] -OutFile $tmp } catch { }
+    if (-not (Test-Path $tmp) -or (Sha $tmp) -ne $d[2]) {
+        foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }
+        Mal ("No se pudo descargar bien " + $d[1] + ". No toque nada."); return
+    }
+    Ok ("Descargado y verificado: " + $d[1])
+}
+
+# --- Respaldos ---
+$tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
+foreach ($t in $tocados) {
+    $ruta = Join-Path $raiz $t
+    if (Test-Path ($ruta + ".bak-limpcfg")) { Mal ("Ya existe " + $t + ".bak-limpcfg. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+}
+$respaldados = @()
+foreach ($t in $tocados) {
+    $ruta = Join-Path $raiz $t
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-limpcfg"); $respaldados += $t }
+}
+Ok ("Respaldos creados (.bak-limpcfg): " + ($respaldados -join ", "))
+
+# --- Aplicar ---
+$esperado = @{}
+foreach ($k in $archivos.Keys) { $esperado[$k] = $archivos[$k].texto.Length }
+$nuevos = @{}
+foreach ($k in $archivos.Keys) { $nuevos[$k] = $archivos[$k].texto }
+foreach ($c in $cambios) {
+    $f = $archivos[$c[0]]
+    $ancla = Ajustar $c[2] $f.crlf; $reemplazo = Ajustar $c[3] $f.crlf
+    $nuevos[$c[0]] = $nuevos[$c[0]].Replace($ancla, $reemplazo)
+    $esperado[$c[0]] = $esperado[$c[0]] + ($reemplazo.Length - $ancla.Length)
+}
+foreach ($k in $archivos.Keys) { [System.IO.File]::WriteAllText((Join-Path $raiz $k), $nuevos[$k], (New-Object System.Text.UTF8Encoding($archivos[$k].bom))) }
+foreach ($d in $descargas) { Move-Item -LiteralPath ((Join-Path $raiz $d[1]) + ".descarga") -Destination (Join-Path $raiz $d[1]) -Force }
+
+# --- Verificar ---
+$todoBien = $true
+function Chk([string]$que, [bool]$cond) { if ($cond) { Ok $que } else { Mal $que; $script:todoBien = $false } }
+foreach ($c in $cambios) {
+    $v = (Leer (Join-Path $raiz $c[0]))
+    Chk ($c[0] + ": " + $c[1] + " aplicado") ((Contar $v.texto (Ajustar $c[3] $v.crlf)) -eq 1)
+}
+foreach ($k in $archivos.Keys) {
+    $largo = (Leer (Join-Path $raiz $k)).texto.Length
+    Chk ($k + ": largo " + $largo + " (esperado " + $esperado[$k] + ")") ($largo -eq $esperado[$k])
+}
+foreach ($d in $descargas) { Chk ($d[1] + ": verificado") ((Sha (Join-Path $raiz $d[1])) -eq $d[2]) }
+
+if (-not $todoBien) {
+    Mal "Algo no salio bien. Restauro todo desde los respaldos."
+    foreach ($t in $tocados) {
+        $ruta = Join-Path $raiz $t
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-limpcfg") -Destination $ruta -Force }
+        elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
+    }
+    Mal "Restaurado. Mandame esta pantalla."
+    return
+}
+Write-Host ""
+Ok "Archivos listos. Reviso que la app compile (puede tardar un minuto)..."
+& npx.cmd tsc --noEmit
+if ($LASTEXITCODE -ne 0) { Mal "La revision de tipos encontro errores (arriba). No hagas la build todavia: mandame esta pantalla."; return }
+Write-Host ""
+Ok "LISTO: la app compila bien. Sale en la PROXIMA build (Android y iPhone)."
+Write-Host ""

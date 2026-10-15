@@ -25,9 +25,17 @@ Actualizado: 15/10/2026.
     como siempre. El botón atrás de Android vuelve primero a las tarjetas. A
     comprobar en el teléfono: que cada bloque de la lista de la foto siga
     estando, en su tarjeta, con sus botones.
-  - [ ] Paso 2: limpieza chica (los registros técnicos detrás de un toque largo
-    en la versión, el nombre real del teléfono en vez del de fábrica,
-    "Guardar" en cada tarjeta en vez de uno solo abajo, textos más cortos).
+  - [ ] **Paso 2: limpieza chica**
+    (`aplicar-configuracion-limpieza-app.ps1`, respaldo `.bak-limpcfg`; sale
+    en la próxima build, falta aplicar). Solo cambia lo que se ve: los tres
+    registros técnicos (rastro del aviso, historial de segundo plano,
+    diagnóstico nativo de cámara) quedan en un renglón plegado "Registros
+    técnicos (para soporte)" dentro de "Preparar autonomía"; "Estado del
+    dispositivo" muestra el nombre que se le puso al teléfono; encabezado y
+    cartel de administrador más cortos (el texto largo sigue en el primer
+    arranque); subtítulos más cortos de la guía de Android y de "Preparar
+    autonomía". Lo de guardar por tarjeta se descartó: cambia el
+    funcionamiento (hoy un solo "Guardar cambios").
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
