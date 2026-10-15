@@ -1,8 +1,37 @@
 # Pendientes de Ojo Guard (app + Ojo Guard MS)
 
-Actualizado: 12/10/2026.
+Actualizado: 15/10/2026.
 
 ## En curso
+
+- [ ] **Ordenar la app nativa de a poco (más simple, para todas las edades)**
+  (14/10/2026). Reglas: el funcionamiento no cambia, solo dónde está cada
+  cosa y cómo se ve; antes de tocar nada se hizo la "foto"
+  (`FOTO-APP-NATIVA-14-10-2026.md` con todo lo que hay hoy, y `foto-app.ps1`
+  que guarda un .zip de la carpeta y compara el código; ya corrido, zip
+  guardado). Etapas:
+  - [ ] **Paso 1: Configuración en tarjetas**
+    (`aplicar-configuracion-tarjetas-app.ps1`, archivo nuevo
+    `src/GruposConfiguracion.tsx`, respaldo `.bak-grupos`; sale en la próxima
+    build, falta aplicar y probar en el teléfono). Cinco tarjetas: Claves y
+    Seguridad (Claves de acceso, Evidencia y ubicación, Detección de intentos),
+    Fotos de Intrusos (Protección sin internet, Intentos de entrada), Modo
+    Perdido y Cercanía (mensaje de recuperación, Modo cercanía, Personas,
+    dispositivos y artículos), Mi Teléfono y Fondo (estado del dispositivo,
+    Datos del teléfono, Apariencia, Preferencias generales entera) y Permisos
+    (en Android "Permisos de Android" con "N de 4"; en iPhone "Permisos del
+    iPhone"). Debajo de las tarjetas quedan "Familia y amigos" (con el Dr. Ojo
+    Guard y el SOS) y "Ojo Guard MS". En el primer arranque se ve todo junto
+    como siempre. El botón atrás de Android vuelve primero a las tarjetas. A
+    comprobar en el teléfono: que cada bloque de la lista de la foto siga
+    estando, en su tarjeta, con sus botones.
+  - [ ] Paso 2: limpieza chica (los registros técnicos detrás de un toque largo
+    en la versión, el nombre real del teléfono en vez del de fábrica,
+    "Guardar" en cada tarjeta en vez de uno solo abajo, textos más cortos).
+  - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
+    "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
+    del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
+  - [ ] Después: la consola (panel), con las capturas que mande Luciano.
 
 - [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
   (12/10/2026, aplicado, publicado y probado: con la build 26 de iPhone y

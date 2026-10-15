@@ -81,7 +81,7 @@ Cada ítem lleva su texto exacto. (A) = solo Android, (i) = solo iPhone.
 11. **Evidencia y ubicación**: interruptores "Adjuntar ubicación" y "Audio ambiental breve (opcional)".
 12. **Modo cercanía**: interruptor "Modo cercanía" y, si está activo, campo "Radio seguro de cercanía — metros".
 13. **Preferencias generales**: interruptores "Modo preventivo" y "Pantalla OLED".
-14. **Preparar autonomía para Modo perdido** (A; "Batería, alarmas exactas, avisos de pantalla completa y diagnóstico"): botones
+14. **Preparar autonomía para Modo perdido** (en iPhone se ve también, solo con los botones comunes; lo de Android va dentro de un bloque solo Android; "Batería, alarmas exactas, avisos de pantalla completa y diagnóstico"): botones
     "Permitir actividad en segundo plano sin restricciones", "Abrir ahorro de batería", "Permitir alarmas exactas", "Permitir avisos
     de pantalla completa", "Revisar permisos", "Probar aviso en este teléfono"; y **registros técnicos**: rastro del aviso de pantalla
     completa, "Historial de segundo plano — versión … build …" (líneas por fecha) y "Diagnóstico nativo de cámara" (líneas crudas).
