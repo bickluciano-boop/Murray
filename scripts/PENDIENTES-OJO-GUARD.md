@@ -134,6 +134,22 @@ Actualizado: 15/10/2026.
     el mapa entra solo, "Cómo llegar" abre afuera y vuelve sin pedir la clave,
     el mapa se ve en claro y en noche, el SOS funciona desde la franja, y
     "Familia" tiene todo lo de antes. Después, la build de iPhone.
+  - [ ] **Inicio v2, ajustes tras la primera build con mapa** (fotos de
+    Luciano, 15/10/2026: el mapa carga bien en el teléfono, con Google Maps,
+    el popup de cada persona y el SOS abajo; "Abrir panel" y Familia andan).
+    Pedidos: (1) **barra de arriba fija en todas las pantallas** como las
+    pestañas de MS: Inicio, Familia, Perfil, Ajustes y "Panel" (abre MS directo),
+    marca en cuál se está; Familia/Perfil/Ajustes sin "Atrás" (los grupos de
+    Ajustes sí); (2) **tarjeta del mapa demasiado grande** al tocar un equipo:
+    dentro de la app queda pegada abajo, máx. 44 % del alto, datos en fila
+    (`aplicar-mapa-app-compacto-panel.ps1`, solo panel, se ve al instante en la
+    app instalada); (3) **SOS repetido**: ahora solo en el Inicio (franja roja);
+    Familia trae las ayudas "sin abrir la app" y un recordatorio. De paso: en
+    Familia, "Mapa ›" lleva al mapa del Inicio y ya no abre Google Maps con un
+    pin suelto. App: `aplicar-barra-superior-app.ps1` (necesita antes el del
+    Inicio con mapa; es solo JS, pero hace falta build para verlo). Pendiente
+    para después: que "Mapa ›" enfoque a esa persona en el mapa; textos y
+    tamaños finos de la barra; iPhone.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
