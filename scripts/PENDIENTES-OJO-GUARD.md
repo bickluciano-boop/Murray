@@ -128,7 +128,9 @@ Actualizado: 15/10/2026.
     pantalla de sincronización: botón "Abrir panel" arriba a la derecha del
     Inicio (usa el mismo acceso directo de `openOjoGuardMs`; dice "Abriendo…"
     mientras pide el enlace). Falta
-    aplicarlos (primero el del panel), hacer la build de Android y probar:
+    aplicarlos (primero el del panel; el del panel y el de la app ya están
+    aplicados el 15/10/2026, el de la app compila bien con react-native-webview
+    instalado), hacer la build de Android y probar:
     el mapa entra solo, "Cómo llegar" abre afuera y vuelve sin pedir la clave,
     el mapa se ve en claro y en noche, el SOS funciona desde la franja, y
     "Familia" tiene todo lo de antes. Después, la build de iPhone.
