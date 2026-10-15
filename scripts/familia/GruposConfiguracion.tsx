@@ -42,7 +42,7 @@ const TEXTOS_GRUPO: Record<GrupoConfiguracion, { titulo: string; resumen: string
   claves: { titulo: "Claves y Seguridad", resumen: "Tus claves, la detección de intentos de desbloqueo y lo que se guarda como evidencia." },
   fotos: { titulo: "Fotos de Intrusos", resumen: "Los intentos de entrada que registró este teléfono." },
   perdido: { titulo: "Modo Perdido y Cercanía", resumen: "Qué ve quien encuentre el teléfono, la cercanía y tus accesorios." },
-  preferencias: { titulo: "Preferencias generales", resumen: "Modo preventivo, pantalla OLED y lo que falta enviar." },
+  preferencias: { titulo: "Preferencias", resumen: "Modo preventivo, pantalla OLED y lo que falta enviar." },
   perfil: { titulo: "Mi perfil", resumen: "Los datos de este teléfono y cómo se ve la app." },
   proteccion: { titulo: "Dr. Ojo Guard", resumen: "Revisa que el SOS, los avisos y la ubicación estén listos en este teléfono." },
   conexion: { titulo: "Ojo Guard MS", resumen: "Cómo se conecta este teléfono con el panel de Ojo Guard MS." },
@@ -130,11 +130,11 @@ export function BotonesInicio({ paleta: P, onPerfil, onConfiguracion }: BotonesI
     <View style={s.botonesInicio}>
       <Pressable accessibilityRole="button" accessibilityLabel="Mi perfil" onPress={onPerfil} style={s.botonInicio}>
         <Image source={ICONO_PERFIL} style={s.botonInicioIcono} resizeMode="contain" />
-        <Text style={s.botonInicioTexto}>Mi perfil</Text>
+        <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={s.botonInicioTexto}>Mi perfil</Text>
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Configuración" onPress={onConfiguracion} style={s.botonInicio}>
         <Image source={ICONO_TUERCA} style={s.botonInicioIcono} resizeMode="contain" />
-        <Text style={s.botonInicioTexto}>Configuración</Text>
+        <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={s.botonInicioTexto}>Configuración</Text>
       </Pressable>
     </View>
   );
