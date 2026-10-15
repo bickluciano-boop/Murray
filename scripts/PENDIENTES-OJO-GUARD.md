@@ -150,6 +150,17 @@ Actualizado: 15/10/2026.
     Inicio con mapa; es solo JS, pero hace falta build para verlo). Pendiente
     para después: que "Mapa ›" enfoque a esa persona en el mapa; textos y
     tamaños finos de la barra; iPhone.
+  - [ ] **"Abrir panel" sin saltos** (fotos de Luciano, 15/10/2026: al
+    apretar "Abrir panel" se veía el cambio a Chrome, una pantalla blanca, un
+    instante la pantalla "Entrá a tu cuenta" y el panel con el mapa vacío antes
+    del mapa). `aplicar-panel-sin-saltos-panel.ps1` (solo panel): entrando
+    directo (`/acceso-v7?directo=1` para la consola completa, `?app=mapa` para
+    el mapa de la app) se muestra "Abriendo Ojo Guard MS…" hasta que el mapa
+    dibuja (se saca sola a los 6 s o si no hay sesión). Queda el salto a Chrome:
+    para evitarlo del todo, que "Panel" abra el panel **adentro de la app**
+    (WebView con la misma sesión del mapa); riesgos a mirar: passkeys no andan
+    en WebView (la sesión "device" no las necesita), subir archivos (búsqueda
+    de caras) y descargas. Propuesto a Luciano, falta su sí.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
