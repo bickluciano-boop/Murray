@@ -146,7 +146,15 @@ Actualizado: 15/10/2026.
     - [ ] **Paso 2 de la consola: barra fija, evidencias, Cuenta, acceso**
       (`aplicar-consola-pestanas2-panel.ps1`, respaldo `.bak-paso2`, publica
       solo; aplicado y publicado el 15/10/2026, versión 4ad88554; falta que
-      Luciano lo mire y mande fotos; requiere el paso 1). Lo visto en las fotos
+      Luciano lo mire y mande fotos; requiere el paso 1). Fotos del 15/10/2026
+      en la compu: barra fija, evidencias sin recuadro vacío y Cuenta en dos
+      columnas, andan.
+    - [ ] **Paso 2b de la consola: explicaciones al pasar el mouse**
+      (`aplicar-consola-ayudas-panel.ps1`, respaldo `.bak-ayudas`, publica
+      solo; falta aplicar). Pedido de Luciano: los "?" parecían un problema;
+      con mouse o touchpad la explicación del botón aparece al pasar por
+      encima (sin símbolo); en celular/tablet queda una "i" chica que la
+      despliega al tocar. Lo visto en las fotos
       del paso 1: en la compu la barra de pestañas flotaba sobre el texto al
       bajar y el recuadro "No disponible" de la cámara trasera seguía
       apareciendo. Ahora: la franja de arriba (logo, pestañas y botones) queda
