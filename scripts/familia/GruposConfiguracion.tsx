@@ -1,5 +1,6 @@
-import { createContext, useContext } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as Battery from "expo-battery";
+import { createContext, useContext, useEffect, useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 
 /**
  * Configuración en cinco tarjetas grandes en vez de una tira larga de bloques. Cada bloque de siempre sigue existiendo, con sus
@@ -53,6 +54,12 @@ export function textosDe(grupo: GrupoConfiguracion, android: boolean) {
 type TarjetasProps = {
   paleta: Paleta;
   android: boolean;
+  /** Nombre que se le puso a este teléfono. */
+  nombre: string;
+  /** Correo privado de alertas (puede estar vacío). */
+  correo: string;
+  /** true: hay internet; false: no hay; null: todavía comprobando. */
+  enLinea: boolean | null;
   /** Cuántos de los cuatro permisos de Android están en orden; null si todavía no se pudo leer. */
   permisosEnOrden: number | null;
   permisosTotal: number;
@@ -63,47 +70,93 @@ type TarjetasProps = {
   onElegir: (grupo: GrupoConfiguracion) => void;
 };
 
-export function TarjetasConfiguracion({ paleta: P, android, permisosEnOrden, permisosTotal, intentos, pendientes, cercania, radioMetros, onElegir }: TarjetasProps) {
+const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos">, ImageSourcePropType> = {
+  claves: require("../assets/config-llave.png"),
+  fotos: require("../assets/config-camara.png"),
+  perdido: require("../assets/config-radar.png"),
+  telefono: require("../assets/config-telefono.png"),
+};
+
+function useBateria() {
+  const [porcentaje, setPorcentaje] = useState<number | null>(null);
+  useEffect(() => {
+    let activo = true;
+    const leer = async () => {
+      const valor = await Battery.getBatteryLevelAsync().catch(() => -1);
+      if (activo && valor >= 0) setPorcentaje(Math.round(valor * 100));
+    };
+    void leer();
+    const intervalo = setInterval(() => void leer(), 60_000);
+    return () => {
+      activo = false;
+      clearInterval(intervalo);
+    };
+  }, []);
+  return porcentaje;
+}
+
+/**
+ * Portada de Configuración: la tarjeta de este teléfono (nombre, si está en línea y la batería, correo), la banda de permisos
+ * (toca para ver o arreglar los de Android) y cuatro tarjetas grandes con ícono. Cada una abre los bloques de siempre de su grupo.
+ */
+export function TarjetasConfiguracion({ paleta: P, android, nombre, correo, enLinea, permisosEnOrden, permisosTotal, intentos, pendientes, cercania, radioMetros, onElegir }: TarjetasProps) {
   const s = estilos(P);
-  const fotos =
-    (intentos > 0 ? `${intentos} registrado${intentos === 1 ? "" : "s"}` : "Ninguno") + (pendientes > 0 ? ` · ${pendientes} por enviar` : "");
+  const bateria = useBateria();
+  const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
+  const colorEstado = enLinea === false ? P.doradoTexto : P.exito;
   const completos = permisosEnOrden !== null && permisosEnOrden >= permisosTotal;
-  const filas: Array<{ grupo: GrupoConfiguracion; detalle: string }> = [
-    { grupo: "claves", detalle: "Claves, intentos de desbloqueo, evidencia" },
-    { grupo: "fotos", detalle: fotos },
-    { grupo: "perdido", detalle: `Mensaje para quien lo encuentre · ${cercania ? `cercanía activa (${radioMetros} m)` : "cercanía apagada"}` },
-    { grupo: "telefono", detalle: "Nombre, fondo de pantalla, estado" },
+  const textoPermisos = !android
+    ? "Permisos del iPhone ›"
+    : permisosEnOrden === null
+      ? "Permisos de Android: revisar ›"
+      : completos
+        ? `Permisos de Android: ${permisosEnOrden}/${permisosTotal} OK ✓`
+        : `Permisos de Android: ${permisosEnOrden}/${permisosTotal} · arreglar ›`;
+  const colores = !android || permisosEnOrden === null
+    ? { fondo: P.superficieHonda, borde: P.borde, texto: P.textoSuave }
+    : completos
+      ? { fondo: P.exitoFondo, borde: P.exitoBorde, texto: P.exito }
+      : { fondo: P.doradoFondo, borde: P.doradoBorde, texto: P.doradoTexto };
+
+  const tarjetas: Array<{ grupo: Exclude<GrupoConfiguracion, "permisos">; detalle: string }> = [
+    { grupo: "claves", detalle: "Claves, señuelo y evidencia" },
+    { grupo: "fotos", detalle: (intentos > 0 ? `${intentos} intento${intentos === 1 ? "" : "s"} registrado${intentos === 1 ? "" : "s"}` : "Ningún intento registrado") + (pendientes > 0 ? ` · ${pendientes} por enviar` : "") },
+    { grupo: "perdido", detalle: `Mensaje de rescate y ${cercania ? `radio ${radioMetros} m` : "cercanía apagada"}` },
+    { grupo: "telefono", detalle: "Nombre, fondo y modo noche" },
   ];
-  filas.push({ grupo: "permisos", detalle: android ? "Batería, avisos de pantalla completa, bloqueo" : "Protección contra robo y permisos de la app" });
 
   return (
-    <View style={s.lista}>
-      {filas.map(({ grupo, detalle }) => {
-        const esPermisos = android && grupo === "permisos" && permisosEnOrden !== null;
-        const titulo = textosDe(grupo, android).titulo;
-        return (
-          <Pressable
-            key={grupo}
-            accessibilityRole="button"
-            accessibilityLabel={`${titulo}. ${detalle}`}
-            onPress={() => onElegir(grupo)}
-            style={[s.tarjeta, esPermisos && { borderColor: completos ? P.exitoBorde : P.doradoBorde }]}
-          >
-            <View style={s.texto}>
-              <Text style={s.titulo}>{titulo}</Text>
-              <Text style={s.detalle}>{detalle}</Text>
-            </View>
-            {esPermisos ? (
-              <View style={[s.estado, { backgroundColor: completos ? P.exitoFondo : P.doradoFondo, borderColor: completos ? P.exitoBorde : P.doradoBorde }]}>
-                <Text style={[s.estadoTexto, { color: completos ? P.exito : P.doradoTexto }]}>
-                  {completos ? "✓" : "!"} {permisosEnOrden} de {permisosTotal}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={s.flecha}>›</Text>
-          </Pressable>
-        );
-      })}
+    <View style={s.portada}>
+      <View style={s.telefono}>
+        <Text style={s.telefonoNombre}>{nombre.trim() || "Mi teléfono"}</Text>
+        <View style={[s.estado, { borderColor: colorEstado }]}>
+          <View style={[s.punto, { backgroundColor: colorEstado }]} />
+          <Text style={[s.estadoTexto, { color: colorEstado }]}>{estado}{bateria !== null ? ` · ${bateria}%` : ""}</Text>
+        </View>
+        {correo.trim() ? <Text style={s.correo}>{correo.trim()}</Text> : null}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={textoPermisos}
+        onPress={() => onElegir("permisos")}
+        style={[s.banda, { backgroundColor: colores.fondo, borderColor: colores.borde }]}
+      >
+        <Text style={[s.bandaTexto, { color: colores.texto }]}>{textoPermisos}</Text>
+      </Pressable>
+
+      <View style={s.grilla}>
+        {tarjetas.map(({ grupo, detalle }) => {
+          const titulo = textosDe(grupo, android).titulo;
+          return (
+            <Pressable key={grupo} accessibilityRole="button" accessibilityLabel={`${titulo}. ${detalle}`} onPress={() => onElegir(grupo)} style={s.celda}>
+              <Image source={ICONOS[grupo]} style={s.icono} resizeMode="contain" />
+              <Text style={s.celdaTitulo}>{titulo}</Text>
+              <Text style={s.celdaDetalle}>{detalle}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -126,26 +179,20 @@ export function CabeceraGrupo({ paleta: P, android, grupo, onVolver }: CabeceraP
 
 function estilos(P: Paleta) {
   return StyleSheet.create({
-    lista: { marginTop: 18, marginBottom: 6 },
-    tarjeta: {
-      alignItems: "center",
-      backgroundColor: P.superficie,
-      borderColor: P.borde,
-      borderRadius: 16,
-      borderWidth: 1,
-      flexDirection: "row",
-      gap: 10,
-      marginBottom: 12,
-      minHeight: 76,
-      paddingHorizontal: 18,
-      paddingVertical: 16,
-    },
-    texto: { flex: 1 },
-    titulo: { color: P.texto, fontSize: 18, fontWeight: "700" },
-    detalle: { color: P.textoTenue, fontSize: 13, lineHeight: 18, marginTop: 4 },
-    estado: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
-    estadoTexto: { fontSize: 13, fontWeight: "800" },
-    flecha: { color: P.doradoTexto, fontSize: 28, fontWeight: "300", lineHeight: 30 },
+    portada: { marginTop: 14, marginBottom: 6 },
+    telefono: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingVertical: 20 },
+    telefonoNombre: { color: P.texto, fontSize: 24, fontWeight: "800", textAlign: "center" },
+    estado: { alignItems: "center", borderRadius: 16, borderWidth: 1.5, flexDirection: "row", gap: 8, marginTop: 10, paddingHorizontal: 14, paddingVertical: 6 },
+    punto: { borderRadius: 5, height: 10, width: 10 },
+    estadoTexto: { fontSize: 14, fontWeight: "700" },
+    correo: { color: P.textoTenue, fontSize: 14, marginTop: 10, textAlign: "center" },
+    banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, marginTop: 12, minHeight: 52, justifyContent: "center", paddingHorizontal: 14, paddingVertical: 12 },
+    bandaTexto: { fontSize: 15, fontWeight: "700", textAlign: "center" },
+    grilla: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "space-between", marginBottom: 12, marginTop: 12 },
+    celda: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 22, borderWidth: 1, minHeight: 176, paddingHorizontal: 10, paddingVertical: 18, width: "48%" },
+    icono: { height: 52, width: 52 },
+    celdaTitulo: { color: P.texto, fontSize: 17, fontWeight: "800", marginTop: 12, textAlign: "center" },
+    celdaDetalle: { color: P.textoTenue, fontSize: 12.5, lineHeight: 17, marginTop: 6, textAlign: "center" },
     cabecera: { marginBottom: 18, marginTop: 38 },
     volver: { alignSelf: "flex-start", paddingVertical: 8 },
     volverTexto: { color: P.doradoTexto, fontSize: 16, fontWeight: "700" },
