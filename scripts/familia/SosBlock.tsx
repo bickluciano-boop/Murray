@@ -10,7 +10,8 @@ import "./sosMapa";
 import { sosShortcutLink } from "./sosTask";
 
 /**
- * Botón de SOS dentro de "Familia y amigos". Hay que mantenerlo apretado 3 segundos (para que no salga por un toque
+ * El SOS. El botón vive en el Inicio, en una franja baja (modo `compacto`); la pantalla de Familia solo trae las ayudas para pedirlo sin
+ * abrir la app (así el botón no se repite). Hay que mantenerlo apretado 3 segundos (para que no salga por un toque
  * sin querer): vibra, manda el pedido y muestra a quién se le avisó, con "Estoy bien" para cancelarlo.
  *
  * Se ve solo si este teléfono está en una familia. Lo que pasa del otro lado (sirena, mail, mapa) está en sos.ts y en el
@@ -185,47 +186,13 @@ export function SosBlock({ enrollment, visible, compacto = false, paleta: P, bot
     );
   }
 
+  // Pantalla de Familia: el botón de SOS ya está en el Inicio (franja roja de abajo); acá solo se explica y quedan las ayudas para pedirlo
+  // sin abrir la app.
   return (
     <View style={s.bloque}>
-      <Text style={s.titulo}>Pedir ayuda (SOS)</Text>
-      {sos ? (
-        <View style={s.enCurso}>
-          <Text style={s.enCursoTitulo}>SOS enviado</Text>
-          <Text style={s.enCursoTexto}>
-            Le avisamos a {listaDeNombres(sos.to)}. Ven tu ubicación en el mapa y les suena la sirena hasta que lo atiendan.
-          </Text>
-          <Pressable accessibilityRole="button" disabled={trabajando} onPress={() => void estoyBien()} style={[botones.secundario, s.estoyBien, trabajando && s.apagado]}>
-            {trabajando ? <ActivityIndicator color={P.texto} /> : <Text style={botones.secundarioTexto}>Estoy bien</Text>}
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Pedir ayuda"
-            accessibilityHint="Mantenelo apretado 3 segundos para avisarle a tu familia"
-            delayLongPress={MANTENER_MS}
-            disabled={trabajando}
-            onLongPress={() => void enviar()}
-            onPressIn={empezar}
-            onPressOut={soltar}
-            style={s.boton}
-          >
-            <Animated.View pointerEvents="none" style={[s.relleno, { width: ancho }]} />
-            {trabajando ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <View style={s.botonTextos} pointerEvents="none">
-                <Text style={s.botonTexto}>SOS</Text>
-                <Text style={s.botonSub}>Mantené apretado 3 segundos</Text>
-              </View>
-            )}
-          </Pressable>
-          <Text style={[botones.ayuda, s.ayuda]}>
-            Avisa a tu familia con tu ubicación: les suena una sirena y te ven en el mapa 10 minutos.
-          </Text>
-        </>
-      )}
+      <Text style={[botones.ayuda, s.ayuda]}>
+        El botón de SOS está en el Inicio, abajo: mantenelo apretado 3 segundos y avisa a tu familia con tu ubicación (les suena una sirena y te ven en el mapa 10 minutos).
+      </Text>
       {mensaje ? <Text style={s.mensaje}>{mensaje}</Text> : null}
 
       {Platform.OS === "android" && sosGestureAvailable() ? (

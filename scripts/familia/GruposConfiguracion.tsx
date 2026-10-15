@@ -5,8 +5,10 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 /**
  * La pantalla a la que se entra con la clave de administrador, en tres niveles:
  *
- *  - Inicio (null): lo de todos los días. Una línea con este teléfono, los botones "Mi perfil", "Familia" y "Configuración", el mapa con
- *    todos los equipos y la familia, y el SOS siempre a mano abajo (ver InicioMapa.tsx).
+ *  - La barra de arriba (BarraSuperior) queda fija en todas las pantallas: Inicio, Familia, Perfil, Ajustes (Configuración) y Abrir el
+ *    panel Ojo Guard MS. Marca en cuál se está.
+ *  - Inicio (null): lo de todos los días. Una línea con este teléfono, el mapa con todos los equipos y la familia, y el SOS siempre a mano
+ *    abajo (ver InicioMapa.tsx).
  *  - Familia ("familia"): quién comparte su ubicación con vos, unirse con un código, pausar la propia ubicación y el SOS completo.
  *  - Mi perfil ("perfil"): los datos de quien usa el teléfono (nombre, correo, cómo se ve, cómo está).
  *  - Configuración ("configuracion"): seis tarjetas grandes y la banda de permisos. Cada tarjeta abre un grupo.
@@ -70,6 +72,7 @@ const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos" | "perfil">, ImageSo
   conexion: require("../assets/config-conexion.png"),
 };
 const ICONO_TUERCA: ImageSourcePropType = require("../assets/config-tuerca.png");
+const ICONO_INICIO: ImageSourcePropType = require("../assets/config-inicio.png");
 const ICONO_PERFIL: ImageSourcePropType = require("../assets/config-perfil.png");
 
 function useBateria() {
@@ -125,73 +128,83 @@ export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea }: Telefono
   );
 }
 
-type CabezaProps = {
-  paleta: Paleta;
-  nombre: string;
-  enLinea: boolean | null;
-  /** Abre el panel Ojo Guard MS entrando directo, sin pedir códigos. Si no se pasa, el botón no se muestra. */
-  onPanel?: () => void;
-  /** Mientras se pide el acceso y se abre el panel. */
-  abriendo?: boolean;
-};
+type CabezaProps = { paleta: Paleta; nombre: string; enLinea: boolean | null };
 
-/**
- * Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande, y a la derecha el
- * botón para abrir el panel Ojo Guard MS: entrar al panel tiene que estar a un toque desde lo primero que se ve.
- */
-export function CabezaInicio({ paleta: P, nombre, enLinea, onPanel, abriendo = false }: CabezaProps) {
+/** Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande. */
+export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
   const s = estilos(P);
   const bateria = useBateria();
   const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
   const colorEstado = enLinea === false ? P.doradoTexto : P.exito;
   return (
     <View style={s.cabeza}>
-      <View style={s.cabezaTextos}>
-        <Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={s.cabezaNombre}>
-          {nombre.trim() || "Mi teléfono"}
+      <Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={s.cabezaNombre}>
+        {nombre.trim() || "Mi teléfono"}
+      </Text>
+      <View style={s.cabezaEstado}>
+        <View style={[s.punto, { backgroundColor: colorEstado }]} />
+        <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
+          {estado}
+          {bateria !== null ? ` · batería ${bateria}%` : ""}
         </Text>
-        <View style={s.cabezaEstado}>
-          <View style={[s.punto, { backgroundColor: colorEstado }]} />
-          <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
-            {estado}
-            {bateria !== null ? ` · batería ${bateria}%` : ""}
-          </Text>
-        </View>
       </View>
-      {onPanel ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Abrir el panel de Ojo Guard MS"
-          disabled={abriendo}
-          onPress={onPanel}
-          style={[s.botonPanel, abriendo && s.botonPanelApagado]}
-        >
-          <Image source={ICONOS.conexion} style={s.botonPanelIcono} resizeMode="contain" />
-          <Text numberOfLines={1} style={s.botonPanelTexto}>{abriendo ? "Abriendo…" : "Abrir panel"}</Text>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
 
-type BotonesInicioMapaProps = { paleta: Paleta; onPerfil: () => void; onFamilia: () => void; onConfiguracion: () => void };
+export type SeccionBarra = "inicio" | "familia" | "perfil" | "configuracion";
 
-/** Debajo de la cabeza del Inicio con mapa: tres botones chicos, "Mi perfil", "Familia" y la tuerca de "Configuración". */
-export function BotonesInicioMapa({ paleta: P, onPerfil, onFamilia, onConfiguracion }: BotonesInicioMapaProps) {
+type BarraProps = {
+  paleta: Paleta;
+  /** En cuál de las cuatro pantallas se está (todos los grupos de Configuración cuentan como "configuracion"). */
+  actual: SeccionBarra;
+  onElegir: (destino: SeccionBarra) => void;
+  /** Abre el panel Ojo Guard MS entrando directo, sin pedir códigos. */
+  onPanel: () => void;
+  /** Mientras se pide el acceso y se abre el panel. */
+  abriendo?: boolean;
+};
+
+/**
+ * La barra de arriba, fija en todas las pantallas (como las pestañas de Ojo Guard MS): Inicio, Familia, Perfil, Ajustes y, destacado,
+ * "Panel", que abre Ojo Guard MS entrando directo. Así se cambia de pantalla sin volver atrás, y el panel está siempre a un toque.
+ */
+export function BarraSuperior({ paleta: P, actual, onElegir, onPanel, abriendo = false }: BarraProps) {
   const s = estilos(P);
-  const botones: Array<{ texto: string; icono: ImageSourcePropType; onPress: () => void }> = [
-    { texto: "Mi perfil", icono: ICONO_PERFIL, onPress: onPerfil },
-    { texto: "Familia", icono: ICONOS.familia, onPress: onFamilia },
-    { texto: "Configuración", icono: ICONO_TUERCA, onPress: onConfiguracion },
+  const items: Array<{ clave: SeccionBarra; texto: string; icono: ImageSourcePropType }> = [
+    { clave: "inicio", texto: "Inicio", icono: ICONO_INICIO },
+    { clave: "familia", texto: "Familia", icono: ICONOS.familia },
+    { clave: "perfil", texto: "Perfil", icono: ICONO_PERFIL },
+    { clave: "configuracion", texto: "Ajustes", icono: ICONO_TUERCA },
   ];
   return (
-    <View style={s.botonesMapa}>
-      {botones.map(({ texto, icono, onPress }) => (
-        <Pressable key={texto} accessibilityRole="button" accessibilityLabel={texto} onPress={onPress} style={s.botonMapa}>
-          <Image source={icono} style={s.botonMapaIcono} resizeMode="contain" />
-          <Text adjustsFontSizeToFit minimumFontScale={0.75} numberOfLines={1} style={s.botonMapaTexto}>{texto}</Text>
-        </Pressable>
-      ))}
+    <View style={s.barra}>
+      {items.map(({ clave, texto, icono }) => {
+        const activo = clave === actual;
+        return (
+          <Pressable
+            key={clave}
+            accessibilityRole="button"
+            accessibilityLabel={clave === "configuracion" ? "Configuración" : texto}
+            accessibilityState={{ selected: activo }}
+            onPress={() => onElegir(clave)}
+            style={[s.barraItem, activo && s.barraItemActivo]}
+          >
+            <Image source={icono} style={s.barraIcono} resizeMode="contain" />
+            <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={[s.barraTexto, activo && s.barraTextoActivo]}>{texto}</Text>
+          </Pressable>
+        );
+      })}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Abrir el panel de Ojo Guard MS"
+        disabled={abriendo}
+        onPress={onPanel}
+        style={[s.barraItem, s.barraPanel, abriendo && s.barraPanelApagado]}
+      >
+        <Image source={ICONOS.conexion} style={s.barraIcono} resizeMode="contain" />
+        <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={[s.barraTexto, s.barraTextoActivo]}>{abriendo ? "Abriendo…" : "Panel"}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -302,23 +315,25 @@ export function TarjetasConfiguracion({ paleta: P, android, intentos, pendientes
   );
 }
 
-type CabeceraPantallaProps = { paleta: Paleta; titulo: string; resumen?: string; onVolver: () => void };
+type CabeceraPantallaProps = { paleta: Paleta; titulo: string; resumen?: string; onVolver?: () => void };
 
-/** "‹ Atrás" bien separado de la ✕ (que solo está en el Inicio), el título y, si hace falta, una línea chica. */
+/** "‹ Atrás" bien separado de la ✕ (que solo está en el Inicio), el título y, si hace falta, una línea chica. Sin `onVolver` no hay "Atrás": la barra de arriba lleva a las otras pantallas. */
 export function CabeceraPantalla({ paleta: P, titulo, resumen, onVolver }: CabeceraPantallaProps) {
   const s = estilos(P);
   return (
     <View style={s.cabecera}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Atrás" hitSlop={10} onPress={onVolver} style={s.volver}>
-        <Text style={s.volverTexto}>‹ Atrás</Text>
-      </Pressable>
+      {onVolver ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Atrás" hitSlop={10} onPress={onVolver} style={s.volver}>
+          <Text style={s.volverTexto}>‹ Atrás</Text>
+        </Pressable>
+      ) : null}
       <Text style={s.cabeceraTitulo}>{titulo}</Text>
       {resumen ? <Text style={s.cabeceraResumen}>{resumen}</Text> : null}
     </View>
   );
 }
 
-type CabeceraProps = { paleta: Paleta; android: boolean; grupo: GrupoConfiguracion; onVolver: () => void };
+type CabeceraProps = { paleta: Paleta; android: boolean; grupo: GrupoConfiguracion; onVolver?: () => void };
 
 export function CabeceraGrupo({ paleta, android, grupo, onVolver }: CabeceraProps) {
   const textos = textosDe(grupo, android);
@@ -337,19 +352,19 @@ function estilos(P: Paleta) {
     botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
-    cabeza: { alignItems: "center", flexDirection: "row", gap: 10, marginBottom: 8 },
-    cabezaTextos: { flex: 1 },
-    botonPanel: { alignItems: "center", backgroundColor: P.doradoFondoFuerte, borderColor: P.doradoBordeMedio, borderRadius: 16, borderWidth: 1.5, flexDirection: "row", gap: 7, paddingHorizontal: 12, paddingVertical: 10 },
-    botonPanelApagado: { opacity: 0.6 },
-    botonPanelIcono: { height: 22, width: 22 },
-    botonPanelTexto: { color: P.doradoTexto, fontSize: 14, fontWeight: "800" },
-    cabezaNombre: { color: P.texto, fontSize: 20, fontWeight: "800" },
-    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 3 },
-    cabezaEstadoTexto: { fontSize: 13, fontWeight: "700" },
-    botonesMapa: { flexDirection: "row", gap: 8, marginBottom: 8 },
-    botonMapa: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 16, borderWidth: 1, flex: 1, gap: 4, justifyContent: "center", paddingHorizontal: 6, paddingVertical: 8 },
-    botonMapaIcono: { height: 24, width: 24 },
-    botonMapaTexto: { color: P.texto, fontSize: 12, fontWeight: "800" },
+    cabeza: { marginBottom: 8 },
+    cabezaNombre: { color: P.texto, fontSize: 18, fontWeight: "800" },
+    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 2 },
+    cabezaEstadoTexto: { fontSize: 12.5, fontWeight: "700" },
+    // Arriba queda lugar (52) para la ✕ de salir y la ayuda (?), que flotan sobre la pantalla.
+    barra: { flexDirection: "row", gap: 6, paddingBottom: 10, paddingHorizontal: 16, paddingTop: 52 },
+    barraItem: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 14, borderWidth: 1, flex: 1, gap: 3, justifyContent: "center", paddingHorizontal: 2, paddingVertical: 7 },
+    barraItemActivo: { backgroundColor: P.doradoFondo, borderColor: P.doradoBorde },
+    barraPanel: { backgroundColor: P.doradoFondoFuerte, borderColor: P.doradoBordeMedio, borderWidth: 1.5 },
+    barraPanelApagado: { opacity: 0.6 },
+    barraIcono: { height: 22, width: 22 },
+    barraTexto: { color: P.texto, fontSize: 11, fontWeight: "800" },
+    barraTextoActivo: { color: P.doradoTexto },
     botonInicioTexto: { color: P.texto, flexShrink: 1, fontSize: 15, fontWeight: "800" },
     banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, justifyContent: "center", marginBottom: 12, marginTop: 4, minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
     bandaTexto: { fontSize: 15, fontWeight: "700", textAlign: "center" },
