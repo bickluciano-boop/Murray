@@ -2,8 +2,7 @@
 
 Todo lo que hoy hace y muestra la consola, armado leyendo `panel-index.html`, `panel-app.txt` (la lógica) y `panel-mapa.css`
 (el mapa), tal como están en la carpeta del panel. Sirve de **lista para tildar** después de cada cambio: ninguna utilidad se
-pierde ni se mueve sin dejar dicho dónde queda. Los puntos marcados **(confirmar)** salen solo de los estilos o de una pista y se
-confirman cuando llegue `panel-mapa.txt` / `panel-avisos.txt`. Copia de respaldo: `FOTO-OJO-GUARD-PANEL-2026-10-15_1459.zip`.
+pierde ni se mueve sin dejar dicho dónde queda. Los archivos leídos son `panel-index.html`, `panel-app.txt`, `panel-mapa.txt` y los cinco de estilos. Copia de respaldo: `FOTO-OJO-GUARD-PANEL-2026-10-15_1459.zip`.
 
 ## 1. Cómo se navega hoy
 
@@ -48,19 +47,31 @@ confirman cuando llegue `panel-mapa.txt` / `panel-avisos.txt`. Copia de respaldo
 - **Última evidencia** (la más reciente; las anteriores van al Historial) con el botón "Ver historial" cuando hay más de una.
   La tarjeta de evidencia está descripta en el punto 6.
 
-## 5. Mapa (`panel-mapa`) **(confirmar con el .txt)**
+## 5. Mapa (`panel-mapa.txt`, leído completo)
 
-- Pantalla completa con la **lista a la izquierda** (en el celular, solo el mapa y una tarjeta que sube de abajo).
-- **Familia y equipos:** grupos en la lista, rol de cada persona (etiqueta), distancia desde quien mira, batería, punto "yo" azul,
-  botón de sonido en la lista, aviso de "ubicación pausada" y marca de quién es el titular.
-- **Selector de recorrido:** "En vivo" (con punto verde), "Hoy" y "7 días" (**confirmar**); paradas del recorrido con sus horas.
-- **Controles del mapa:** centrar, invitar (en el celular), zoom, y capas (mapa / satélite **(confirmar)**).
-- **Tarjeta de la persona o equipo elegido:** foto o iniciales (con lápiz para cambiar la foto), nombre, dirección, datos
-  (batería, distancia…), paradas, botones (Seguir en vivo / Parar, Cómo llegar, Hacer sonar…), "Administrar" (cambiar rol / quitar),
-  "Avisarme cuando llegue o salga" (avisos de ubicación por persona, con lista y borrar), foto y audio pedidos a un **menor**.
-- **Familia:** botón "Invitar" (diálogo con nombre, roles y código para compartir), lista de **invitaciones** pendientes (con quitar).
-- **Lugares** (geocercos): círculos en el mapa con el nombre, lista, "Agregar lugar", radios (chips), elegir el punto con la mira.
-- **SOS:** cartel rojo arriba del mapa con quién pidió ayuda (botones), aro que late en esa persona.
+- **Pestaña "Mapa"**: pantalla completa con Google Maps. En escritorio, lista a la izquierda; en celular, solo el mapa y una tarjeta
+  que sube desde abajo (se pliega con una manija).
+- **Lista lateral** "Familia y equipos" (o "Tus dispositivos"), con el resumen "N personas · N dispositivos" y el botón
+  **"Invitar a la familia"**. Grupos **FAMILIA** y **DISPOSITIVOS**. Cada fila: foto o iniciales, nombre, etiqueta de rol
+  (ADULTO / MENOR / AMIGO / TITULAR), marca de quién es, aviso de SOS, distancia "De vos" (o "Cerca"), estado (En vivo / hace cuánto),
+  batería, dirección, y un botón redondo de sonido. Abajo: **INVITACIONES SIN USAR** (nombre, rol, código, copiar, compartir, quitar)
+  y **LUGARES** (lista de lugares guardados y "Agregar lugar"), más la nota de que se actualiza sola.
+- **Sobre el mapa:** selector **En vivo / Hoy / 7 días**; controles **+ / − / ◎ (ver todos o centrar)** y, en el celular, el botón
+  de invitar; capas **Mapa / Satélite**; marcadores con foto o iniciales (halo que late si está en vivo; aro rojo si pidió SOS);
+  el punto azul **"Vos"**; el **recorrido** y las **paradas** (con hora de llegada y salida); los círculos de los lugares y avisos.
+- **Tarjeta de la persona o equipo elegido:** foto (se puede cambiar la de los teléfonos), nombre y rol, estado, dirección, datos
+  **Margen de error · Batería · Hoy (km) · De vos**, las últimas 3 paradas y los botones:
+  **Seguir en vivo / Dejar de seguir** (teléfonos con la app y menores), **Ubicar ahora**, **Hacer sonar** (pasa a **Detener
+  sonido**; la alarma se corta sola al minuto), **Pedir foto y audio** (solo menores de tu familia: "ve cada pedido que hagas") y
+  **Cómo llegar**. Debajo: **"Avisarme cuando llegue o salga"** (lista de avisos con frecuencia y quitar), la **evidencia** pedida
+  (foto, audio y enlace), **"Cambiar rol o quitar"** (titular) y **"Salir de esta familia"**, y la lista de los otros equipos.
+- **Diálogos:** *Invitar* (nombre, rol Adulto/Menor/Amigo, cómo te ve, código y enlace para copiar o compartir), *Administrar*
+  (rol, guardar, quitar con confirmación), *Aviso de llegada/salida* (cuándo, dónde: lugar guardado / punto elegido con una mira
+  sobre el mapa / dirección, radio, frecuencia), *Lugar* (ver, quitar) y *Salir de la familia* (confirmar).
+- **SOS:** cartel rojo arriba del mapa con quién pidió ayuda y los botones **Ver** y **Atendido**.
+- **Modo demostración** (`?demo=1`): datos de ejemplo, ninguna orden real.
+- Dato a tener en cuenta: en el Mapa, **Pedir foto y audio** solo existe para menores; para los teléfonos propios esa acción
+  ("Solicitar evidencia") está en Dispositivos. Los pedidos con confirmación de identidad piden hacerlos desde Dispositivos.
 
 ## 6. Historial (y la "Última evidencia" del Inicio)
 
@@ -125,7 +136,8 @@ buscador de **vista de calle y satelital** ("Buscando imágenes…").
 - Redibujado cada 15 s y "deslizar para actualizar"; el Modo perdido y el resto de órdenes con su seguimiento.
 - **Confirmar identidad** (passkey o código) cuando el servidor pide "step up" (acciones sensibles); el acceso vencido avisa.
 - Tema claro/oscuro guardado; mapa de Google con su clave; avisos de equipo nuevo por correo (lado servidor).
-- `panel-avisos` (avisos-v1.js) **(confirmar qué hace con el .txt)**.
+- `panel-avisos.txt` **no existe** en tu carpeta: viene de `aplicar-avisos-correo.ps1` (elegir qué avisos por correo llegan), que
+  todavía **no se aplicó**. Sigue pendiente (ver PENDIENTES).
 
 ## 12. Lista para tildar después de cada paso
 
