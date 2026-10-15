@@ -14,7 +14,7 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 
 type Paleta = { [clave: string]: string };
 
-export type GrupoConfiguracion = "claves" | "fotos" | "perdido" | "telefono" | "permisos";
+export type GrupoConfiguracion = "familia" | "claves" | "fotos" | "perdido" | "telefono" | "permisos" | "conexion";
 export type GrupoActualValor = GrupoConfiguracion | "todo" | null;
 
 export const GrupoActual = createContext<GrupoActualValor>("todo");
@@ -36,11 +36,13 @@ export function useSeVe(grupo?: GrupoConfiguracion) {
 }
 
 const TEXTOS_GRUPO: Record<GrupoConfiguracion, { titulo: string; resumen: string }> = {
+  familia: { titulo: "Familia y SOS", resumen: "Tu familia en el mapa, el botón SOS y el chequeo del Dr. Ojo Guard." },
   claves: { titulo: "Claves y Seguridad", resumen: "Tus claves, la detección de intentos de desbloqueo y lo que se guarda como evidencia." },
   fotos: { titulo: "Fotos de Intrusos", resumen: "Los intentos de entrada que registró este teléfono y lo que falta enviar." },
   perdido: { titulo: "Modo Perdido y Cercanía", resumen: "Qué ve quien encuentre el teléfono, la cercanía y tus accesorios." },
   telefono: { titulo: "Mi Teléfono y Fondo", resumen: "El nombre de este teléfono, cómo se ve y cómo está." },
   permisos: { titulo: "Permisos de Android", resumen: "Los ajustes de Android que, si no se tocan, frenan Ojo Guard en silencio." },
+  conexion: { titulo: "Ojo Guard MS", resumen: "Cómo se conecta este teléfono con el panel de Ojo Guard MS." },
 };
 
 /** Los textos de cada grupo. "Permisos" cambia de nombre en iPhone, donde los ajustes son otros. */
@@ -60,6 +62,8 @@ type TarjetasProps = {
   correo: string;
   /** true: hay internet; false: no hay; null: todavía comprobando. */
   enLinea: boolean | null;
+  /** Estado de la vinculación con Ojo Guard MS: "not-linked", "syncing", "executed", "offline" o conectado. */
+  conexion: string;
   /** Cuántos de los cuatro permisos de Android están en orden; null si todavía no se pudo leer. */
   permisosEnOrden: number | null;
   permisosTotal: number;
@@ -71,6 +75,8 @@ type TarjetasProps = {
 };
 
 const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos">, ImageSourcePropType> = {
+  familia: require("../assets/config-familia.png"),
+  conexion: require("../assets/config-conexion.png"),
   claves: require("../assets/config-llave.png"),
   fotos: require("../assets/config-camara.png"),
   perdido: require("../assets/config-radar.png"),
@@ -97,9 +103,9 @@ function useBateria() {
 
 /**
  * Portada de Configuración: la tarjeta de este teléfono (nombre, si está en línea y la batería, correo), la banda de permisos
- * (toca para ver o arreglar los de Android) y cuatro tarjetas grandes con ícono. Cada una abre los bloques de siempre de su grupo.
+ * (toca para ver o arreglar los de Android) y seis tarjetas grandes con ícono. Cada una abre los bloques de siempre de su grupo.
  */
-export function TarjetasConfiguracion({ paleta: P, android, nombre, correo, enLinea, permisosEnOrden, permisosTotal, intentos, pendientes, cercania, radioMetros, onElegir }: TarjetasProps) {
+export function TarjetasConfiguracion({ paleta: P, android, nombre, correo, enLinea, conexion, permisosEnOrden, permisosTotal, intentos, pendientes, cercania, radioMetros, onElegir }: TarjetasProps) {
   const s = estilos(P);
   const bateria = useBateria();
   const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
@@ -119,10 +125,12 @@ export function TarjetasConfiguracion({ paleta: P, android, nombre, correo, enLi
       : { fondo: P.doradoFondo, borde: P.doradoBorde, texto: P.doradoTexto };
 
   const tarjetas: Array<{ grupo: Exclude<GrupoConfiguracion, "permisos">; detalle: string }> = [
-    { grupo: "claves", detalle: "Claves, señuelo y evidencia" },
+    { grupo: "familia", detalle: "SOS, mapa y Dr. Ojo Guard" },
+    { grupo: "claves", detalle: "PIN de admin, señuelo y evidencia" },
     { grupo: "fotos", detalle: (intentos > 0 ? `${intentos} intento${intentos === 1 ? "" : "s"} registrado${intentos === 1 ? "" : "s"}` : "Ningún intento registrado") + (pendientes > 0 ? ` · ${pendientes} por enviar` : "") },
     { grupo: "perdido", detalle: `Mensaje de rescate y ${cercania ? `radio ${radioMetros} m` : "cercanía apagada"}` },
     { grupo: "telefono", detalle: "Nombre, fondo y modo noche" },
+    { grupo: "conexion", detalle: conexion === "not-linked" ? "Sin vincular" : conexion === "syncing" ? "Buscando…" : conexion === "executed" ? "Orden ejecutada" : conexion === "offline" ? "Sin conexión" : "Conectado" },
   ];
 
   return (
@@ -189,7 +197,7 @@ function estilos(P: Paleta) {
     banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, marginTop: 12, minHeight: 52, justifyContent: "center", paddingHorizontal: 14, paddingVertical: 12 },
     bandaTexto: { fontSize: 15, fontWeight: "700", textAlign: "center" },
     grilla: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "space-between", marginBottom: 12, marginTop: 12 },
-    celda: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 22, borderWidth: 1, minHeight: 176, paddingHorizontal: 10, paddingVertical: 18, width: "48%" },
+    celda: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 22, borderWidth: 1, minHeight: 168, paddingHorizontal: 10, paddingVertical: 18, width: "48%" },
     icono: { height: 52, width: 52 },
     celdaTitulo: { color: P.texto, fontSize: 17, fontWeight: "800", marginTop: 12, textAlign: "center" },
     celdaDetalle: { color: P.textoTenue, fontSize: 12.5, lineHeight: 17, marginTop: 6, textAlign: "center" },
