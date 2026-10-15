@@ -176,7 +176,8 @@ Actualizado: 15/10/2026.
       min · ubicación hace 23 h".
     - [ ] **Paso 3 de la consola: Mis Equipos más limpio**
       (`aplicar-consola-equipos-panel.ps1`, respaldo `.bak-equipos`, publica
-      solo; falta aplicar). A la vista: Solicitar evidencia, Localizar ahora,
+      solo; aplicado y publicado el 15/10/2026, versión 108f6f90; falta verlo
+      en pantalla). A la vista: Solicitar evidencia, Localizar ahora,
       Hacer sonar (pasa a Detener sonido al ejecutarse) y Activar Modo perdido
       (pasa a Desactivar). En "Más acciones": la acción contraria, Detectar
       cerca y Quitar este dispositivo (nada se saca; el estado de sonar y
