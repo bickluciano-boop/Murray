@@ -174,6 +174,15 @@ Actualizado: 15/10/2026.
       había abierto la app 17 min antes. Ahora "Sin conexión" solo sale si no
       hubo ni ubicación ni señal de vida en 3 h; si hubo señal: "visto hace 17
       min · ubicación hace 23 h".
+    - [ ] **Paso 3 de la consola: Mis Equipos más limpio**
+      (`aplicar-consola-equipos-panel.ps1`, respaldo `.bak-equipos`, publica
+      solo; falta aplicar). A la vista: Solicitar evidencia, Localizar ahora,
+      Hacer sonar (pasa a Detener sonido al ejecutarse) y Activar Modo perdido
+      (pasa a Desactivar). En "Más acciones": la acción contraria, Detectar
+      cerca y Quitar este dispositivo (nada se saca; el estado de sonar y
+      Modo perdido es memoria de la pestaña, así que tras recargar la página
+      "Detener sonido" queda en "Más acciones"). Falta de la lista: Pedir
+      foto/evidencia también en el Mapa, y la estética de las tarjetas.
     - [ ] **iPhone "Sin conexión hace 23 h" en el mapa** (15/10/2026): el
       iPhone tenía 5% de batería en el último reporte y ahora 45% y en uso.
       Hipótesis: se reinició y la app no vuelve sola a mandar datos hasta que
