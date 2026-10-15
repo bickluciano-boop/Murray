@@ -93,6 +93,26 @@ Actualizado: 15/10/2026.
     quien tenga el teléfono desbloqueado y la clave de administrador de la
     app puede abrir la consola sin passkey (el aviso por correo lo deja a la
     vista).
+  - [ ] **Inicio v2: el Mapa primero** (pedido de Luciano el 15/10/2026, con
+    la build de Android 1 instalada: el SOS grande como primera cosa "no me
+    termina de convencer"). Idea: al abrir la app se ve **el mapa con todos
+    los equipos y la familia**; la app sirve para lo que se hace **con el
+    teléfono en la mano** (hacer sonar un equipo propio, ver dónde están los
+    hijos y amigos, hacerle sonar el celular a un menor que lo busca, invitar,
+    lugares, avisos de llegada y salida); lo que depende de que se lo hayan
+    robado (Modo perdido, evidencia, etc.) queda en el panel. El SOS queda
+    siempre a mano pero chico (no ocupa media pantalla); "Pedir ayuda sin abrir
+    la app" y "Unirme con un código" pasan adentro de Familia/Configuración sin
+    perderse. Camino propuesto: en Android el mapa nativo de Google necesita una
+    clave que la app no tiene (y sin ella se cierra), así que se muestra **el
+    mismo mapa del panel dentro de la app** (WebView, con el acceso directo de
+    un solo uso para no pedir claves; en el panel, modo "solo mapa" sin barra ni
+    pestañas; el aviso de seguridad por correo del acceso directo no puede
+    llegar en cada apertura: como mucho uno cada 12 h para este uso). Requiere
+    el módulo `react-native-webview` (nativo: **build nueva de Android y la
+    primera de iPhone con esto adentro**). La build de iPhone se espera hasta
+    tener el Inicio v2. Falta decidir con Luciano: mapa con WebView (recomendado)
+    o clave de Google Maps.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
