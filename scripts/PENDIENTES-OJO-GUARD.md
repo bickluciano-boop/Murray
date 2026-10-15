@@ -167,7 +167,8 @@ Actualizado: 15/10/2026.
       pero la ubicación es vieja, dice "activo hace 3 min · ubicación hace 23 h".
     - [ ] **Paso 2d de la consola: "Sin conexión" solo sin señales**
       (`aplicar-consola-estado-panel.ps1`, respaldo `.bak-estado`, publica
-      solo; falta aplicar). Fotos del 15/10/2026 con el 2c: "Mi teléfono" ya
+      solo; aplicado y publicado el 15/10/2026; la foto muestra al iPhone con
+      "visto hace 21 min · ubicación hace 23 h" y sin el cartel rojo). Fotos del 15/10/2026 con el 2c: "Mi teléfono" ya
       muestra la calle ("Ugarteche 3167, Palermo") y la Notebook dice "activo
       hace 7 s"; el iPhone seguía en rojo "Sin conexión hace 23 h" aunque se
       había abierto la app 17 min antes. Ahora "Sin conexión" solo sale si no
