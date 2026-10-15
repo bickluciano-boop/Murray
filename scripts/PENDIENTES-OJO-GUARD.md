@@ -50,27 +50,31 @@ Actualizado: 15/10/2026.
     barra de arriba del teléfono cambia según el tema. Íconos propios (familia,
     llave, cámara, radar, teléfono, enlace), sin escudos ni candados (manual de marca), como
     PNG en `assets/` (sin librerías nuevas). Quien ya eligió tema lo conserva.
-  - [ ] **Paso 3b: Inicio y Configuración con la tuerca**
+  - [ ] **Paso 3b: Inicio, Mi perfil y Configuración**
     (`aplicar-inicio-configuracion-app.ps1`, respaldo `.bak-inicio`; sale en
-    la próxima build, falta aplicar). Salió de las fotos del 15/10/2026 con
-    el look 3a instalado: la grilla salía en una sola columna en pantallas
-    angostas (arreglado: filas de a dos), "Configuración" quedaba pegada a
-    la ✕ y salir mandaba al teclado, los dos porcentajes (batería 87 % y
-    Dr. Ojo Guard 100 %) se confundían, y se esperaba ver primero a la
-    familia. Ahora: al entrar con la clave se ve el **Inicio** (tarjeta del
-    teléfono con la tuerca, y Familia y SOS con el SOS debajo de las
-    personas); la tuerca abre **Configuración** (banda de permisos y seis
-    tarjetas: Claves y Seguridad, Fotos de Intrusos, Modo Perdido y
-    Cercanía, Mi Teléfono y Fondo, Dr. Ojo Guard, Ojo Guard MS); "‹ Atrás"
-    vuelve un paso (también el botón atrás de Android) y la ✕ solo está en
-    el Inicio, más chica. "En línea · batería 87 %" y "Dr. Ojo Guard ·
-    protección 100 %". Volver de Google Maps ya no pide la clave de nuevo
-    (`markPendingSystemActivity` en `abrirEnMapa`). Pendiente de pedido:
-    mapa dentro de la app en Android con círculos de cada persona (hoy solo
-    iPhone; en Android hace falta una clave de Google Maps, ver
-    "Android" más abajo), el botón SOS grande y rojo del dibujo, "Perfil"
-    del primer arranque, y que Configuración no pida la clave de nuevo al
-    volver de ver un mapa por otra vía.
+    la próxima build, falta aplicar). Salió de las fotos y pedidos del
+    15/10/2026 con el look 3a instalado. Estructura: al entrar con la clave
+    se ve el **Inicio** (tarjeta del teléfono con "En línea · batería", los
+    botones **Mi perfil** y **Configuración** con la tuerca, y Familia y SOS
+    con el SOS debajo de las personas). **Mi perfil** (los datos de uno):
+    Estado del dispositivo, Datos del teléfono, Apariencia (Modo noche y
+    fondo). **Configuración**: banda de permisos y seis tarjetas de a dos:
+    Claves y Seguridad, Fotos de Intrusos (solo Intentos de entrada), Modo
+    Perdido y Cercanía (mensaje, contacto, recompensa, Modo cercanía,
+    personas y artículos), Preferencias (Preferencias generales y "Envíos
+    pendientes", que antes era "Protección sin internet"), Dr. Ojo Guard y
+    Ojo Guard MS. "‹ Atrás" vuelve un paso (también el botón atrás de
+    Android); la ✕ solo está en el Inicio, más chica. Arreglado: la grilla
+    salía en una columna en pantallas angostas; "batería 87 %" y "protección
+    100 %" se confundían; volver de Google Maps pedía la clave de nuevo
+    (`markPendingSystemActivity` en `abrirEnMapa`).
+    Pendiente de pedido: en Modo Perdido, **ver y pedir Modo perdido** desde
+    la app (hoy se pide desde el panel Ojo Guard MS; la app solo guarda el
+    mensaje de recuperación y la cercanía; requiere una API nueva en el
+    panel); el mapa dentro de la app en Android con círculos de cada persona
+    (hoy solo iPhone; en Android hace falta una clave de Google Maps, ver
+    "Android" más abajo); el botón SOS grande y rojo del dibujo; "Perfil" del
+    primer arranque.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.

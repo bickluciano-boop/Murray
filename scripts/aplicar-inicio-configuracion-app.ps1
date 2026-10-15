@@ -1,13 +1,15 @@
-﻿# aplicar-inicio-configuracion-app.ps1 - Inicio (Familia y SOS) y Configuracion con la tuerca (paso 3b de ordenar la app).
+﻿# aplicar-inicio-configuracion-app.ps1 - Inicio, Mi perfil y Configuracion (paso 3b de ordenar la app).
 # Es solo organizacion y apariencia: ninguna funcion cambia.
-#  - Al entrar con la clave de administrador se ve el INICIO: la tarjeta de este telefono (nombre, "En linea", bateria) con la tuerca de
-#    Configuracion arriba a la derecha, y abajo Familia y SOS (el mapa o la lista de la familia, el SOS arriba de todo lo demas).
-#  - La tuerca abre CONFIGURACION: la banda de permisos y seis tarjetas, de a dos por fila: Claves y Seguridad, Fotos de Intrusos, Modo
-#    Perdido y Cercania, Mi Telefono y Fondo, Dr. Ojo Guard (sale de Familia) y Ojo Guard MS. "Atras" vuelve un paso; la X de salir queda
-#    solo en el Inicio, mas chica, y ya no se confunde con "Atras".
+#  - Al entrar con la clave de administrador se ve el INICIO: la tarjeta de este telefono (nombre, "En linea", bateria), los botones
+#    "Mi perfil" y "Configuracion" (la tuerca) y, abajo, Familia y SOS (mapa o lista de la familia, con el SOS justo debajo).
+#  - MI PERFIL (los datos de uno): Estado del dispositivo, Datos del telefono (nombre y correo) y Apariencia (Modo noche y fondo).
+#  - CONFIGURACION: la banda de permisos y seis tarjetas de a dos: Claves y Seguridad, Fotos de Intrusos (solo Intentos de entrada),
+#    Modo Perdido y Cercania, Preferencias generales (Modo preventivo, Pantalla OLED y "Envios pendientes", que antes se llamaba
+#    "Proteccion sin internet"), Dr. Ojo Guard (sale de Familia) y Ojo Guard MS.
+#  - "Atras" vuelve un paso; la X de salir queda solo en el Inicio, mas chica, y ya no se confunde con "Atras".
 #  - Arregla la grilla que salia en una sola columna en pantallas angostas, que "En linea" diga "bateria 87%" (no se confunda con la
 #    proteccion del Dr. Ojo Guard, que ahora dice "proteccion 100 %"), y que al volver de Google Maps no se pida de nuevo la clave.
-# Cambia src\GruposConfiguracion.tsx y src\ProteccionBlock.tsx, suma src\PaginaChequeo.tsx y dos iconos en assets\, y toca App.tsx y
+# Cambia src\GruposConfiguracion.tsx y src\ProteccionBlock.tsx, suma src\PaginaChequeo.tsx y cuatro iconos en assets\, y toca App.tsx y
 # src\FamilySection.tsx. Va en la carpeta de la APP (la que tiene app.json). Respaldo .bak-inicio. Es solo codigo de la app (nada
 # nativo): sale en la PROXIMA build, en Android y en iPhone.
 $ErrorActionPreference = "Continue"
@@ -37,13 +39,13 @@ if (-not (Test-Path (Join-Path $raiz "assets\config-conexion.png"))) { Mal "Prim
 if (-not (Test-Path (Join-Path $raiz "src\FamilySection.tsx"))) { Mal "No encuentro src\FamilySection.tsx en esta carpeta."; return }
 $cambios = @(
     @('App.tsx', 'import de la pantalla de Inicio', 'import { CabeceraGrupo, enGrupo, GrupoActual, TarjetasConfiguracion, useSeVe, type GrupoConfiguracion } from "./src/GruposConfiguracion";
-', 'import { BandaPermisos, CabeceraGrupo, CabeceraPantalla, enGrupo, GrupoActual, TarjetaTelefono, TarjetasConfiguracion, useSeVe, type GrupoConfiguracion } from "./src/GruposConfiguracion";
+', 'import { BandaPermisos, BotonesInicio, CabeceraGrupo, CabeceraPantalla, enGrupo, GrupoActual, TarjetaTelefono, TarjetasConfiguracion, useSeVe, type GrupoConfiguracion } from "./src/GruposConfiguracion";
 import { PaginaChequeo } from "./src/PaginaChequeo";
 '),
     @('App.tsx', 'estado: tambien la pantalla de Configuracion', 'const [grupo, setGrupo] = useState<GrupoConfiguracion | null>(null);', 'const [grupo, setGrupo] = useState<GrupoConfiguracion | "configuracion" | null>(null);'),
     @('App.tsx', 'elegirGrupo acepta Configuracion', 'function elegirGrupo(nuevo: GrupoConfiguracion | null) {', 'function elegirGrupo(nuevo: GrupoConfiguracion | "configuracion" | null) {'),
     @('App.tsx', 'boton atras: de un grupo a las tarjetas, de las tarjetas al Inicio', '      elegirGrupo(null);
-      return true;', '      elegirGrupo(grupo === "configuracion" ? null : "configuracion");
+      return true;', '      elegirGrupo(grupo === "configuracion" || grupo === "perfil" ? null : "configuracion");
       return true;'),
     @('App.tsx', 'la X solo en el Inicio', '      {onCancel ? (
         // Antes la ', '      {onCancel && grupoActual === null ? (
@@ -73,7 +75,7 @@ import { PaginaChequeo } from "./src/PaginaChequeo";
 ')),
     @('App.tsx', 'cabecera de Configuracion y de cada grupo', '            <CabeceraGrupo paleta={P} android={Platform.OS === "android"} grupo={grupoActual} onVolver={() => elegirGrupo(null)} />
           )}
-', '            <CabeceraGrupo paleta={P} android={Platform.OS === "android"} grupo={grupoActual} onVolver={() => elegirGrupo("configuracion")} />
+', '            <CabeceraGrupo paleta={P} android={Platform.OS === "android"} grupo={grupoActual} onVolver={() => elegirGrupo(grupoActual === "perfil" ? null : "configuracion")} />
           )}
 '),
     @('App.tsx', 'las pantallas: Inicio, Configuracion y Dr. Ojo Guard', '          {grupoActual === null ? (
@@ -104,8 +106,8 @@ import { PaginaChequeo } from "./src/PaginaChequeo";
                 nombre={draft.deviceName}
                 correo={draft.alertEmail}
                 enLinea={isOnline}
-                onConfiguracion={() => elegirGrupo("configuracion")}
               />
+              <BotonesInicio paleta={P} onPerfil={() => elegirGrupo("perfil")} onConfiguracion={() => elegirGrupo("configuracion")} />
               <BandaPermisos
                 paleta={P}
                 android={Platform.OS === "android"}
@@ -183,6 +185,15 @@ function SeccionDeFamilia(props: { title: string; subtitle?: string; defaultOpen
 }
 
 function SeccionPlegable({', 'function SeccionPlegable({'),
+    @('App.tsx', 'Mi perfil: datos del telefono', '<CollapsibleSection grupo="telefono" title="Datos del tel', '<CollapsibleSection grupo="perfil" title="Datos del tel'),
+    @('App.tsx', 'Mi perfil: apariencia', '<CollapsibleSection grupo="telefono" title="Apariencia"', '<CollapsibleSection grupo="perfil" title="Apariencia"'),
+    @('App.tsx', 'Mi perfil: estado del dispositivo', '{enGrupo(grupoActual, "telefono") ? (', '{enGrupo(grupoActual, "perfil") ? ('),
+    @('App.tsx', 'Preferencias generales: tarjeta propia', '<CollapsibleSection grupo="telefono" title="Preferencias generales">', '<CollapsibleSection grupo="preferencias" title="Preferencias generales">'),
+    @('App.tsx', 'Proteccion sin internet pasa a Preferencias como Envios pendientes', ('            grupo="fotos"
+            title="Protecci' + [char]0x00f3 + 'n sin internet"
+            subtitle={pendingCount > 0 ? `${pendingCount} pendiente${pendingCount === 1 ? "" : "s"}` : "Al d' + [char]0x00ed + 'a"}'), ('            grupo="preferencias"
+            title="Env' + [char]0x00ed + 'os pendientes"
+            subtitle={pendingCount > 0 ? `${pendingCount} por enviar` : "Todo enviado"}')),
     @('src\FamilySection.tsx', 'Familia: ya no trae el chequeo del Dr. Ojo Guard', 'import { ProteccionBlock } from "./ProteccionBlock";
 import { fetchFamily', 'import { fetchFamily'),
     @('src\FamilySection.tsx', 'Familia: abierta en el Inicio', '    <Seccion
@@ -205,11 +216,13 @@ import { fetchFamily', 'import { fetchFamily'),
   void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`).catch(() => undefined);')
 )
 $descargas = @(
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/4087b5e708f9b157ce964cd23b6346beecfdd443/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "4533174a845ab00fcf36e1b70f338840e467cff7a5b4c5393fb77b7af27a793c"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/4087b5e708f9b157ce964cd23b6346beecfdd443/scripts/familia/PaginaChequeo.tsx", "src\PaginaChequeo.tsx", "47a8c6e9247d7be8aa3c5e2a09aedb6698d04c28c21d97d3a9f783f2f9d39934"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/4087b5e708f9b157ce964cd23b6346beecfdd443/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "6d4a5d85fe3f9dc0b5018bcc5a271eb20031b44372ad7d59223745278837fcc6"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/4087b5e708f9b157ce964cd23b6346beecfdd443/scripts/familia/iconos/config-tuerca.png", "assets\config-tuerca.png", "9d6eb9a07e95b569c68b9be12e3bd92e0d80b4de926898c353d318ca35308d79"),
-    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/4087b5e708f9b157ce964cd23b6346beecfdd443/scripts/familia/iconos/config-chequeo.png", "assets\config-chequeo.png", "3c09ba1ee147a7fa2f6da290e246218c3786b23eab0672406e80b21dfb5a4e53")
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/GruposConfiguracion.tsx", "src\GruposConfiguracion.tsx", "03a0d8b20db4f683f891a1838722b1866c73c940cf0b2737c0ed561af9882e15"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/PaginaChequeo.tsx", "src\PaginaChequeo.tsx", "47a8c6e9247d7be8aa3c5e2a09aedb6698d04c28c21d97d3a9f783f2f9d39934"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/ProteccionBlock.tsx", "src\ProteccionBlock.tsx", "6d4a5d85fe3f9dc0b5018bcc5a271eb20031b44372ad7d59223745278837fcc6"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/iconos/config-tuerca.png", "assets\config-tuerca.png", "9d6eb9a07e95b569c68b9be12e3bd92e0d80b4de926898c353d318ca35308d79"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/iconos/config-chequeo.png", "assets\config-chequeo.png", "3c09ba1ee147a7fa2f6da290e246218c3786b23eab0672406e80b21dfb5a4e53"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/iconos/config-perfil.png", "assets\config-perfil.png", "5886a1f4f1537d7c4c08d177c03d4dbd0bcf24537f58e2f4a0052b93fc614272"),
+    @("https://raw.githubusercontent.com/bickluciano-boop/Murray/b015aa90f8be0ced986c0c6d4415aff71f3e57a2/scripts/familia/iconos/config-ajustes.png", "assets\config-ajustes.png", "a231cf478ad5178721f8f226bfae69430b4622a8016138f2d6fccc8b2cd56db0")
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
