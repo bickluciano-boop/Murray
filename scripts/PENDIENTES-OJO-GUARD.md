@@ -158,9 +158,10 @@ Actualizado: 15/10/2026.
       despliega al tocar.
     - [ ] **Paso 2c de la consola: calle en vez de coordenadas, "activo hace X"**
       (`aplicar-consola-direcciones-panel.ps1`, respaldo `.bak-direcciones`,
-      publica solo; falta aplicar). Fotos del 15/10/2026: "Mi teléfono" mostraba
+      publica solo; aplicado y publicado el 15/10/2026, versión ef9df11e; falta
+      verlo en pantalla). Fotos del 15/10/2026: "Mi teléfono" mostraba
       `-34.579752, -58.4114573` porque la ubicación en vivo llega sin calle
-      (`/api/native/live-location` guarda lo que manda la app). Ahora la
+      (`nativeLiveLocation` guarda lo que manda la app). Ahora la
       consola pide la calle a `/api/remote/address` (OpenStreetMap, de a una y
       sin repetir) en Mis Equipos y en el Mapa. Y cuando el equipo está activo
       pero la ubicación es vieja, dice "activo hace 3 min · ubicación hace 23 h".
@@ -176,9 +177,11 @@ Actualizado: 15/10/2026.
       23 h": con el iPhone quieto, iOS pausa el seguimiento y la app no manda
       punto al abrirse (`familyLocation.ts`: `activar()` solo reanuda el
       seguimiento). Arreglo de la app (va con la próxima build de iPhone,
-      propuesto a Luciano): al abrir la app o volver al frente, mandar una
+      aceptado por Luciano): al abrir la app o volver al frente, mandar una
       ubicación actual (`getCurrentPositionAsync`) además de reanudar el
-      seguimiento. Del lado del panel, el paso 2c ya aclara "activo hace X". Lo visto en las fotos
+      seguimiento. Script `aplicar-iphone-ubicacion-al-abrir-app.ps1` (solo
+      `src/familyLocation.ts`, respaldo `.bak-puntoabrir`; compila con
+      `tsc --noEmit` en la prueba; falta aplicarlo y hacer la build de iPhone). Del lado del panel, el paso 2c ya aclara "activo hace X". Lo visto en las fotos
       del paso 1: en la compu la barra de pestañas flotaba sobre el texto al
       bajar y el recuadro "No disponible" de la cámara trasera seguía
       apareciendo. Ahora: la franja de arriba (logo, pestañas y botones) queda
