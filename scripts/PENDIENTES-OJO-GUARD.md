@@ -128,9 +128,10 @@ Actualizado: 15/10/2026.
     sonando (para un solo botón Hacer sonar / Detener sonido), y frases
     como "cifrados" o "métricas de salud" de pulseras. Autoguardado: solo
     interruptores; las claves de 6 números mantienen su botón Guardar.
-    - [ ] **Paso 1 de la consola: claro por defecto, 4 pestañas**
+    - [x] **Paso 1 de la consola: claro por defecto, 4 pestañas**
       (`aplicar-consola-pestanas-panel.ps1`, respaldo `.bak-pestanas`, publica
-      solo; falta aplicar y probar). Decidido por Luciano el 15/10/2026: abre
+      solo; aplicado y publicado el 15/10/2026, fotos de Luciano en la compu:
+      anda). Decidido por Luciano el 15/10/2026: abre
       claro y el oscuro es "Modo noche" (quien ya eligió un tema lo conserva).
       Pestañas: Mapa y Familia (lo primero que se ve; es el Mapa de hoy), Mis
       Equipos (dispositivos + pulseras + artículos), Evidencias (última e
@@ -141,8 +142,20 @@ Actualizado: 15/10/2026.
       ejemplo (compu y celular, claro y noche). Siguientes pasos: Mis Equipos
       más limpio (un solo botón sonar/detener cuando el panel sepa el estado
       real, "Más" para lo menos usado, Pedir foto/evidencia también en el
-      Mapa), estética de las tarjetas, login con Passkey arriba y Cuenta en
-      tarjetas.
+      Mapa), estética de las tarjetas.
+    - [ ] **Paso 2 de la consola: barra fija, evidencias, Cuenta, acceso**
+      (`aplicar-consola-pestanas2-panel.ps1`, respaldo `.bak-paso2`, publica
+      solo; falta aplicar y probar; requiere el paso 1). Lo visto en las fotos
+      del paso 1: en la compu la barra de pestañas flotaba sobre el texto al
+      bajar y el recuadro "No disponible" de la cámara trasera seguía
+      apareciendo. Ahora: la franja de arriba (logo, pestañas y botones) queda
+      fija con fondo; las evidencias no muestran recuadros vacíos (la línea
+      "Delantera / Trasera / Audio" sigue diciendo qué hay y qué falta); Cuenta
+      en tarjetas (correo y protección separadas, dos columnas en la compu);
+      acceso con "Entrar con huella o Face ID" arriba de todo (desplegado si ya
+      se entró así en ese equipo) y el código por correo justo debajo; en el
+      celular el encabezado entra en una línea. Probado en navegador (compu y
+      celular, claro y noche) y con la corrida simulada del script.
 
 - [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
   (12/10/2026, aplicado, publicado y probado: con la build 26 de iPhone y
