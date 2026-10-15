@@ -5,9 +5,10 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 /**
  * La pantalla a la que se entra con la clave de administrador, en tres niveles:
  *
- *  - Inicio (null): lo de todos los días. La tarjeta de este teléfono con la tuerca de Configuración, y abajo Familia y SOS.
+ *  - Inicio (null): lo de todos los días. La tarjeta de este teléfono, los botones "Mi perfil" y "Configuración", y abajo Familia y SOS.
+ *  - Mi perfil ("perfil"): los datos de quien usa el teléfono (nombre, correo, cómo se ve, cómo está).
  *  - Configuración ("configuracion"): seis tarjetas grandes y la banda de permisos. Cada tarjeta abre un grupo.
- *  - Un grupo: solo los bloques de ese grupo, con "‹ Atrás" para volver a las tarjetas.
+ *  - Un grupo: solo los bloques de ese grupo, con "‹ Atrás" para volver (a las tarjetas o al Inicio).
  *
  * Los bloques de siempre (con sus mismos botones y textos) se marcan con el grupo al que pertenecen. "todo" es el primer arranque
  * ("Preparar este teléfono"): se ve todo junto, como siempre, para no cambiar los pasos de la instalación.
@@ -15,7 +16,7 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 
 type Paleta = { [clave: string]: string };
 
-export type GrupoConfiguracion = "claves" | "fotos" | "perdido" | "telefono" | "proteccion" | "conexion" | "permisos";
+export type GrupoConfiguracion = "claves" | "fotos" | "perdido" | "preferencias" | "proteccion" | "conexion" | "permisos" | "perfil";
 export type GrupoActualValor = GrupoConfiguracion | "configuracion" | "todo" | null;
 
 export const GrupoActual = createContext<GrupoActualValor>("todo");
@@ -39,9 +40,10 @@ export function useSeVe(grupo?: GrupoConfiguracion) {
 
 const TEXTOS_GRUPO: Record<GrupoConfiguracion, { titulo: string; resumen: string }> = {
   claves: { titulo: "Claves y Seguridad", resumen: "Tus claves, la detección de intentos de desbloqueo y lo que se guarda como evidencia." },
-  fotos: { titulo: "Fotos de Intrusos", resumen: "Los intentos de entrada que registró este teléfono y lo que falta enviar." },
+  fotos: { titulo: "Fotos de Intrusos", resumen: "Los intentos de entrada que registró este teléfono." },
   perdido: { titulo: "Modo Perdido y Cercanía", resumen: "Qué ve quien encuentre el teléfono, la cercanía y tus accesorios." },
-  telefono: { titulo: "Mi Teléfono y Fondo", resumen: "El nombre de este teléfono, cómo se ve y cómo está." },
+  preferencias: { titulo: "Preferencias generales", resumen: "Modo preventivo, pantalla OLED y lo que falta enviar." },
+  perfil: { titulo: "Mi perfil", resumen: "Los datos de este teléfono y cómo se ve la app." },
   proteccion: { titulo: "Dr. Ojo Guard", resumen: "Revisa que el SOS, los avisos y la ubicación estén listos en este teléfono." },
   conexion: { titulo: "Ojo Guard MS", resumen: "Cómo se conecta este teléfono con el panel de Ojo Guard MS." },
   permisos: { titulo: "Permisos de Android", resumen: "Los ajustes de Android que, si no se tocan, frenan Ojo Guard en silencio." },
@@ -55,15 +57,16 @@ export function textosDe(grupo: GrupoConfiguracion, android: boolean) {
   return TEXTOS_GRUPO[grupo];
 }
 
-const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos">, ImageSourcePropType> = {
+const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos" | "perfil">, ImageSourcePropType> = {
   claves: require("../assets/config-llave.png"),
   fotos: require("../assets/config-camara.png"),
   perdido: require("../assets/config-radar.png"),
-  telefono: require("../assets/config-telefono.png"),
+  preferencias: require("../assets/config-ajustes.png"),
   proteccion: require("../assets/config-chequeo.png"),
   conexion: require("../assets/config-conexion.png"),
 };
 const ICONO_TUERCA: ImageSourcePropType = require("../assets/config-tuerca.png");
+const ICONO_PERFIL: ImageSourcePropType = require("../assets/config-perfil.png");
 
 function useBateria() {
   const [porcentaje, setPorcentaje] = useState<number | null>(null);
@@ -91,11 +94,10 @@ type TelefonoProps = {
   correo: string;
   /** true: hay internet; false: no hay; null: todavía comprobando. */
   enLinea: boolean | null;
-  onConfiguracion: () => void;
 };
 
-/** Arriba del Inicio: cómo se llama este teléfono, si está en línea, la batería y la tuerca que abre Configuración. */
-export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea, onConfiguracion }: TelefonoProps) {
+/** Arriba del Inicio: cómo se llama este teléfono, si está en línea, la batería y el correo. */
+export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea }: TelefonoProps) {
   const s = estilos(P);
   const bateria = useBateria();
   const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
@@ -115,9 +117,24 @@ export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea, onConfigur
         </View>
         {correo.trim() ? <Text style={s.correo}>{correo.trim()}</Text> : null}
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Configuración" hitSlop={8} onPress={onConfiguracion} style={s.tuerca}>
-        <Image source={ICONO_TUERCA} style={s.tuercaIcono} resizeMode="contain" />
-        <Text style={s.tuercaTexto}>Configuración</Text>
+    </View>
+  );
+}
+
+type BotonesInicioProps = { paleta: Paleta; onPerfil: () => void; onConfiguracion: () => void };
+
+/** Debajo de la tarjeta del teléfono: "Mi perfil" (los datos de uno) y la tuerca de "Configuración". */
+export function BotonesInicio({ paleta: P, onPerfil, onConfiguracion }: BotonesInicioProps) {
+  const s = estilos(P);
+  return (
+    <View style={s.botonesInicio}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Mi perfil" onPress={onPerfil} style={s.botonInicio}>
+        <Image source={ICONO_PERFIL} style={s.botonInicioIcono} resizeMode="contain" />
+        <Text style={s.botonInicioTexto}>Mi perfil</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Configuración" onPress={onConfiguracion} style={s.botonInicio}>
+        <Image source={ICONO_TUERCA} style={s.botonInicioIcono} resizeMode="contain" />
+        <Text style={s.botonInicioTexto}>Configuración</Text>
       </Pressable>
     </View>
   );
@@ -175,16 +192,11 @@ type TarjetasProps = {
 /** Configuración: seis tarjetas grandes con ícono, de a dos por fila. Cada una abre los bloques de siempre de su grupo. */
 export function TarjetasConfiguracion({ paleta: P, android, intentos, pendientes, cercania, radioMetros, conexion, onElegir }: TarjetasProps) {
   const s = estilos(P);
-  const tarjetas: Array<{ grupo: Exclude<GrupoConfiguracion, "permisos">; detalle: string }> = [
+  const tarjetas: Array<{ grupo: Exclude<GrupoConfiguracion, "permisos" | "perfil">; detalle: string }> = [
     { grupo: "claves", detalle: "PIN de admin, señuelo y evidencia" },
-    {
-      grupo: "fotos",
-      detalle:
-        (intentos > 0 ? `${intentos} intento${intentos === 1 ? "" : "s"} registrado${intentos === 1 ? "" : "s"}` : "Ningún intento registrado") +
-        (pendientes > 0 ? ` · ${pendientes} por enviar` : ""),
-    },
+    { grupo: "fotos", detalle: intentos > 0 ? `${intentos} intento${intentos === 1 ? "" : "s"} registrado${intentos === 1 ? "" : "s"}` : "Ningún intento registrado" },
     { grupo: "perdido", detalle: `Mensaje de rescate y ${cercania ? `radio ${radioMetros} m` : "cercanía apagada"}` },
-    { grupo: "telefono", detalle: "Nombre, fondo y modo noche" },
+    { grupo: "preferencias", detalle: pendientes > 0 ? `Modo preventivo, OLED · ${pendientes} por enviar` : "Modo preventivo, OLED y envíos" },
     { grupo: "proteccion", detalle: "Chequeo del teléfono y prueba de sirena" },
     {
       grupo: "conexion",
@@ -247,9 +259,10 @@ function estilos(P: Paleta) {
     punto: { borderRadius: 5, height: 10, width: 10 },
     estadoTexto: { fontSize: 13, fontWeight: "700" },
     correo: { color: P.textoTenue, fontSize: 13, marginTop: 8 },
-    tuerca: { alignItems: "center", justifyContent: "center", minWidth: 74, paddingVertical: 4 },
-    tuercaIcono: { height: 40, width: 40 },
-    tuercaTexto: { color: P.textoTenue, fontSize: 11, fontWeight: "600", marginTop: 2 },
+    botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
+    botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
+    botonInicioIcono: { height: 28, width: 28 },
+    botonInicioTexto: { color: P.texto, flexShrink: 1, fontSize: 15, fontWeight: "800" },
     banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, justifyContent: "center", marginBottom: 12, marginTop: 4, minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
     bandaTexto: { fontSize: 15, fontWeight: "700", textAlign: "center" },
     grilla: { gap: 12, marginBottom: 12, marginTop: 4 },
