@@ -39,6 +39,12 @@ Actualizado: 15/10/2026.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
+    Decidido el 15/10/2026: la app abre **clara por defecto** (como los
+    ejemplos de Luciano: crema, botón SOS rojo grande, tarjeta "Mi Familia",
+    engranaje) y el oscuro queda como opción "Modo noche"; el interruptor
+    sale del "?" y pasa a "Mi Teléfono y Fondo". Quien ya eligió un tema lo
+    conserva (se guarda en `ojo-guard-tema`); solo cambia el de quien nunca
+    eligió. La pantalla de guardia sigue oscura.
   - [ ] Después: la consola (panel), con las capturas que mande Luciano.
 
 - [x] **Avisos de llegada y salida por persona: geocercos en iPhone**
