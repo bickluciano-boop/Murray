@@ -10,7 +10,7 @@ import type { NativeEnrollment } from "./remoteStorage";
 import { probarSirena } from "./sosTask";
 
 /**
- * "Dr. Ojo Guard" dentro de "Familia y amigos", justo arriba del SOS: un título que se despliega (cerrado, muestra el último
+ * "Dr. Ojo Guard" (en Configuración, su tarjeta propia): un título que se despliega (cerrado, muestra el último
  * porcentaje) con el botón "Hacer chequeo". Mira qué está prendido y qué no (ver proteccion.ts), muestra un porcentaje y, en cada
  * cosa que falta, un botón que lleva a la pantalla del sistema donde se arregla. Si la persona vuelve de Ajustes, se chequea sola
  * de nuevo para que el porcentaje suba al momento. En Android además tiene "Probar la sirena": hace sonar una alarma de prueba por
@@ -22,6 +22,8 @@ type Paleta = { [clave: string]: string };
 type Props = {
   enrollment: NativeEnrollment | null | undefined;
   visible: boolean;
+  /** Abierto desde el principio (en la página propia del Dr. Ojo Guard). */
+  abierto?: boolean;
   paleta: Paleta;
   botones: {
     secundario: StyleProp<ViewStyle>;
@@ -44,7 +46,7 @@ function dosDigitos(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Props) {
+export function ProteccionBlock({ enrollment, visible, abierto = false, paleta: P, botones }: Props) {
   const [resultado, setResultado] = useState<ResultadoProteccion | null>(null);
   const [revisando, setRevisando] = useState(false);
   const [avisoSirena, setAvisoSirena] = useState("");
@@ -91,11 +93,11 @@ export function ProteccionBlock({ enrollment, visible, paleta: P, botones }: Pro
   const general: EstadoItem = !resultado ? "ok" : resultado.porcentaje >= 100 ? "ok" : resultado.porcentaje >= 60 ? "revisar" : "falta";
 
   return (
-    <Plegable titulo={resultado ? `Dr. Ojo Guard · ${resultado.porcentaje} %` : "Dr. Ojo Guard"} paleta={P}>
+    <Plegable titulo={resultado ? `Dr. Ojo Guard · protección ${resultado.porcentaje} %` : "Dr. Ojo Guard"} paleta={P} abiertoInicial={abierto}>
       {resultado ? (
         <>
           <View style={[s.resumen, { borderColor: borde(general), backgroundColor: fondo(general) }]}>
-            <Text style={[s.porcentaje, { color: color(general) }]}>{resultado.porcentaje} %</Text>
+            <Text style={[s.porcentaje, { color: color(general) }]}>Protección {resultado.porcentaje} %</Text>
             <View style={s.barra}>
               <View style={[s.barraRelleno, { width: `${resultado.porcentaje}%`, backgroundColor: color(general) }]} />
             </View>
