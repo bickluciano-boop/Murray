@@ -215,7 +215,8 @@ Actualizado: 15/10/2026.
       min · ubicación hace 23 h".
     - [ ] **Paso 3b de la consola: en el celular, la explicación al mantener
       el dedo** (`aplicar-consola-toque-panel.ps1`, respaldo `.bak-toque`,
-      publica solo; falta aplicar). Pedido de Luciano al ver las "i" en el
+      publica solo; aplicado y publicado el 15/10/2026, versión 2c66ac8f;
+      falta verlo en el celular). Pedido de Luciano al ver las "i" en el
       celular: que al poner el dedo aparezca la observación y no la "i". Mantener
       apretado un cuarto de segundo muestra el globito (queda 2 s después de
       soltar) y NO hace la acción; un toque corto la hace. Probado con toques
