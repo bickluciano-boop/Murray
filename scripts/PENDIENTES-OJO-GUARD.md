@@ -156,13 +156,29 @@ Actualizado: 15/10/2026.
       con mouse o touchpad la explicación del botón aparece al pasar por
       encima (sin símbolo); en celular/tablet queda una "i" chica que la
       despliega al tocar.
+    - [ ] **Paso 2c de la consola: calle en vez de coordenadas, "activo hace X"**
+      (`aplicar-consola-direcciones-panel.ps1`, respaldo `.bak-direcciones`,
+      publica solo; falta aplicar). Fotos del 15/10/2026: "Mi teléfono" mostraba
+      `-34.579752, -58.4114573` porque la ubicación en vivo llega sin calle
+      (`/api/native/live-location` guarda lo que manda la app). Ahora la
+      consola pide la calle a `/api/remote/address` (OpenStreetMap, de a una y
+      sin repetir) en Mis Equipos y en el Mapa. Y cuando el equipo está activo
+      pero la ubicación es vieja, dice "activo hace 3 min · ubicación hace 23 h".
     - [ ] **iPhone "Sin conexión hace 23 h" en el mapa** (15/10/2026): el
       iPhone tenía 5% de batería en el último reporte y ahora 45% y en uso.
       Hipótesis: se reinició y la app no vuelve sola a mandar datos hasta que
       se abre o se mueve ~150 m (límite de iOS). Prueba pedida: abrir Ojo Guard
       en el iPhone y ver si pasa a "En vivo". Si pasa: cambiar el cartel
       "Sin conexión" por algo más justo ("Última señal hace N h"). Si no pasa:
-      investigar la app del iPhone. Lo visto en las fotos
+      investigar la app del iPhone. Resultado de la prueba (15/10/2026): al
+      abrir la app el cartel "Sin conexión" desapareció y la batería pasó de
+      5% a 50% (el aviso de vida llega), pero la ubicación siguió en "hace
+      23 h": con el iPhone quieto, iOS pausa el seguimiento y la app no manda
+      punto al abrirse (`familyLocation.ts`: `activar()` solo reanuda el
+      seguimiento). Arreglo de la app (va con la próxima build de iPhone,
+      propuesto a Luciano): al abrir la app o volver al frente, mandar una
+      ubicación actual (`getCurrentPositionAsync`) además de reanudar el
+      seguimiento. Del lado del panel, el paso 2c ya aclara "activo hace X". Lo visto en las fotos
       del paso 1: en la compu la barra de pestañas flotaba sobre el texto al
       bajar y el recuadro "No disponible" de la cámara trasera seguía
       apareciendo. Ahora: la franja de arriba (logo, pestañas y botones) queda
