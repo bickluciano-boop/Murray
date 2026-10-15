@@ -151,10 +151,18 @@ Actualizado: 15/10/2026.
       columnas, andan.
     - [ ] **Paso 2b de la consola: explicaciones al pasar el mouse**
       (`aplicar-consola-ayudas-panel.ps1`, respaldo `.bak-ayudas`, publica
-      solo; falta aplicar). Pedido de Luciano: los "?" parecían un problema;
+      solo; aplicado y publicado el 15/10/2026, versión 0b7885ea; falta verlo
+      en pantalla). Pedido de Luciano: los "?" parecían un problema;
       con mouse o touchpad la explicación del botón aparece al pasar por
       encima (sin símbolo); en celular/tablet queda una "i" chica que la
-      despliega al tocar. Lo visto en las fotos
+      despliega al tocar.
+    - [ ] **iPhone "Sin conexión hace 23 h" en el mapa** (15/10/2026): el
+      iPhone tenía 5% de batería en el último reporte y ahora 45% y en uso.
+      Hipótesis: se reinició y la app no vuelve sola a mandar datos hasta que
+      se abre o se mueve ~150 m (límite de iOS). Prueba pedida: abrir Ojo Guard
+      en el iPhone y ver si pasa a "En vivo". Si pasa: cambiar el cartel
+      "Sin conexión" por algo más justo ("Última señal hace N h"). Si no pasa:
+      investigar la app del iPhone. Lo visto en las fotos
       del paso 1: en la compu la barra de pestañas flotaba sobre el texto al
       bajar y el recuadro "No disponible" de la cámara trasera seguía
       apareciendo. Ahora: la franja de arriba (logo, pestañas y botones) queda
