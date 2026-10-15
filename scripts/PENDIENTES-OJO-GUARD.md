@@ -75,6 +75,24 @@ Actualizado: 15/10/2026.
     (hoy solo iPhone; en Android hace falta una clave de Google Maps, ver
     "Android" más abajo); el botón SOS grande y rojo del dibujo; "Perfil" del
     primer arranque.
+  - [ ] **Acceso directo al panel desde la app del propio teléfono**
+    (pedido de Luciano el 15/10/2026: "es absurdo e incómodo volver a poner la
+    clave más la clave de acceso de Google" si ya se entró a la app).
+    `aplicar-acceso-directo-panel.ps1` (ruta `POST /api/native/panel-handoff`
+    con el token del dispositivo, que da un enlace de un solo uso de 1 minuto;
+    `GET /auth/device?t=…` lo canjea por la cookie de sesión `ojo_ms` con método
+    nuevo "device"; tabla `panel_handoff` que crea el propio panel; aviso de
+    seguridad por correo en cada acceso; la sesión "device" cuenta como
+    fuerte durante sus 30 minutos, así que no pide passkey en las acciones
+    sensibles) y `aplicar-acceso-directo-app.ps1` (el botón "Abrir Ojo Guard
+    MS" pide el enlace y lo abre; si falla, abre la entrada de siempre; y
+    volver del navegador no pide la clave de la app). Falta aplicar los dos
+    (primero el del panel) y la build; probar: abrir la consola desde el botón
+    y comprobar que entra directo y que llega el correo de aviso; entrar desde
+    otro equipo tiene que seguir pidiendo todo. Riesgo conocido a propósito:
+    quien tenga el teléfono desbloqueado y la clave de administrador de la
+    app puede abrir la consola sin passkey (el aviso por correo lo deja a la
+    vista).
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
