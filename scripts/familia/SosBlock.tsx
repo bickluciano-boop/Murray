@@ -28,6 +28,8 @@ type Paleta = { [clave: string]: string };
 type Props = {
   enrollment: NativeEnrollment | null | undefined;
   visible: boolean;
+  /** Inicio con mapa: solo el botón (o "SOS enviado" con "Estoy bien"), en una franja baja. Lo demás queda en Familia. */
+  compacto?: boolean;
   paleta: Paleta;
   botones: {
     secundario: StyleProp<ViewStyle>;
@@ -52,7 +54,7 @@ function listaDeNombres(nombres: string[]) {
   return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
 }
 
-export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
+export function SosBlock({ enrollment, visible, compacto = false, paleta: P, botones }: Props) {
   const [sos, setSos] = useState<SosEstado | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [mensaje, setMensaje] = useState("");
@@ -139,6 +141,49 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
   if (!visible || !enrollment) return null;
   const s = estilos(P);
   const ancho = avance.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+
+  if (compacto) {
+    return (
+      <View style={s.compacto}>
+        {sos ? (
+          <View style={[s.enCurso, s.enCursoFila]}>
+            <View style={s.enCursoTextos}>
+              <Text style={s.enCursoTitulo}>SOS enviado</Text>
+              <Text numberOfLines={2} style={s.enCursoTexto}>
+                Le avisamos a {listaDeNombres(sos.to)}.
+              </Text>
+            </View>
+            <Pressable accessibilityRole="button" disabled={trabajando} onPress={() => void estoyBien()} style={[botones.secundario, s.compactoBoton, trabajando && s.apagado]}>
+              {trabajando ? <ActivityIndicator color={P.texto} /> : <Text style={botones.secundarioTexto}>Estoy bien</Text>}
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Pedir ayuda"
+            accessibilityHint="Mantenelo apretado 3 segundos para avisarle a tu familia"
+            delayLongPress={MANTENER_MS}
+            disabled={trabajando}
+            onLongPress={() => void enviar()}
+            onPressIn={empezar}
+            onPressOut={soltar}
+            style={[s.boton, s.botonCompacto]}
+          >
+            <Animated.View pointerEvents="none" style={[s.relleno, { width: ancho }]} />
+            {trabajando ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <View style={s.botonCompactoTextos} pointerEvents="none">
+                <Text style={s.botonCompactoSos}>SOS</Text>
+                <Text style={s.botonCompactoSub}>Mantené apretado 3 segundos</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
+        {mensaje ? <Text style={s.mensaje}>{mensaje}</Text> : null}
+      </View>
+    );
+  }
 
   return (
     <View style={s.bloque}>
@@ -254,6 +299,14 @@ export function SosBlock({ enrollment, visible, paleta: P, botones }: Props) {
 function estilos(P: Paleta) {
   return StyleSheet.create({
     bloque: { marginTop: 18 },
+    compacto: { marginTop: 8 },
+    botonCompacto: { height: 56 },
+    botonCompactoTextos: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "center", paddingHorizontal: 12 },
+    botonCompactoSos: { color: "#ffffff", fontSize: 22, fontWeight: "800", letterSpacing: 4 },
+    botonCompactoSub: { color: "#ffd9d4", flexShrink: 1, fontSize: 12 },
+    enCursoFila: { alignItems: "center", flexDirection: "row", gap: 12 },
+    enCursoTextos: { flex: 1 },
+    compactoBoton: { paddingHorizontal: 16 },
     titulo: { color: P.textoSuave, fontSize: 13, fontWeight: "600", marginBottom: 8 },
     boton: { height: 68, borderRadius: 16, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: ROJO },
     relleno: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: ROJO_OSCURO },

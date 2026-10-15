@@ -5,7 +5,9 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 /**
  * La pantalla a la que se entra con la clave de administrador, en tres niveles:
  *
- *  - Inicio (null): lo de todos los días. La tarjeta de este teléfono, los botones "Mi perfil" y "Configuración", y abajo Familia y SOS.
+ *  - Inicio (null): lo de todos los días. Una línea con este teléfono, los botones "Mi perfil", "Familia" y "Configuración", el mapa con
+ *    todos los equipos y la familia, y el SOS siempre a mano abajo (ver InicioMapa.tsx).
+ *  - Familia ("familia"): quién comparte su ubicación con vos, unirse con un código, pausar la propia ubicación y el SOS completo.
  *  - Mi perfil ("perfil"): los datos de quien usa el teléfono (nombre, correo, cómo se ve, cómo está).
  *  - Configuración ("configuracion"): seis tarjetas grandes y la banda de permisos. Cada tarjeta abre un grupo.
  *  - Un grupo: solo los bloques de ese grupo, con "‹ Atrás" para volver (a las tarjetas o al Inicio).
@@ -16,7 +18,7 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 
 type Paleta = { [clave: string]: string };
 
-export type GrupoConfiguracion = "claves" | "fotos" | "perdido" | "preferencias" | "proteccion" | "conexion" | "permisos" | "perfil";
+export type GrupoConfiguracion = "claves" | "fotos" | "perdido" | "preferencias" | "proteccion" | "conexion" | "permisos" | "perfil" | "familia";
 export type GrupoActualValor = GrupoConfiguracion | "configuracion" | "todo" | null;
 
 export const GrupoActual = createContext<GrupoActualValor>("todo");
@@ -44,6 +46,7 @@ const TEXTOS_GRUPO: Record<GrupoConfiguracion, { titulo: string; resumen: string
   perdido: { titulo: "Modo Perdido y Cercanía", resumen: "Qué ve quien encuentre el teléfono, la cercanía y tus accesorios." },
   preferencias: { titulo: "Preferencias", resumen: "Modo preventivo, pantalla OLED y lo que falta enviar." },
   perfil: { titulo: "Mi perfil", resumen: "Los datos de este teléfono y cómo se ve la app." },
+  familia: { titulo: "Familia y amigos", resumen: "Quién comparte su ubicación con vos, el SOS y cómo pedir ayuda sin abrir la app." },
   proteccion: { titulo: "Dr. Ojo Guard", resumen: "Revisa que el SOS, los avisos y la ubicación estén listos en este teléfono." },
   conexion: { titulo: "Ojo Guard MS", resumen: "Cómo se conecta este teléfono con el panel de Ojo Guard MS." },
   permisos: { titulo: "Permisos de Android", resumen: "Los ajustes de Android que, si no se tocan, frenan Ojo Guard en silencio." },
@@ -58,6 +61,7 @@ export function textosDe(grupo: GrupoConfiguracion, android: boolean) {
 }
 
 const ICONOS: Record<Exclude<GrupoConfiguracion, "permisos" | "perfil">, ImageSourcePropType> = {
+  familia: require("../assets/config-familia.png"),
   claves: require("../assets/config-llave.png"),
   fotos: require("../assets/config-camara.png"),
   perdido: require("../assets/config-radar.png"),
@@ -117,6 +121,52 @@ export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea }: Telefono
         </View>
         {correo.trim() ? <Text style={s.correo}>{correo.trim()}</Text> : null}
       </View>
+    </View>
+  );
+}
+
+type CabezaProps = { paleta: Paleta; nombre: string; enLinea: boolean | null };
+
+/** Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande. */
+export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
+  const s = estilos(P);
+  const bateria = useBateria();
+  const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
+  const colorEstado = enLinea === false ? P.doradoTexto : P.exito;
+  return (
+    <View style={s.cabeza}>
+      <Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={s.cabezaNombre}>
+        {nombre.trim() || "Mi teléfono"}
+      </Text>
+      <View style={s.cabezaEstado}>
+        <View style={[s.punto, { backgroundColor: colorEstado }]} />
+        <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
+          {estado}
+          {bateria !== null ? ` · batería ${bateria}%` : ""}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+type BotonesInicioMapaProps = { paleta: Paleta; onPerfil: () => void; onFamilia: () => void; onConfiguracion: () => void };
+
+/** Debajo de la cabeza del Inicio con mapa: tres botones chicos, "Mi perfil", "Familia" y la tuerca de "Configuración". */
+export function BotonesInicioMapa({ paleta: P, onPerfil, onFamilia, onConfiguracion }: BotonesInicioMapaProps) {
+  const s = estilos(P);
+  const botones: Array<{ texto: string; icono: ImageSourcePropType; onPress: () => void }> = [
+    { texto: "Mi perfil", icono: ICONO_PERFIL, onPress: onPerfil },
+    { texto: "Familia", icono: ICONOS.familia, onPress: onFamilia },
+    { texto: "Configuración", icono: ICONO_TUERCA, onPress: onConfiguracion },
+  ];
+  return (
+    <View style={s.botonesMapa}>
+      {botones.map(({ texto, icono, onPress }) => (
+        <Pressable key={texto} accessibilityRole="button" accessibilityLabel={texto} onPress={onPress} style={s.botonMapa}>
+          <Image source={icono} style={s.botonMapaIcono} resizeMode="contain" />
+          <Text adjustsFontSizeToFit minimumFontScale={0.75} numberOfLines={1} style={s.botonMapaTexto}>{texto}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -262,6 +312,14 @@ function estilos(P: Paleta) {
     botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
+    cabeza: { marginBottom: 8 },
+    cabezaNombre: { color: P.texto, fontSize: 20, fontWeight: "800" },
+    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 3 },
+    cabezaEstadoTexto: { fontSize: 13, fontWeight: "700" },
+    botonesMapa: { flexDirection: "row", gap: 8, marginBottom: 8 },
+    botonMapa: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 16, borderWidth: 1, flex: 1, gap: 4, justifyContent: "center", paddingHorizontal: 6, paddingVertical: 8 },
+    botonMapaIcono: { height: 24, width: 24 },
+    botonMapaTexto: { color: P.texto, fontSize: 12, fontWeight: "800" },
     botonInicioTexto: { color: P.texto, flexShrink: 1, fontSize: 15, fontWeight: "800" },
     banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, justifyContent: "center", marginBottom: 12, marginTop: 4, minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
     bandaTexto: { fontSize: 15, fontWeight: "700", textAlign: "center" },
