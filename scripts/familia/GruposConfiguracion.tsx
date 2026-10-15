@@ -125,26 +125,51 @@ export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea }: Telefono
   );
 }
 
-type CabezaProps = { paleta: Paleta; nombre: string; enLinea: boolean | null };
+type CabezaProps = {
+  paleta: Paleta;
+  nombre: string;
+  enLinea: boolean | null;
+  /** Abre el panel Ojo Guard MS entrando directo, sin pedir códigos. Si no se pasa, el botón no se muestra. */
+  onPanel?: () => void;
+  /** Mientras se pide el acceso y se abre el panel. */
+  abriendo?: boolean;
+};
 
-/** Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande. */
-export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
+/**
+ * Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande, y a la derecha el
+ * botón para abrir el panel Ojo Guard MS: entrar al panel tiene que estar a un toque desde lo primero que se ve.
+ */
+export function CabezaInicio({ paleta: P, nombre, enLinea, onPanel, abriendo = false }: CabezaProps) {
   const s = estilos(P);
   const bateria = useBateria();
   const estado = enLinea === null ? "Comprobando" : enLinea ? "En línea" : "Sin internet";
   const colorEstado = enLinea === false ? P.doradoTexto : P.exito;
   return (
     <View style={s.cabeza}>
-      <Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={s.cabezaNombre}>
-        {nombre.trim() || "Mi teléfono"}
-      </Text>
-      <View style={s.cabezaEstado}>
-        <View style={[s.punto, { backgroundColor: colorEstado }]} />
-        <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
-          {estado}
-          {bateria !== null ? ` · batería ${bateria}%` : ""}
+      <View style={s.cabezaTextos}>
+        <Text adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1} style={s.cabezaNombre}>
+          {nombre.trim() || "Mi teléfono"}
         </Text>
+        <View style={s.cabezaEstado}>
+          <View style={[s.punto, { backgroundColor: colorEstado }]} />
+          <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
+            {estado}
+            {bateria !== null ? ` · batería ${bateria}%` : ""}
+          </Text>
+        </View>
       </View>
+      {onPanel ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Abrir el panel de Ojo Guard MS"
+          disabled={abriendo}
+          onPress={onPanel}
+          style={[s.botonPanel, abriendo && s.botonPanelApagado]}
+        >
+          <Image source={ICONOS.conexion} style={s.botonPanelIcono} resizeMode="contain" />
+          <Text numberOfLines={1} style={s.botonPanelTexto}>{abriendo ? "Abriendo…" : "Abrir panel"}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -312,7 +337,12 @@ function estilos(P: Paleta) {
     botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
-    cabeza: { marginBottom: 8 },
+    cabeza: { alignItems: "center", flexDirection: "row", gap: 10, marginBottom: 8 },
+    cabezaTextos: { flex: 1 },
+    botonPanel: { alignItems: "center", backgroundColor: P.doradoFondoFuerte, borderColor: P.doradoBordeMedio, borderRadius: 16, borderWidth: 1.5, flexDirection: "row", gap: 7, paddingHorizontal: 12, paddingVertical: 10 },
+    botonPanelApagado: { opacity: 0.6 },
+    botonPanelIcono: { height: 22, width: 22 },
+    botonPanelTexto: { color: P.doradoTexto, fontSize: 14, fontWeight: "800" },
     cabezaNombre: { color: P.texto, fontSize: 20, fontWeight: "800" },
     cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 3 },
     cabezaEstadoTexto: { fontSize: 13, fontWeight: "700" },

@@ -12,6 +12,9 @@ import { SosBlock } from "./SosBlock";
  * y Configuración); en el medio, ocupando casi toda la pantalla, el mapa con los equipos y la familia (ver MapaEnApp.tsx); y abajo,
  * siempre a mano pero chico, el botón de SOS.
  *
+ * Entrar al panel Ojo Guard MS está a un toque, arriba a la derecha ("Abrir panel"): pide el acceso directo y abre el navegador con la
+ * sesión iniciada, sin pasar por Configuración ni por la pantalla de sincronización.
+ *
  * Lo que sirve cuando el teléfono ya no está en tus manos (Modo perdido, evidencia) se maneja desde el panel Ojo Guard MS.
  * Lo que antes estaba acá abajo (la lista de la familia, unirse con un código, pausar la ubicación y el SOS completo con sus ayudas)
  * está ahora en "Familia".
@@ -29,6 +32,8 @@ type Props = {
   onConfiguracion: () => void;
   /** Cuando el teléfono no está vinculado: lleva a donde se vincula. */
   onVincular: () => void;
+  /** Abre el panel Ojo Guard MS entrando directo, sin pedir códigos (el botón "Abrir panel" de arriba). */
+  onPanel: () => void | Promise<void>;
   /** La banda de permisos que faltan, si hace falta mostrarla. */
   banda?: ReactNode;
   /** Un aviso arriba del mapa (por ejemplo el diagnóstico de captura), si hace falta. */
@@ -40,9 +45,21 @@ type Props = {
   };
 };
 
-export function InicioMapa({ paleta: P, tema, nombre, enLinea, onPerfil, onFamilia, onConfiguracion, onVincular, banda, aviso, botones }: Props) {
+export function InicioMapa({ paleta: P, tema, nombre, enLinea, onPerfil, onFamilia, onConfiguracion, onVincular, onPanel, banda, aviso, botones }: Props) {
   const [vinculo, setVinculo] = useState<NativeEnrollment | null | undefined>(undefined);
   const [conFamilia, setConFamilia] = useState(false);
+  const [abriendo, setAbriendo] = useState(false);
+
+  // Pedir el acceso y abrir el navegador tarda un instante: mientras tanto el botón dice "Abriendo…".
+  async function abrirPanel() {
+    if (abriendo) return;
+    setAbriendo(true);
+    try {
+      await onPanel();
+    } finally {
+      setAbriendo(false);
+    }
+  }
 
   // El SOS se muestra solo si este teléfono está en una familia (o ve a alguien): se mira al abrir y cada vez que se vuelve a la app.
   useEffect(() => {
@@ -72,7 +89,7 @@ export function InicioMapa({ paleta: P, tema, nombre, enLinea, onPerfil, onFamil
   const s = estilos();
   return (
     <View style={s.raiz}>
-      <CabezaInicio paleta={P} nombre={nombre} enLinea={enLinea} />
+      <CabezaInicio paleta={P} nombre={nombre} enLinea={enLinea} onPanel={() => void abrirPanel()} abriendo={abriendo} />
       <BotonesInicioMapa paleta={P} onPerfil={onPerfil} onFamilia={onFamilia} onConfiguracion={onConfiguracion} />
       {banda}
       {aviso}
