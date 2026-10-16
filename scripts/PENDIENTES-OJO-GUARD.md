@@ -301,7 +301,8 @@ Actualizado: 16/10/2026.
     reproducir muestra tipo, tamaño y código. Si aun así no suena en Android,
     pedir la foto del texto del reproductor (y, de último, poner
     `mediaPlaybackRequiresUserAction={false}` en `MapaEnApp.tsx`, que sí pide
-    build). **Pedido nuevo
+    build). Aplicado y publicado por Luciano el 16/10/2026 (versión
+    d4ea403b); falta que cuente si ya suena en el Android. **Pedido nuevo
     (hecho y aplicado el 16/10/2026, versión 14725ebb: `aplicar-familia-ordenes-adultos-panel.ps1`):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
     como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
     estoy buscando"); propuesta enviada: sonar y ubicar para adultos y menores
