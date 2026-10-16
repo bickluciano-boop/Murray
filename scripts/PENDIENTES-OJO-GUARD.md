@@ -1,6 +1,6 @@
 # Pendientes de Ojo Guard (app + Ojo Guard MS)
 
-Actualizado: 15/10/2026.
+Actualizado: 16/10/2026.
 
 ## En curso
 
@@ -166,6 +166,29 @@ Actualizado: 15/10/2026.
     en WebView (la sesión "device" no las necesita), subir archivos (búsqueda
     de caras) y descargas. Propuesto a Luciano el 15/10/2026: dijo que no;
     "Panel" sigue abriendo el panel en Chrome (con la pantalla "Abriendo…").
+  - [ ] **Inicio v2, ronda 3: mapa estilo "Buscar" y Familia más clara**
+    (fotos de Luciano, 16/10/2026, con la build de Android que trae la barra
+    fija; con capturas de "Buscar" de Apple como ejemplo). Pedidos:
+    (1) **Ajustes repetía "Abrir Ojo Guard MS"** (ya está "Panel" en la barra):
+    sacar ese botón de Ajustes > Ojo Guard MS (quedan "Sincronizar órdenes
+    ahora" y "Crear acceso seguro a MS"); (2) **el recuadro de cada
+    dispositivo en el Inicio era muy grande**: tarjeta compacta con un botón
+    con ícono por cada cosa que se puede hacer: Hacer sonar / Detener sonido,
+    Ubicar ahora, Evidencia (foto y audio, "en el caso que permita": en iPhone
+    solo con la app abierta), Cómo llegar y Seguir en vivo, más el estado
+    ("En vivo / Sin conexión · hace X · distancia"), la dirección y la
+    batería; abajo del mapa la lista Familia y equipos como en "Buscar"
+    (persona o equipo, cómo está, dirección, distancia y botón de sonar); X
+    para volver a la lista; mantener el dedo sobre un botón explica qué hace.
+    Hecho: `aplicar-mapa-app-tarjeta-panel.ps1` (solo panel, se ve al instante
+    en la app instalada; probado con el mapa simulado en claro y noche; suma
+    "Pedir foto y audio" para los teléfonos propios en el mapa del panel, con
+    la orden "capture" de Mis Equipos). (3) **La pantalla Familia poco
+    clara** (comparada con "Personas / Dispositivos" de Apple): rediseñar en la
+    app (filas como la lista de Personas, sin el título "Familia y amigos"
+    repetido adentro, "Mapa ›" que no tape la etiqueta del rol, y las partes
+    de unirse con código, pausar y salir más ordenadas). Es app: va en la
+    próxima build de Android junto con (1). Pendiente: iPhone.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
