@@ -285,6 +285,21 @@ Actualizado: 16/10/2026.
     copiar los `.bak-rotar` de `src\` y publicar.
     Aplicado y publicado por Luciano el 16/10/2026 (versión 3e092ad6); falta
     que cuente cómo se ve y si gira en el teléfono.
+    **Probado en Android (foto de Luciano, 16/10/2026): "gira perfecto", pero
+    "está sobrecargado".** Se ven comercios y paradas de Google (Museo Evita,
+    íconos de colectivo): el estilo del código ya no vale con Map ID, hay que
+    ocultarlos desde "Estilos de mapa" de la consola y asociar el estilo al
+    Map ID `1b7239dd38bbcc4a7271dd0d` (pasos a cargo de Luciano). Pidió
+    reducir los íconos de abajo y del mapa, y reubicar Satélite:
+    `aplicar-mapa-liviano-panel.ps1` (solo panel: pines de 30 px con etiqueta
+    solo con el nombre —la hora y la marca al elegir—, botones de arriba más
+    chicos, Mapa/Satélite como icono de capas en la columna de la derecha con
+    la brújula, tarjeta con botones y letra más chicos; probado en un navegador,
+    antes y después). FALTA, en la próxima build (app): la barra de abajo
+    (SOS, Inicio, Perfil, Ajustes, Panel) más baja y con íconos más chicos, el
+    nombre del teléfono en un solo renglón y la ✕ y el ? del iPhone, todo en un
+    solo script de app. Dato: la tarjeta ya se pliega tocando su encabezado
+    (nombre) o arrastrando la manija (`ogm-plegada`).
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
