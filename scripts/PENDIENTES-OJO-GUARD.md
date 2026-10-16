@@ -243,6 +243,13 @@ Actualizado: 16/10/2026.
     SOS (mantener 3 s y "Estoy bien"), que la barra no tape el gesto de volver
     de Android, y que "Sumar" abra la invitación. Pendiente: iPhone.
     **Primera build con la barra de abajo (fotos de Luciano, 16/10/2026, en
+    **Enfocar a la persona al tocarla (Luciano pidió "4", 16/10/2026):** en
+    el mapa del Inicio, tocar a alguien de la lista ya lo elegía y lo centraba,
+    pero respecto de todo el mapa, y quedaba pegado a la tarjeta de abajo; la
+    lista de personas con "Mapa ›" ya no existe en Familia (se sacó). Arreglo
+    (solo panel, sin build): `aplicar-mapa-enfocar-panel.ps1` — `centrar` deja
+    a la persona en el medio de la parte libre, arriba de la tarjeta (también
+    en "Seguir en vivo"); la cuenta se probó con una proyección de prueba.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
