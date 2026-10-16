@@ -7,7 +7,7 @@
 #    Con una X se vuelve a la lista. Todo lo demas (paradas, avisos, evidencia recibida, cambiar rol, salir de la familia) sigue igual, mas abajo.
 #  - En el celular o la tablet, al mantener el dedo sobre un boton se lee que hace (un toque corto lo aprieta como siempre).
 # Solo cambia el mapa dentro de la app (?app=mapa) y suma el boton Pedir foto y audio para tus telefonos en el mapa del panel. El resto del panel no cambia.
-# Requiere aplicar-mapa-app-compacto-panel.ps1 y los pasos de la consola. Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\panel-mapa.txt y
+# Incluye la tarjeta compacta (aplicar-mapa-app-compacto-panel.ps1 ya no hace falta). Requiere aplicar-mapa-en-app-panel.ps1 y los pasos de la consola. Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\panel-mapa.txt y
 # src\panel-explanations.css. Respaldo .bak-tarjeta. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
@@ -34,7 +34,7 @@ Ok "Carpeta correcta"
 foreach ($f in @("src\panel-mapa.txt", "src\panel-explanations.css")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta."); return } }
 $mapaTexto = (Leer (Join-Path $raiz "src\panel-mapa.txt")).texto
 if ((Contar $mapaTexto 'function htmlTarjetaApp') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
-if ((Contar (Leer (Join-Path $raiz "src\panel-explanations.css")).texto 'html.app-mapa #og-mapa .ogm-tarjeta { left: 8px; right: 8px; bottom: 8px; max-height: 44%') -ne 1) { Mal "Falta aplicar antes aplicar-mapa-app-compacto-panel.ps1 (y los pasos de la consola)."; return }
+if ((Contar (Leer (Join-Path $raiz "src\panel-explanations.css")).texto 'html.app-mapa .topbar') -eq 0) { Mal "Falta aplicar antes el mapa dentro de la app (aplicar-mapa-en-app-panel.ps1)."; return }
 if ((Contar (Leer (Join-Path $raiz "src\panel-explanations.css")).texto '/* Botones en pastilla (como el dibujo de la consola). */') -ne 1) { Mal "Falta aplicar antes los pasos de la consola (pestanas, ayudas, equipos)."; return }
 $cambios = @(
     @('src\panel-mapa.txt', 'mapa: modo app', 'const temaActual = () => (document.documentElement.getAttribute("data-theme") === "light" ? "claro" : "oscuro");
@@ -216,7 +216,12 @@ function dibujar() {
   html.app-mapa #og-mapa .ogm-lista small { font-size: 0.76rem; }
   html.app-mapa #og-mapa.ogm-plegada.ogm-sin-elegir .ogm-lado > :not(.ogm-asa-lista):not(h2):not(.ogm-sub) { display: none; }
 
-  html.app-mapa #og-mapa .ogm-tarjeta { max-height: 46%; }
+  html.app-mapa #og-mapa .ogm-tarjeta { left: 8px; right: 8px; bottom: 8px; max-height: 46%; border-radius: 18px; padding: 4px 12px 10px; }
+  html.app-mapa #og-mapa .ogm-asa { height: 20px; margin: -4px -12px 2px; width: calc(100% + 24px); }
+  html.app-mapa #og-mapa .ogm-asa::before { top: 7px; }
+  html.app-mapa #og-mapa .ogm-cab { gap: 10px; }
+  html.app-mapa #og-mapa .ogm-direc { margin: 6px 0 8px; font-size: 0.84rem; }
+  html.app-mapa #og-mapa .ogm-paradas { margin-bottom: 8px; padding-top: 8px; }
   html.app-mapa #og-mapa .ogm-cab-app { align-items: center; gap: 10px; }
   html.app-mapa #og-mapa .ogm-cab-app .ogm-foto { flex: none; }
   html.app-mapa #og-mapa .ogm-cab-app .ogm-av.grande { width: 44px; height: 44px; }

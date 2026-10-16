@@ -148,8 +148,9 @@ Actualizado: 16/10/2026.
     Familia, "Mapa ›" lleva al mapa del Inicio y ya no abre Google Maps con un
     pin suelto. App: `aplicar-barra-superior-app.ps1` (necesita antes el del
     Inicio con mapa; es solo JS, pero hace falta build para verlo). Aplicado
-    por Luciano el 15/10/2026 y compila bien; el panel compacto y el "sin
-    saltos" también están aplicados. Falta la build de Android (una sola, con
+    por Luciano el 15/10/2026 y compila bien; el "sin saltos" del panel también
+    está aplicado (el "compacto" suelto nunca se aplicó: lo reemplaza el de la
+    ronda 3, que lo trae incluido). Falta la build de Android (una sola, con
     todo) y probar la barra fija, el SOS sin repetir, "Mapa ›" de Familia y
     "Abrir panel" con la pantalla "Abriendo…". Pendiente
     para después: que "Mapa ›" enfoque a esa persona en el mapa; textos y
@@ -180,7 +181,8 @@ Actualizado: 16/10/2026.
     batería; abajo del mapa la lista Familia y equipos como en "Buscar"
     (persona o equipo, cómo está, dirección, distancia y botón de sonar); X
     para volver a la lista; mantener el dedo sobre un botón explica qué hace.
-    Hecho: `aplicar-mapa-app-tarjeta-panel.ps1` (solo panel, se ve al instante
+    Hecho: `aplicar-mapa-app-tarjeta-panel.ps1` (incluye la tarjeta compacta;
+    solo panel, se ve al instante
     en la app instalada; probado con el mapa simulado en claro y noche; suma
     "Pedir foto y audio" para los teléfonos propios en el mapa del panel, con
     la orden "capture" de Mis Equipos). (3) **La pantalla Familia poco
