@@ -1,6 +1,7 @@
 import * as Battery from "expo-battery";
+import { initialWindowMetrics } from "react-native-safe-area-context";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { Image, Keyboard, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import { Image, Keyboard, Platform, Pressable, StatusBar, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 
 /**
  * La pantalla a la que se entra con la clave de administrador, en tres niveles:
@@ -190,13 +191,16 @@ export function BarraInferior({ paleta: P, actual, onElegir, onPanel, abriendo =
   const s = estilos(P);
   const tecladoVisible = useTecladoVisible();
   if (tecladoVisible) return null;
+  // En Android la app llega hasta abajo de todo: los botones del sistema (atrás, inicio, recientes) o el gesto quedaban encima de la barra y se
+  // comían los toques. Se deja debajo el lugar que mide el teléfono (48 si no se pudo medir). En iPhone ya lo cuida la pantalla segura.
+  const lugarAbajo = Platform.OS === "android" ? Math.round(initialWindowMetrics?.insets.bottom ?? 48) : 0;
   const items: Array<{ clave: SeccionBarra; texto: string; icono: ImageSourcePropType }> = [
     { clave: "inicio", texto: "Inicio", icono: ICONO_INICIO },
     { clave: "perfil", texto: "Perfil", icono: ICONO_PERFIL },
     { clave: "configuracion", texto: "Ajustes", icono: ICONO_TUERCA },
   ];
   return (
-    <View style={s.barra}>
+    <View style={[s.barra, { paddingBottom: 12 + lugarAbajo }]}>
       {sos}
       {items.map(({ clave, texto, icono }) => {
         const activo = clave === actual;
@@ -384,7 +388,8 @@ function estilos(P: Paleta) {
     botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
-    cabeza: { alignItems: "center", marginBottom: 6, marginHorizontal: 44, paddingTop: Platform.OS === "android" ? 12 : 4 },
+    // En Android la app llega hasta arriba de todo: el renglón empieza debajo de la barra de estado (hora, batería).
+    cabeza: { alignItems: "center", marginBottom: 6, marginHorizontal: 44, paddingTop: Platform.OS === "android" ? Math.max(26, (StatusBar.currentHeight ?? 0) + 2) : 4 },
     cabezaNombre: { color: P.texto, fontSize: 16, fontWeight: "800" },
     cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 6, marginTop: 1 },
     cabezaEstadoTexto: { fontSize: 12, fontWeight: "700" },

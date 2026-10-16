@@ -66,6 +66,10 @@ export function SosBlock({ enrollment, visible, compacto = false, cuadrado = fal
   const [gestoActivo, setGestoActivo] = useState(false);
   const [enlace, setEnlace] = useState("");
   const avance = useRef(new Animated.Value(0)).current;
+  // Mientras se mantiene apretado, el cuadradito cuenta 3, 2, 1 para que se note que está andando.
+  const [restante, setRestante] = useState<number | null>(null);
+  const cuenta = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => { if (cuenta.current) clearInterval(cuenta.current); }, []);
 
   const cargar = useCallback(async () => {
     if (!enrollment) return;
@@ -100,10 +104,19 @@ export function SosBlock({ enrollment, visible, compacto = false, cuadrado = fal
   const empezar = () => {
     avance.setValue(0);
     Animated.timing(avance, { toValue: 1, duration: MANTENER_MS, easing: Easing.linear, useNativeDriver: false }).start();
+    const inicio = Date.now();
+    setRestante(Math.ceil(MANTENER_MS / 1000));
+    if (cuenta.current) clearInterval(cuenta.current);
+    cuenta.current = setInterval(() => setRestante(Math.max(1, Math.ceil((MANTENER_MS - (Date.now() - inicio)) / 1000))), 200);
   };
   const soltar = () => {
     avance.stopAnimation();
     avance.setValue(0);
+    if (cuenta.current) {
+      clearInterval(cuenta.current);
+      cuenta.current = null;
+    }
+    setRestante(null);
   };
 
   async function enviar() {
@@ -190,7 +203,7 @@ export function SosBlock({ enrollment, visible, compacto = false, cuadrado = fal
             ) : (
               <View pointerEvents="none" style={s.cuadradoTextos}>
                 <Text style={s.cuadradoSos}>SOS</Text>
-                <Text style={s.cuadradoSub}>3 s</Text>
+                <Text style={s.cuadradoSub}>{restante ?? 3} s</Text>
               </View>
             )}
           </Pressable>
