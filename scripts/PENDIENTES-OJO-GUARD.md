@@ -283,6 +283,8 @@ Actualizado: 16/10/2026.
     Google); (4) cambiar claro/noche con el mapa abierto puede no verse hasta
     reabrir (el `colorScheme` se fija al crear el mapa). Si algo sale mal:
     copiar los `.bak-rotar` de `src\` y publicar.
+    Aplicado y publicado por Luciano el 16/10/2026 (versión 3e092ad6); falta
+    que cuente cómo se ve y si gira en el teléfono.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
