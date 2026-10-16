@@ -251,6 +251,22 @@ Actualizado: 16/10/2026.
     a la persona en el medio de la parte libre, arriba de la tarjeta (también
     en "Seguir en vivo"); la cuenta se probó con una proyección de prueba. Aplicado y publicado por
     Luciano el 16/10/2026 (versión 89f28c5a); falta que cuente cómo se ve.
+    **Más mapa y rotar (foto de Luciano, 16/10/2026, tras enfocar):** "queda
+    poco espacio de mapa" y "no se puede rotar el mapa". Eligió: (1)
+    Mapa/Satélite en un solo botón chico (hecho, solo panel:
+    `aplicar-mapa-capas-panel.ps1`, se ve el de la otra vista y al tocarlo se
+    cambia); (2) nombre del teléfono en un solo renglón arriba ("Android
+    Luciano · En línea · 24%"): FALTA, va en la próxima build junto con el
+    arreglo de la ✕ y el ? del iPhone (un solo script de app, a preparar);
+    (3) **rotar con dos dedos: crear un Map ID propio** en Google Cloud (el
+    mapa de hoy es "raster", que no rota; hace falta mapa vectorial con
+    Map ID, Rotación sí y Tilt no, más un estilo que oculte comercios y
+    transporte). Luciano crea el Map ID y me lo pasa; entonces: script de panel
+    con `mapId`, modo claro/noche con `colorScheme` (el `styles` del código
+    deja de valer con Map ID y el `colorScheme` solo se fija al crear el
+    mapa), botón "norte" para volver a mirar al norte, y ajustar `centrar`
+    para que cuente el giro (el desplazamiento por la tarjeta hoy supone norte
+    arriba). No eligió "Tarjeta que se achica" (queda como idea).
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
