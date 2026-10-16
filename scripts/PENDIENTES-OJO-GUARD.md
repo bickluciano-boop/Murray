@@ -287,7 +287,21 @@ Actualizado: 16/10/2026.
     Evidencias del panel). Si aun así no suena en el teléfono, ver qué tipo de
     audio sube la notebook (WAV u otro) y si el servidor lo marca bien.
     `aplicar-barra-ajustes-app.ps1` y hacer la build. Aplicado por Luciano
-    el 16/10/2026 también `aplicar-mapa-evidencia2-panel.ps1`. **Pedido nuevo
+    el 16/10/2026 también `aplicar-mapa-evidencia2-panel.ps1`.
+    **Audio de la evidencia en Android (Luciano, 16/10/2026: "suena en iPhone,
+    no suena en Android"):** causas halladas probando en un navegador con la
+    política de audio estricta: (1) el reproductor estaba dentro de la tarjeta
+    del mapa, que se redibuja cada pocos segundos, y el audio desaparecía;
+    (2) el visor de Android solo deja arrancar un audio dentro del toque y
+    bajar el archivo tarda. Arreglo (solo panel, sin build):
+    `aplicar-mapa-audio-android-panel.ps1` — reproductor propio fijo arriba del
+    mapa, con cruz para cerrarlo; en el toque se arranca un silencio de 0,1 s
+    para destrabar el reproductor y después se cambia por el audio; si el visor
+    no lo arranca dice "Tocá el play para escuchar"; si el audio no se puede
+    reproducir muestra tipo, tamaño y código. Si aun así no suena en Android,
+    pedir la foto del texto del reproductor (y, de último, poner
+    `mediaPlaybackRequiresUserAction={false}` en `MapaEnApp.tsx`, que sí pide
+    build). **Pedido nuevo
     (hecho y aplicado el 16/10/2026, versión 14725ebb: `aplicar-familia-ordenes-adultos-panel.ps1`):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
     como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
     estoy buscando"); propuesta enviada: sonar y ubicar para adultos y menores
