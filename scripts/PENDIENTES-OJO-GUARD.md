@@ -288,7 +288,7 @@ Actualizado: 16/10/2026.
     audio sube la notebook (WAV u otro) y si el servidor lo marca bien.
     `aplicar-barra-ajustes-app.ps1` y hacer la build. Aplicado por Luciano
     el 16/10/2026 también `aplicar-mapa-evidencia2-panel.ps1`. **Pedido nuevo
-    (hecho, falta aplicar `aplicar-familia-ordenes-adultos-panel.ps1`):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
+    (hecho y aplicado el 16/10/2026, versión 14725ebb: `aplicar-familia-ordenes-adultos-panel.ps1`):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
     como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
     estoy buscando"); propuesta enviada: sonar y ubicar para adultos y menores
     (lo pide el titular; la persona oye la alarma y ve un aviso), evidencia y en
@@ -307,6 +307,20 @@ Actualizado: 16/10/2026.
     igual que la de un menor; en el iPhone, sonar es una notificación y la foto
     solo con la app abierta). Probado: las consultas SQL con datos de ejemplo y
     el script contra el espejo del servidor.
+    **Hacer sonar en iPhone (Luciano, 16/10/2026):** con la app cerrada y el
+    interruptor lateral en silencio no suena (límite de iPhone; falta Apple
+    con las Alertas críticas, ID 7R4MM73U2Y); con el interruptor en sonido
+    suena la sirena del aviso (28 s) y NO se puede cortar; con la app abierta
+    sonaban DOS alarmas (la del aviso y la de la app) y la del aviso no se
+    corta. Arreglos preparados: `aplicar-sirena-corta-app.ps1` (app, pide build:
+    con la app abierta el aviso de "Hacer sonar" no suena porque ya suena la
+    alarma de la app, que sí se detiene; y suma `ojo_sirena_corta.wav`, 10 s
+    con fundido) y, para correr DESPUÉS de instalar las builds,
+    `aplicar-sirena-corta-panel.ps1` (servidor: el aviso de "Hacer sonar" usa
+    la sirena corta y `interruptionLevel: "time-sensitive"`; antes de la build
+    de iPhone nueva el iPhone tocaría el sonido común). El script de la
+    barra/SOS (`aplicar-barra-ajustes-app.ps1`) lo aplicó Luciano el
+    16/10/2026 y compila bien; falta la build de Android.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
