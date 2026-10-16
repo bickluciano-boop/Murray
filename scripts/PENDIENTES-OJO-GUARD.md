@@ -289,7 +289,9 @@ Actualizado: 16/10/2026.
     "está sobrecargado".** Se ven comercios y paradas de Google (Museo Evita,
     íconos de colectivo): el estilo del código ya no vale con Map ID, hay que
     ocultarlos desde "Estilos de mapa" de la consola y asociar el estilo al
-    Map ID `1b7239dd38bbcc4a7271dd0d` (pasos a cargo de Luciano). Pidió
+    Map ID `1b7239dd38bbcc4a7271dd0d`. **Luciano (16/10/2026): los comercios no
+    molestan, ayudan como referencia: NO se oculta nada, se deja el mapa de
+    Google como está (no hace falta el estilo de la consola).** Pidió
     reducir los íconos de abajo y del mapa, y reubicar Satélite:
     `aplicar-mapa-liviano-panel.ps1` (solo panel: pines de 30 px con etiqueta
     solo con el nombre —la hora y la marca al elegir—, botones de arriba más
