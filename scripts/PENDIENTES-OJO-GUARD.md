@@ -335,6 +335,15 @@ Actualizado: 16/10/2026.
     abierta o plegada); queda el icono de la persona con el + en la columna de
     botones de arriba a la derecha. Aplicado y publicado por Luciano el
     16/10/2026 (versión 7b148784).
+    **Luciano (16/10/2026): "queda mejor — personas/dispositivos".** Entendido
+    como pestañas de Buscar de Apple: `aplicar-mapa-pestanas-lista-panel.ps1`
+    (solo panel, requiere el de la lista en una fila): la lista de abajo tiene
+    dos pestañas "Personas · n" y "Dispositivos · n"; se ve una sola a la vez
+    (sin los títulos FAMILIA / DISPOSITIVOS); la fila plegada ES el selector:
+    tocar una pestaña abre la lista en esa, tocar la marcada con la lista abierta
+    la pliega; sin personas queda solo Dispositivos; la consola de la compu no
+    cambia. Probado la lógica y el aspecto en un navegador. Si quería otra cosa
+    (por ejemplo solo cambiar los títulos), se vuelve con los `.bak-pestanas`.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
