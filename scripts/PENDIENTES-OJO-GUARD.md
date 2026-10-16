@@ -286,8 +286,9 @@ Actualizado: 16/10/2026.
     reproduce desde la memoria (si no se puede, lo dice; el audio sigue en
     Evidencias del panel). Si aun así no suena en el teléfono, ver qué tipo de
     audio sube la notebook (WAV u otro) y si el servidor lo marca bien.
-    `aplicar-barra-ajustes-app.ps1` y hacer la build. **Pedido nuevo (sin
-    hacer):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
+    `aplicar-barra-ajustes-app.ps1` y hacer la build. Aplicado por Luciano
+    el 16/10/2026 también `aplicar-mapa-evidencia2-panel.ps1`. **Pedido nuevo
+    (hecho, falta aplicar `aplicar-familia-ordenes-adultos-panel.ps1`):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
     como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
     estoy buscando"); propuesta enviada: sonar y ubicar para adultos y menores
     (lo pide el titular; la persona oye la alarma y ve un aviso), evidencia y en
@@ -295,6 +296,17 @@ Actualizado: 16/10/2026.
     (1 como propongo, 2 también evidencia y en vivo, 3 solo sonar); es un
     cambio de servidor (`family/command` y `canCommand`) y hay que revisar que
     las apps lo reciban igual que el de un menor.
+    Luciano no eligió número pero dijo "falta el sonido y todo lo demás" al
+    tocar a "LB iPhone": se tomó la opción 2 (sonar, ubicar, evidencia y en vivo)
+    para el TITULAR sobre familiares ADULTOS, siempre con aviso a la persona
+    (push y correo, salvo ubicar, quien lo hizo); un adulto no puede pedírselo a
+    otro adulto; amigos afuera; con la ubicación pausada solo se puede hacer
+    sonar (409 "paused"). Servidor: `familyMinorTarget`, `familyIsTutorOf`,
+    `canCommand`, la orden y el en vivo de familia, el correo de la foto y los
+    textos del rol Adulto. Las apps no cambian (la orden llega al teléfono
+    igual que la de un menor; en el iPhone, sonar es una notificación y la foto
+    solo con la app abierta). Probado: las consultas SQL con datos de ejemplo y
+    el script contra el espejo del servidor.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
