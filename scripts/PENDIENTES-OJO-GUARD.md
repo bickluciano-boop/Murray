@@ -328,6 +328,11 @@ Actualizado: 16/10/2026.
     tarjeta de un equipo (✕) se vuelve a la fila; En vivo/Hoy/7 días se esconde
     mientras no hay nadie elegido. Probado en un navegador con las reglas reales.
     Pendiente decidir: el nombre cortado ("LB i…") en la lista abierta.
+    **Luciano (16/10/2026): "está repetido el icono de sumar, yo lo dejaría
+    arriba".** `aplicar-mapa-sumar-arriba-panel.ps1` (solo panel): el botón
+    Sumar de la lista de abajo se esconde (con `!important`, sirve con la lista
+    abierta o plegada); queda el icono de la persona con el + en la columna de
+    botones de arriba a la derecha.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
