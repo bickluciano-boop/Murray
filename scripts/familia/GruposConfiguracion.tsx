@@ -146,7 +146,7 @@ export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
         <View style={[s.punto, { backgroundColor: colorEstado }]} />
         <Text style={[s.cabezaEstadoTexto, { color: colorEstado }]}>
           {estado}
-          {bateria !== null ? ` · batería ${bateria}%` : ""}
+          {bateria !== null ? ` · ${bateria}%` : ""}
         </Text>
       </View>
     </View>
@@ -200,7 +200,7 @@ export function BarraInferior({ paleta: P, actual, onElegir, onPanel, abriendo =
     { clave: "configuracion", texto: "Ajustes", icono: ICONO_TUERCA },
   ];
   return (
-    <View style={[s.barra, { paddingBottom: 12 + lugarAbajo }]}>
+    <View style={[s.barra, { paddingBottom: 8 + lugarAbajo }]}>
       {sos}
       {items.map(({ clave, texto, icono }) => {
         const activo = clave === actual;
@@ -389,18 +389,18 @@ function estilos(P: Paleta) {
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
     // En Android la app llega hasta arriba de todo: el renglón empieza debajo de la barra de estado (hora, batería).
-    cabeza: { alignItems: "center", marginBottom: 6, marginHorizontal: 44, paddingTop: Platform.OS === "android" ? Math.max(26, (StatusBar.currentHeight ?? 0) + 2) : 4 },
-    cabezaNombre: { color: P.texto, fontSize: 16, fontWeight: "800" },
-    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 6, marginTop: 1 },
+    cabeza: { alignItems: "center", flexDirection: "row", gap: 8, justifyContent: "center", marginBottom: 4, marginHorizontal: 44, paddingTop: Platform.OS === "android" ? Math.max(26, (StatusBar.currentHeight ?? 0) + 2) : 4 },
+    cabezaNombre: { color: P.texto, flexShrink: 1, fontSize: 16, fontWeight: "800" },
+    cabezaEstado: { alignItems: "center", flexDirection: "row", flexShrink: 0, gap: 5 },
     cabezaEstadoTexto: { fontSize: 12, fontWeight: "700" },
     // Abajo, fija: encima del mapa si hay un aviso del SOS (zIndex), y con lugar para el gesto de volver de Android.
-    barra: { backgroundColor: P.fondo, borderTopColor: P.borde, borderTopWidth: 1, elevation: 8, flexDirection: "row", gap: 6, paddingBottom: 12, paddingHorizontal: 10, paddingTop: 8, zIndex: 8 },
-    barraItem: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 14, borderWidth: 1, flex: 1, gap: 3, justifyContent: "center", paddingHorizontal: 2, paddingVertical: 7 },
+    barra: { backgroundColor: P.fondo, borderTopColor: P.borde, borderTopWidth: 1, elevation: 8, flexDirection: "row", gap: 6, paddingBottom: 8, paddingHorizontal: 10, paddingTop: 5, zIndex: 8 },
+    barraItem: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 12, borderWidth: 1, flex: 1, gap: 1, justifyContent: "center", paddingHorizontal: 2, paddingVertical: 4 },
     barraItemActivo: { backgroundColor: P.doradoFondo, borderColor: P.doradoBorde },
     barraPanel: { backgroundColor: P.doradoFondoFuerte, borderColor: P.doradoBordeMedio, borderWidth: 1.5 },
     barraPanelApagado: { opacity: 0.6 },
-    barraIcono: { height: 22, width: 22 },
-    barraTexto: { color: P.texto, fontSize: 11, fontWeight: "800" },
+    barraIcono: { height: 17, width: 17 },
+    barraTexto: { color: P.texto, fontSize: 10, fontWeight: "800" },
     barraTextoActivo: { color: P.doradoTexto },
     botonInicioTexto: { color: P.texto, flexShrink: 1, fontSize: 15, fontWeight: "800" },
     banda: { alignItems: "center", borderRadius: 16, borderWidth: 1, justifyContent: "center", marginBottom: 12, marginTop: 4, minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
