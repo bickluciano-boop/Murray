@@ -296,7 +296,14 @@ Actualizado: 16/10/2026.
     chicos, Mapa/Satélite como icono de capas en la columna de la derecha con
     la brújula, tarjeta con botones y letra más chicos; probado en un navegador,
     antes y después; aplicado y publicado por Luciano el 16/10/2026, versión
-    fb541e96, falta que cuente cómo se ve). FALTA, en la próxima build (app): la barra de abajo
+    fb541e96). **Foto de Luciano, 16/10/2026: "perfecto, los pines más chicos;
+    el cartel de LB iPhone podría ser más chico, como una hilera, y grande
+    cuando lo tocás".** Hecho: `aplicar-mapa-tarjeta-fila-panel.ps1` (solo
+    panel): al elegir un equipo o persona la tarjeta empieza plegada en UNA
+    FILA (inicial o dibujo, nombre, cómo está y la cruz; 51 px contra 72 px de
+    la plegada anterior y 170 px abierta), y se abre tocándola o deslizando la
+    manija hacia arriba; probado en un navegador con las reglas reales. FALTA,
+    en la próxima build (app): la barra de abajo
     (SOS, Inicio, Perfil, Ajustes, Panel) más baja y con íconos más chicos, el
     nombre del teléfono en un solo renglón y la ✕ y el ? del iPhone, todo en un
     solo script de app. Dato: la tarjeta ya se pliega tocando su encabezado
