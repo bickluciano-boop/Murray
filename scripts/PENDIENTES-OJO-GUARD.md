@@ -319,8 +319,18 @@ Actualizado: 16/10/2026.
     `aplicar-sirena-corta-panel.ps1` (servidor: el aviso de "Hacer sonar" usa
     la sirena corta y `interruptionLevel: "time-sensitive"`; antes de la build
     de iPhone nueva el iPhone tocaría el sonido común). El script de la
-    barra/SOS (`aplicar-barra-ajustes-app.ps1`) lo aplicó Luciano el
-    16/10/2026 y compila bien; falta la build de Android.
+    barra/SOS (`aplicar-barra-ajustes-app.ps1`) y `aplicar-sirena-corta-app.ps1`
+    los aplicó Luciano el 16/10/2026; la build de Android con la barra de abajo
+    y el SOS cuadradito está instalada y anda (foto del 16/10/2026: la barra
+    no se superpone con los botones de Android, el título queda bajo la barra de
+    estado, el SOS de 3 s manda la notificación al iPhone). **SOS en iPhone
+    (Luciano, "sí", 16/10/2026):** la sirena de aviso del SOS no se corta ni con
+    "Estoy bien" y apretar de nuevo la superponía. Se sumó al script del servidor
+    `aplicar-sirena-corta-panel.ps1`: sirena de 10 s en iPhone para el SOS (en
+    Android sigue la de 28 s, sale del canal de la app) y, si la misma persona
+    vuelve a pedir SOS en menos de 40 s (aunque haya cancelado), el aviso
+    llega igual, visible y urgente, pero sin sonido (nunca se bloquea). Orden:
+    build de iPhone nueva instalada y recién después el script del servidor.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.

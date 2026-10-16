@@ -1,6 +1,9 @@
-﻿# aplicar-sirena-corta-panel.ps1 - Hacer sonar en iPhone: el aviso trae la sirena corta (10 segundos) y como aviso urgente.
+﻿# aplicar-sirena-corta-panel.ps1 - Hacer sonar y SOS en iPhone: la sirena del aviso corta (10 segundos), urgente, y sin sonido si se repite enseguida.
 # Pedido de Luciano (16/10/2026): con la app cerrada, el aviso de "Hacer sonar" suena 28 segundos y no se puede cortar. Con la sirena corta dura 10, y como
 # aviso urgente (Time Sensitive) no lo frenan los modos de concentracion. En silencio sigue sin sonar hasta que Apple apruebe las Alertas criticas.
+#  - SOS (Luciano, 16/10/2026: "si"): la sirena de aviso del SOS tambien dura 10 segundos en iPhone (en Android sigue la de 28: sale del canal de la app). Y si la
+#    misma persona vuelve a pedir SOS dentro de los 40 segundos del anterior (aunque lo haya cancelado con "Estoy bien"), el aviso nuevo llega igual, visible y
+#    urgente, pero SIN sonido: en iPhone una sirena de aviso no se puede cortar y se superponian dos. Nunca se bloquea un SOS: siempre llega.
 # SE CORRE DESPUES de instalar la app nueva (la que trae la sirena corta; en el iPhone, la build nueva): antes, el iPhone tocaria el sonido comun.
 # Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\index.ts. Respaldo .bak-sirenacorta. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
@@ -29,9 +32,21 @@ foreach ($f in @("src\index.ts")) { if (-not (Test-Path (Join-Path $raiz $f))) {
 $indexTexto = (Leer (Join-Path $raiz "src\index.ts")).texto
 if ((Contar $indexTexto 'ojo_sirena_corta.wav') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 $cambios = @(
-    ,@('src\index.ts', 'hacer sonar: sirena corta y aviso urgente', '      sound: aviso?.silencioso ? undefined : type === "alarm" ? "ojo_sirena.wav" : "default",', '      sound: aviso?.silencioso ? undefined : type === "alarm" ? "ojo_sirena_corta.wav" : "default",
+    @('src\index.ts', 'hacer sonar: sirena corta y aviso urgente', '      sound: aviso?.silencioso ? undefined : type === "alarm" ? "ojo_sirena.wav" : "default",', '      sound: aviso?.silencioso ? undefined : type === "alarm" ? "ojo_sirena_corta.wav" : "default",
       // "Hacer sonar" como aviso urgente: atraviesa los modos de concentracion del iPhone (hace falta la build con el permiso Time Sensitive).
-      ...(type === "alarm" ? { interruptionLevel: "time-sensitive" } : {}),')
+      ...(type === "alarm" ? { interruptionLevel: "time-sensitive" } : {}),'),
+    @('src\index.ts', 'SOS: el aviso admite ir sin sonido', 'async function sendExpoNoticeLogged(env: Env, pushToken: string | null, title: string, body: string, motivo: string, opciones?: { sound?: string;', 'async function sendExpoNoticeLogged(env: Env, pushToken: string | null, title: string, body: string, motivo: string, opciones?: { sinSonido?: boolean; sound?: string;'),
+    @('src\index.ts', 'SOS: sin sonido si corresponde', 'body: JSON.stringify([{ to: pushToken, title, body, sound: opciones?.sound ?? "default", priority: "high", ttl: opciones?.ttl ?? 86_400, channelId: opciones?.channelId, interruptionLevel: opciones?.interruptionLevel,', 'body: JSON.stringify([{ to: pushToken, title, body, sound: opciones?.sinSonido ? null : opciones?.sound ?? "default", priority: "high", ttl: opciones?.ttl ?? 86_400, channelId: opciones?.channelId, interruptionLevel: opciones?.interruptionLevel,'),
+    @('src\index.ts', 'SOS: mirar si ya hubo uno hace menos de 40 segundos', '  const destinatarios = await familySosRecipients(env, email);
+  if (!destinatarios.length) return json({ error: "no_recipients" }, 409);
+  const id = randomId("sos");', '  const destinatarios = await familySosRecipients(env, email);
+  if (!destinatarios.length) return json({ error: "no_recipients" }, 409);
+  // Si esta persona ya pidio un SOS hace menos de 40 segundos (aunque lo haya cancelado), la sirena anterior puede seguir sonando en el iPhone de quien lo
+  // recibio, y un aviso con sonido se superpondria (en iPhone una sirena de aviso no se puede cortar). El aviso nuevo llega igual, visible y urgente, pero sin sonido.
+  const sirenaAnteriorSonando = Boolean(await env.DB.prepare("SELECT 1 AS ok FROM family_sos WHERE person_email=? AND created_at>? LIMIT 1")
+    .bind(email, new Date(Date.now() - 40_000).toISOString()).first<{ ok: number }>().catch(() => null));
+  const id = randomId("sos");'),
+    @('src\index.ts', 'SOS: sirena corta y, si se repite enseguida, sin sonido', '"sos", { sound: "ojo_sirena.wav", channelId: "ojo-sos", ttl: 600, interruptionLevel: "time-sensitive", data: { type: "sos"', '"sos", { sinSonido: sirenaAnteriorSonando, sound: "ojo_sirena_corta.wav", channelId: "ojo-sos", ttl: 600, interruptionLevel: "time-sensitive", data: { type: "sos"')
 )
 $descargas = @()
 
