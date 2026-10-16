@@ -221,7 +221,8 @@ Actualizado: 16/10/2026.
     línea, y toda la pantalla más mapa; achico lo de Android en línea y
     batería"; y "Familia y amigos queda grande, no entiendo la función: vas al
     mapa y ves lo mismo que en el Inicio; la configuración de familia podría
-    estar en otro lado, solo para agregar gente"). Hecho (falta aplicar y la
+    estar en otro lado, solo para agregar gente"). Hecho (aplicado por
+    Luciano el 16/10/2026 y compila bien, el del panel también; falta la
     build): `aplicar-barra-abajo-app.ps1` (respaldo `.bak-barraabajo`): barra
     fija abajo en todas las pantallas con **SOS** (cuadradito rojo "SOS · 3 s",
     se mantiene apretado 3 segundos; ya enviado pasa a "Estoy bien" y el aviso
