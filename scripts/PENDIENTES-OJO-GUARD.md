@@ -249,7 +249,8 @@ Actualizado: 16/10/2026.
     lista de personas con "Mapa ›" ya no existe en Familia (se sacó). Arreglo
     (solo panel, sin build): `aplicar-mapa-enfocar-panel.ps1` — `centrar` deja
     a la persona en el medio de la parte libre, arriba de la tarjeta (también
-    en "Seguir en vivo"); la cuenta se probó con una proyección de prueba.
+    en "Seguir en vivo"); la cuenta se probó con una proyección de prueba. Aplicado y publicado por
+    Luciano el 16/10/2026 (versión 89f28c5a); falta que cuente cómo se ve.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
