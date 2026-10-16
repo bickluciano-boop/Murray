@@ -242,6 +242,29 @@ Actualizado: 16/10/2026.
     recién entonces la build de Android (una sola). A mirar en el teléfono: el
     SOS (mantener 3 s y "Estoy bien"), que la barra no tape el gesto de volver
     de Android, y que "Sumar" abra la invitación. Pendiente: iPhone.
+    **Primera build con la barra de abajo (fotos de Luciano, 16/10/2026, en
+    Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
+    SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
+    de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
+    SOS "estaba pero no funcionaba"; (2) el nombre del teléfono arriba quedaba
+    pisado por la barra de estado; (3) **las dos iniciales no se entienden**
+    ("LI", "MT", "NL"): querían el dibujo del equipo como el círculo de
+    "Buscar" de Apple, o poder editarlo (el lápiz del círculo ya deja poner
+    una foto a un equipo); (4) en la tarjeta de una persona adulta ("LB
+    iPhone") solo sale "Cómo llegar": **por diseño las órdenes (sonar,
+    ubicar, evidencia, en vivo) son solo para equipos propios y menores de la
+    familia**; "LB iPhone" es un familiar ADULTO, no un equipo de la cuenta
+    (a esa invitación se le puso ese nombre; en una prueba anterior se le
+    cambió el rol a menor por D1 y se volvió a adulto). Pendiente de decidir
+    con Luciano cómo darle esas órdenes a su propio iPhone (vincularlo como
+    equipo propio, o marcar a un familiar como "mi equipo": cambio de servidor).
+    Arreglos: `aplicar-mapa-iconos-panel.ps1` (panel: dibujos de celular,
+    compu y reloj en los círculos; una sola inicial en las personas; botones de
+    la tarjeta que no se estiran; estado a dos renglones) y
+    `aplicar-barra-ajustes-app.ps1` (app: la barra deja abajo el lugar que mide
+    el teléfono con `react-native-safe-area-context`, que es NATIVO: hace
+    falta otra build de Android; el título baja de la barra de estado; el SOS
+    cuenta 3, 2, 1 mientras se lo mantiene).
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
