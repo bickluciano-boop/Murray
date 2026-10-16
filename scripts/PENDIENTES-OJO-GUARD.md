@@ -308,8 +308,8 @@ Actualizado: 16/10/2026.
     en la próxima build (app): la barra de abajo
     (SOS, Inicio, Perfil, Ajustes, Panel) más baja y con íconos más chicos, el
     nombre del teléfono en un solo renglón y la ✕ y el ? del iPhone, todo en un
-    solo script de app: **PREPARADO** `aplicar-barra-chica-app.ps1` (16/10/2026,
-    todavía sin aplicar): botones de la barra de ~53 a ~40 de alto, íconos de 22
+    solo script de app: `aplicar-barra-chica-app.ps1` (16/10/2026, **aplicado
+    por Luciano y compila bien; falta la build de Android y de iPhone**): botones de la barra de ~53 a ~40 de alto, íconos de 22
     a 17, letra de 11 a 10, SOS cuadradito de 52 a 38 de alto mínimo, encabezado
     "Android Luciano · En línea · 24%" en un renglón, y en iPhone la ✕ y el ?
     bajan `initialWindowMetrics.insets.top`. Reemplaza `src\GruposConfiguracion.tsx`
@@ -319,6 +319,15 @@ Actualizado: 16/10/2026.
     la tarjeta ya se pliega tocando su encabezado (nombre) o arrastrando la
     manija (`ogm-plegada`); desde `aplicar-mapa-tarjeta-fila-panel.ps1`
     (aplicado el 16/10/2026, versión 33bb086a) empieza plegada en una fila.
+    **Lista de abajo en una fila (Luciano eligió, 16/10/2026, tras una foto de
+    la lista "Familia y equipos" abierta con el nombre cortado "LB i…"):** "Lista
+    en una fila" y "Ocultar En vivo/Hoy/7 días" (no eligió "Nombre completo").
+    `aplicar-mapa-lista-fila-panel.ps1` (solo panel): al abrir el mapa en la
+    app la lista empieza plegada: título + Sumar (50 px contra ~156 abierta);
+    un toque en el título o en la manija la abre o la cierra; al cerrar la
+    tarjeta de un equipo (✕) se vuelve a la fila; En vivo/Hoy/7 días se esconde
+    mientras no hay nadie elegido. Probado en un navegador con las reglas reales.
+    Pendiente decidir: el nombre cortado ("LB i…") en la lista abierta.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
