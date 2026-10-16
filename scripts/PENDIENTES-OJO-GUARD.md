@@ -216,6 +216,31 @@ Actualizado: 16/10/2026.
     "SOS" y "3 s" en vez de la franja ancha; pendiente de elegir dónde:
     arriba a la derecha junto al nombre (no ocupa lugar del mapa) o abajo a la
     izquierda sobre el mapa.
+  - [ ] **Barra de abajo con el SOS, Familia dentro de Ajustes y más mapa**
+    (Luciano, 16/10/2026: "pondría los 5 iconos abajo, con el SOS en la misma
+    línea, y toda la pantalla más mapa; achico lo de Android en línea y
+    batería"; y "Familia y amigos queda grande, no entiendo la función: vas al
+    mapa y ves lo mismo que en el Inicio; la configuración de familia podría
+    estar en otro lado, solo para agregar gente"). Hecho (falta aplicar y la
+    build): `aplicar-barra-abajo-app.ps1` (respaldo `.bak-barraabajo`): barra
+    fija abajo en todas las pantallas con **SOS** (cuadradito rojo "SOS · 3 s",
+    se mantiene apretado 3 segundos; ya enviado pasa a "Estoy bien" y el aviso
+    "SOS enviado. Le avisamos a…" flota arriba; solo si el teléfono está en una
+    familia; el SOS queda a mano en todas las pantallas), Inicio, Perfil,
+    Ajustes y Panel; se esconde con el teclado. **Familia sale de la barra** y
+    pasa a ser una tarjeta ancha arriba de Ajustes ("Familia y amigos", con
+    "‹ Atrás"): adentro quedan cuántas personas comparten con vos, el aviso de
+    "Siempre" del iPhone, Mi ubicación (pausar 1 hora/reanudar), SOS y ayuda
+    (pedir ayuda sin abrir la app), Unirme con un código y Salir de la
+    familia; la lista de personas se saca de ahí porque es la misma del mapa.
+    La franja ancha del SOS de abajo del mapa y la barra de arriba se sacan; el
+    nombre del teléfono con "En línea · batería" queda chico en el renglón de
+    la ✕ y la ayuda (?). Panel: `aplicar-mapa-app-sumar-panel.ps1` (el botón
+    "Sumar" en la lista de abajo del mapa, que abre lo de siempre para invitar;
+    se ve al instante). Orden: primero el del panel, después el de la app, y
+    recién entonces la build de Android (una sola). A mirar en el teléfono: el
+    SOS (mantener 3 s y "Estoy bien"), que la barra no tape el gesto de volver
+    de Android, y que "Sumar" abra la invitación. Pendiente: iPhone.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
