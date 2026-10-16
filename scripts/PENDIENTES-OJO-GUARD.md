@@ -255,7 +255,7 @@ Actualizado: 16/10/2026.
     poco espacio de mapa" y "no se puede rotar el mapa". Eligió: (1)
     Mapa/Satélite en un solo botón chico (hecho, solo panel:
     `aplicar-mapa-capas-panel.ps1`, se ve el de la otra vista y al tocarlo se
-    cambia); (2) nombre del teléfono en un solo renglón arriba ("Android
+    cambia; aplicado y publicado por Luciano el 16/10/2026, versión 70bcd2be); (2) nombre del teléfono en un solo renglón arriba ("Android
     Luciano · En línea · 24%"): FALTA, va en la próxima build junto con el
     arreglo de la ✕ y el ? del iPhone (un solo script de app, a preparar);
     (3) **rotar con dos dedos: crear un Map ID propio** en Google Cloud (el
