@@ -275,6 +275,18 @@ Actualizado: 16/10/2026.
     al pedir evidencia, cuando llega, la tarjeta baja sola hasta ella; además
     la tarjeta ya no vuelve arriba cada vez que se actualiza. Se aplica sola o
     después de los dibujos (probado en los dos órdenes).
+    Aplicados por Luciano el 16/10/2026 (panel): los dibujos de equipos
+    (`aplicar-mapa-iconos-panel.ps1`) y la evidencia en la tarjeta
+    (`aplicar-mapa-evidencia-panel.ps1`). Falta aplicar
+    `aplicar-barra-ajustes-app.ps1` y hacer la build. **Pedido nuevo (sin
+    hacer):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
+    como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
+    estoy buscando"); propuesta enviada: sonar y ubicar para adultos y menores
+    (lo pide el titular; la persona oye la alarma y ve un aviso), evidencia y en
+    vivo solo equipos propios y menores, amigos afuera. Falta su respuesta
+    (1 como propongo, 2 también evidencia y en vivo, 3 solo sonar); es un
+    cambio de servidor (`family/command` y `canCommand`) y hay que revisar que
+    las apps lo reciban igual que el de un menor.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
