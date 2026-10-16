@@ -295,7 +295,8 @@ Actualizado: 16/10/2026.
     solo con el nombre —la hora y la marca al elegir—, botones de arriba más
     chicos, Mapa/Satélite como icono de capas en la columna de la derecha con
     la brújula, tarjeta con botones y letra más chicos; probado en un navegador,
-    antes y después). FALTA, en la próxima build (app): la barra de abajo
+    antes y después; aplicado y publicado por Luciano el 16/10/2026, versión
+    fb541e96, falta que cuente cómo se ve). FALTA, en la próxima build (app): la barra de abajo
     (SOS, Inicio, Perfil, Ajustes, Panel) más baja y con íconos más chicos, el
     nombre del teléfono en un solo renglón y la ✕ y el ? del iPhone, todo en un
     solo script de app. Dato: la tarjeta ya se pliega tocando su encabezado
