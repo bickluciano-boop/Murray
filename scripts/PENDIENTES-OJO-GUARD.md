@@ -308,8 +308,17 @@ Actualizado: 16/10/2026.
     en la próxima build (app): la barra de abajo
     (SOS, Inicio, Perfil, Ajustes, Panel) más baja y con íconos más chicos, el
     nombre del teléfono en un solo renglón y la ✕ y el ? del iPhone, todo en un
-    solo script de app. Dato: la tarjeta ya se pliega tocando su encabezado
-    (nombre) o arrastrando la manija (`ogm-plegada`).
+    solo script de app: **PREPARADO** `aplicar-barra-chica-app.ps1` (16/10/2026,
+    todavía sin aplicar): botones de la barra de ~53 a ~40 de alto, íconos de 22
+    a 17, letra de 11 a 10, SOS cuadradito de 52 a 38 de alto mínimo, encabezado
+    "Android Luciano · En línea · 24%" en un renglón, y en iPhone la ✕ y el ?
+    bajan `initialWindowMetrics.insets.top`. Reemplaza `src\GruposConfiguracion.tsx`
+    y `src\SosBlock.tsx` (revisa que sean los de `aplicar-barra-ajustes-app.ps1`)
+    y toca 3 lugares de `App.tsx` (import y dos `top`); respaldo `.bak-barrachica`;
+    termina con `npx tsc --noEmit`. Luego: build de Android y de iPhone. Dato:
+    la tarjeta ya se pliega tocando su encabezado (nombre) o arrastrando la
+    manija (`ogm-plegada`); desde `aplicar-mapa-tarjeta-fila-panel.ps1`
+    (aplicado el 16/10/2026, versión 33bb086a) empieza plegada en una fila.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
