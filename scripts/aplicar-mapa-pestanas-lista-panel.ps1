@@ -3,7 +3,7 @@
 # sola a la vez; ya no hay que recorrer todo junto ni se ven los titulos FAMILIA / DISPOSITIVOS. La fila plegada de abajo ES el selector: tocar una pestana
 # abre la lista en esa. Sin personas en la familia, queda solo "Dispositivos". En la compu (consola) la lista no cambia. Nada se pierde.
 # Requiere aplicar-mapa-lista-fila-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\panel-mapa.txt y
-# src\panel-explanations.css. Respaldo .bak-pestanas. Al final publica el panel solo. No hace falta build.
+# src\panel-explanations.css. Respaldo .bak-listapest. Al final publica el panel solo. No hace falta build.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -109,14 +109,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-pestanas")) { Mal ("Ya existe " + $t + ".bak-pestanas. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-listapest")) { Mal ("Ya existe " + $t + ".bak-listapest. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-pestanas"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-listapest"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-pestanas): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-listapest): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -149,7 +149,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-pestanas") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-listapest") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."

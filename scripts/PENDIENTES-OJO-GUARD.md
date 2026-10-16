@@ -343,7 +343,9 @@ Actualizado: 16/10/2026.
     tocar una pestaña abre la lista en esa, tocar la marcada con la lista abierta
     la pliega; sin personas queda solo Dispositivos; la consola de la compu no
     cambia. Probado la lógica y el aspecto en un navegador. Si quería otra cosa
-    (por ejemplo solo cambiar los títulos), se vuelve con los `.bak-pestanas`.
+    (por ejemplo solo cambiar los títulos), se vuelve con los `.bak-listapest`
+    (el nombre `.bak-pestanas` ya lo usaba un paso viejo de la consola: la primera
+    corrida paró sin tocar nada).
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
