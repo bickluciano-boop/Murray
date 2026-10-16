@@ -265,6 +265,16 @@ Actualizado: 16/10/2026.
     el teléfono con `react-native-safe-area-context`, que es NATIVO: hace
     falta otra build de Android; el título baja de la barra de estado; el SOS
     cuenta 3, 2, 1 mientras se lo mantiene).
+    **Dónde aparece la evidencia (pregunta de Luciano, 16/10/2026):** pidió
+    evidencia a la notebook, sacó la foto y en Ajustes no había nada. Es así:
+    Ajustes > Fotos de Intrusos muestra los intentos de ESTE teléfono; la
+    evidencia que sacan otros equipos queda en la pestaña Evidencias del panel
+    y llega por mail. Mejora hecha: `aplicar-mapa-evidencia-panel.ps1` (panel,
+    se ve al instante): la tarjeta de cada equipo del mapa trae "Última
+    evidencia" (foto que se agranda sobre el mapa y audio con reproductor), y
+    al pedir evidencia, cuando llega, la tarjeta baja sola hasta ella; además
+    la tarjeta ya no vuelve arriba cada vez que se actualiza. Se aplica sola o
+    después de los dibujos (probado en los dos órdenes).
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
