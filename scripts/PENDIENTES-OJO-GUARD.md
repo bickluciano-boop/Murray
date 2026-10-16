@@ -203,6 +203,19 @@ Actualizado: 16/10/2026.
     la próxima build de Android (falta hacerla y probar la pantalla Familia nueva,
     la tarjeta del mapa con sus botones y Ajustes sin el botón repetido). Pendiente: que
     tocar a una persona la enfoque en el mapa; iPhone.
+  - [ ] **Mapa del Inicio, ronda 2: todavía más chico + SOS en cuadradito**
+    (foto de Luciano, 16/10/2026, con el mapa nuevo: "el recuadro de los
+    dispositivos ocupa la mitad del mapa; si una persona está lejos, en la
+    provincia y vos en capital, cuesta verla"; y "el SOS tendría que ser un
+    cuadrado más chico abajo y que solo diga 3 y el signo de segundos").
+    Panel: `aplicar-mapa-app-tarjeta2-panel.ps1` (tarjeta de un tercio del mapa
+    en vez de casi la mitad: nombre, estado con batería y dirección en el
+    encabezado; lista de abajo más baja con el título en una línea; el
+    encuadre mide lo que tapan la lista o la tarjeta y deja a todos a la
+    vista). App (falta, va en la próxima build): SOS como cuadradito rojo con
+    "SOS" y "3 s" en vez de la franja ancha; pendiente de elegir dónde:
+    arriba a la derecha junto al nombre (no ocupa lugar del mapa) o abajo a la
+    izquierda sobre el mapa.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
