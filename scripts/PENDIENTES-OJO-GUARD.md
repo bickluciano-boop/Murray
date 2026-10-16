@@ -189,8 +189,18 @@ Actualizado: 16/10/2026.
     clara** (comparada con "Personas / Dispositivos" de Apple): rediseñar en la
     app (filas como la lista de Personas, sin el título "Familia y amigos"
     repetido adentro, "Mapa ›" que no tape la etiqueta del rol, y las partes
-    de unirse con código, pausar y salir más ordenadas). Es app: va en la
-    próxima build de Android junto con (1). Pendiente: iPhone.
+    de unirse con código, pausar y salir más ordenadas). Hecho:
+    `aplicar-familia-pantalla-app.ps1` (archivo nuevo `src/FamiliaPantalla.tsx`
+    que reemplaza a `FamilySection` cambiando solo el import de App.tsx, más
+    sacar el botón repetido de Ajustes; respaldo `.bak-familia`; compila bien
+    en la prueba). La pantalla: lista de personas (inicial con aro verde si
+    está en vivo, rol, "En vivo · hace 2 min" / "Sin conexión · hace 1 día" /
+    "Ubicación pausada", dirección, batería, flecha para ir al mapa del
+    Inicio; el mapa de Apple que había arriba en iPhone ya no está porque el
+    mapa de todos es el del Inicio), y tarjetas con título: Mi ubicación,
+    SOS y ayuda, Unirme a una familia; al final "Salir de la familia". Sale en
+    la próxima build de Android (hay que aplicarlo antes). Pendiente: que
+    tocar a una persona la enfoque en el mapa; iPhone.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
