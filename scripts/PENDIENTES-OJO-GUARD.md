@@ -278,6 +278,14 @@ Actualizado: 16/10/2026.
     Aplicados por Luciano el 16/10/2026 (panel): los dibujos de equipos
     (`aplicar-mapa-iconos-panel.ps1`) y la evidencia en la tarjeta
     (`aplicar-mapa-evidencia-panel.ps1`). Falta aplicar
+    Foto de Luciano (16/10/2026): la "Última evidencia" funciona (se ve la
+    foto) pero **mostraba solo la delantera y el audio no sonaba** (el
+    reproductor directo no anda en el visor de la app). Arreglo:
+    `aplicar-mapa-evidencia2-panel.ps1` (panel): se ven la delantera y la
+    trasera, y el audio pasa a un botón "Escuchar el audio" que lo baja y lo
+    reproduce desde la memoria (si no se puede, lo dice; el audio sigue en
+    Evidencias del panel). Si aun así no suena en el teléfono, ver qué tipo de
+    audio sube la notebook (WAV u otro) y si el servidor lo marca bien.
     `aplicar-barra-ajustes-app.ps1` y hacer la build. **Pedido nuevo (sin
     hacer):** poder hacer sonar (y ubicar) el teléfono de cualquier familiar,
     como en Buscar de Apple ("a ella le llega una alarma y se da cuenta que la
