@@ -326,7 +326,8 @@ Actualizado: 16/10/2026.
     app la lista empieza plegada: título + Sumar (50 px contra ~156 abierta);
     un toque en el título o en la manija la abre o la cierra; al cerrar la
     tarjeta de un equipo (✕) se vuelve a la fila; En vivo/Hoy/7 días se esconde
-    mientras no hay nadie elegido. Probado en un navegador con las reglas reales.
+    mientras no hay nadie elegido. Probado en un navegador con las reglas reales. Aplicado y
+    publicado por Luciano el 16/10/2026 (versión be617b95).
     Pendiente decidir: el nombre cortado ("LB i…") en la lista abierta.
     **Luciano (16/10/2026): "está repetido el icono de sumar, yo lo dejaría
     arriba".** `aplicar-mapa-sumar-arriba-panel.ps1` (solo panel): el botón
