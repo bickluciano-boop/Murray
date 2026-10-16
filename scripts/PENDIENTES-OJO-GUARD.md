@@ -333,7 +333,8 @@ Actualizado: 16/10/2026.
     arriba".** `aplicar-mapa-sumar-arriba-panel.ps1` (solo panel): el botón
     Sumar de la lista de abajo se esconde (con `!important`, sirve con la lista
     abierta o plegada); queda el icono de la persona con el + en la columna de
-    botones de arriba a la derecha.
+    botones de arriba a la derecha. Aplicado y publicado por Luciano el
+    16/10/2026 (versión 7b148784).
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
