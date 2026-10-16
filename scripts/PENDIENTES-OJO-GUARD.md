@@ -331,6 +331,24 @@ Actualizado: 16/10/2026.
     vuelve a pedir SOS en menos de 40 s (aunque haya cancelado), el aviso
     llega igual, visible y urgente, pero sin sonido (nunca se bloquea). Orden:
     build de iPhone nueva instalada y recién después el script del servidor.
+    **Probado por Luciano el 16/10/2026 (iPhone con la build 31, versión 0.9.1,
+    instalada por TestFlight; servidor `aplicar-sirena-corta-panel.ps1`
+    aplicado, versión a3d65baf):** Hacer sonar desde el Android al iPhone con la
+    app abierta suena UNA sola alarma y "Detener sonido" la corta; con la app
+    cerrada y el interruptor lateral en sonido suena (también al repetir a los
+    segundos); con el interruptor en silencio no suena (límite de Apple, falta
+    Alertas críticas); el SOS dos veces seguidas: el primero suena y el segundo,
+    a los segundos, llega sin sonido (como se diseñó). El SOS del Android
+    (3 s) anda perfecto. **Falta para la próxima build de iPhone:** en el
+    iPhone la ✕ de arriba a la izquierda y el ? de arriba a la derecha se
+    pisan con la hora y la batería (`closeSettingsButton` y `helpButton` usan
+    `top: Platform.OS === "android" ? 18 : 8` y en iPhone, al ser absolutos,
+    no cuentan el margen seguro de arriba: sumar `initialWindowMetrics.insets.top`
+    de `react-native-safe-area-context`, ya instalado). Pendientes de otro
+    lado: Alertas críticas de Apple (ID 7R4MM73U2Y), declaración de condición de
+    comerciante (DSA) en App Store Connect (cartel visto el 16/10/2026; la pide
+    Apple para enviar apps/actualizaciones a la UE; la decide Luciano o su
+    contador) y que "Mapa ›"/tocar a una persona la enfoque en el mapa.
   - [ ] Paso 3: pantalla de inicio "Familia y SOS" (con el SOS grande) y
     "Perfil" (lo que se completa al bajar la app); Configuración pasa a ser la
     del engranaje. Pendiente decidir: si el SOS se puede usar sin pedir clave.
