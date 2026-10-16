@@ -1,22 +1,19 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { AppState, StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { type ReactNode } from "react";
+import { StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 
 import { CabezaInicio } from "./GruposConfiguracion";
 import { MapaEnApp } from "./MapaEnApp";
-import { fetchFamily } from "./remoteApi";
-import { loadNativeEnrollment, type NativeEnrollment } from "./remoteStorage";
-import { SosBlock } from "./SosBlock";
 
 /**
- * El Inicio de la app: lo que se usa con el teléfono en la mano. Arriba una línea con este teléfono; en el medio, ocupando casi toda la
- * pantalla, el mapa con los equipos y la familia (ver MapaEnApp.tsx); y abajo, siempre a mano pero chico, el botón de SOS.
+ * El Inicio de la app: lo que se usa con el teléfono en la mano. Arriba, chico y en el renglón de la ✕ y la ayuda (?), el nombre de este
+ * teléfono y cómo está; y el resto de la pantalla, hasta la barra de abajo, es el mapa con los equipos y la familia (ver MapaEnApp.tsx).
  *
- * La barra de arriba (Inicio, Familia, Perfil, Ajustes y Panel) no es de esta pantalla: queda fija en todas (ver BarraSuperior en
- * GruposConfiguracion.tsx). "Panel" abre Ojo Guard MS entrando directo, sin pasar por Configuración.
+ * La barra de abajo (SOS, Inicio, Perfil, Ajustes y Panel) no es de esta pantalla: queda fija en todas (ver BarraInferior en
+ * GruposConfiguracion.tsx). El SOS es el cuadradito rojo de esa barra (ver SosBlock.tsx); "Panel" abre Ojo Guard MS entrando directo.
  *
  * Lo que sirve cuando el teléfono ya no está en tus manos (Modo perdido, evidencia) se maneja desde el panel Ojo Guard MS.
- * Lo que antes estaba acá abajo (la lista de la familia, unirse con un código, pausar la ubicación y el SOS completo con sus ayudas)
- * está ahora en "Familia".
+ * Unirse con un código, pausar la ubicación y las ayudas del SOS están en Ajustes > Familia y amigos; las personas se ven y se suman
+ * desde el mapa de acá.
  */
 
 type Paleta = { [clave: string]: string };
@@ -32,42 +29,15 @@ type Props = {
   banda?: ReactNode;
   /** Un aviso arriba del mapa (por ejemplo el diagnóstico de captura), si hace falta. */
   aviso?: ReactNode;
-  botones: {
+  /** Ya no se usa en el Inicio (el SOS pasó a la barra de abajo); se acepta para no cambiar App.tsx. */
+  botones?: {
     secundario: StyleProp<ViewStyle>;
     secundarioTexto: StyleProp<TextStyle>;
     ayuda: StyleProp<TextStyle>;
   };
 };
 
-export function InicioMapa({ paleta: P, tema, nombre, enLinea, onVincular, banda, aviso, botones }: Props) {
-  const [vinculo, setVinculo] = useState<NativeEnrollment | null | undefined>(undefined);
-  const [conFamilia, setConFamilia] = useState(false);
-
-  // El SOS se muestra solo si este teléfono está en una familia (o ve a alguien): se mira al abrir y cada vez que se vuelve a la app.
-  useEffect(() => {
-    let vivo = true;
-    const mirar = async () => {
-      const actual = await loadNativeEnrollment().catch(() => null);
-      if (!vivo) return;
-      setVinculo(actual);
-      if (!actual) return;
-      try {
-        const datos = await fetchFamily(actual);
-        if (vivo) setConFamilia(datos.me.memberships > 0 || datos.people.length > 0);
-      } catch {
-        // Sin red se deja como estaba.
-      }
-    };
-    void mirar();
-    const suscripcion = AppState.addEventListener("change", (estado) => {
-      if (estado === "active") void mirar();
-    });
-    return () => {
-      vivo = false;
-      suscripcion.remove();
-    };
-  }, []);
-
+export function InicioMapa({ paleta: P, tema, nombre, enLinea, onVincular, banda, aviso }: Props) {
   const s = estilos();
   return (
     <View style={s.raiz}>
@@ -75,13 +45,12 @@ export function InicioMapa({ paleta: P, tema, nombre, enLinea, onVincular, banda
       {banda}
       {aviso}
       <MapaEnApp paleta={P} tema={tema} onVincular={onVincular} />
-      <SosBlock enrollment={vinculo} visible={conFamilia} compacto paleta={P} botones={botones} />
     </View>
   );
 }
 
 function estilos() {
   return StyleSheet.create({
-    raiz: { flex: 1, paddingBottom: 12, paddingHorizontal: 16 },
+    raiz: { flex: 1, paddingBottom: 8, paddingHorizontal: 12 },
   });
 }

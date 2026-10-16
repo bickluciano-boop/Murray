@@ -1,15 +1,15 @@
 import * as Battery from "expo-battery";
-import { createContext, useContext, useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Image, Keyboard, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 
 /**
  * La pantalla a la que se entra con la clave de administrador, en tres niveles:
  *
- *  - La barra de arriba (BarraSuperior) queda fija en todas las pantallas: Inicio, Familia, Perfil, Ajustes (Configuración) y Abrir el
- *    panel Ojo Guard MS. Marca en cuál se está.
- *  - Inicio (null): lo de todos los días. Una línea con este teléfono, el mapa con todos los equipos y la familia, y el SOS siempre a mano
- *    abajo (ver InicioMapa.tsx).
- *  - Familia ("familia"): quién comparte su ubicación con vos, unirse con un código, pausar la propia ubicación y el SOS completo.
+ *  - La barra de abajo (BarraInferior) queda fija en todas las pantallas: SOS (cuadradito rojo, se mantiene apretado 3 segundos), Inicio, Perfil,
+ *    Ajustes (Configuración) y Abrir el panel Ojo Guard MS. Marca en cuál se está.
+ *  - Inicio (null): lo de todos los días. Una línea con este teléfono y el mapa con todos los equipos y la familia (ver InicioMapa.tsx).
+ *  - Familia y amigos ("familia"): un grupo de Ajustes con lo que no está en el mapa: unirse con un código, pausar la propia ubicación, el
+ *    SOS y sus ayudas, y salir de una familia. Las personas se ven y se suman desde el mapa del Inicio.
  *  - Mi perfil ("perfil"): los datos de quien usa el teléfono (nombre, correo, cómo se ve, cómo está).
  *  - Configuración ("configuracion"): seis tarjetas grandes y la banda de permisos. Cada tarjeta abre un grupo.
  *  - Un grupo: solo los bloques de ese grupo, con "‹ Atrás" para volver (a las tarjetas o al Inicio).
@@ -48,7 +48,7 @@ const TEXTOS_GRUPO: Record<GrupoConfiguracion, { titulo: string; resumen: string
   perdido: { titulo: "Modo Perdido y Cercanía", resumen: "Qué ve quien encuentre el teléfono, la cercanía y tus accesorios." },
   preferencias: { titulo: "Preferencias", resumen: "Modo preventivo, pantalla OLED y lo que falta enviar." },
   perfil: { titulo: "Mi perfil", resumen: "Los datos de este teléfono y cómo se ve la app." },
-  familia: { titulo: "Familia y amigos", resumen: "Quién comparte su ubicación con vos, el SOS y cómo pedir ayuda sin abrir la app." },
+  familia: { titulo: "Familia y amigos", resumen: "Unirte con un código, pausar tu ubicación, el SOS y cómo pedir ayuda sin abrir la app. Las personas se ven y se suman desde el mapa del Inicio." },
   proteccion: { titulo: "Dr. Ojo Guard", resumen: "Revisa que el SOS, los avisos y la ubicación estén listos en este teléfono." },
   conexion: { titulo: "Ojo Guard MS", resumen: "Cómo se conecta este teléfono con el panel de Ojo Guard MS." },
   permisos: { titulo: "Permisos de Android", resumen: "Los ajustes de Android que, si no se tocan, frenan Ojo Guard en silencio." },
@@ -130,7 +130,7 @@ export function TarjetaTelefono({ paleta: P, nombre, correo, enLinea }: Telefono
 
 type CabezaProps = { paleta: Paleta; nombre: string; enLinea: boolean | null };
 
-/** Inicio con mapa: una sola línea con el nombre del teléfono y cómo está (en línea y batería), sin la tarjeta grande. */
+/** Inicio con mapa: el nombre del teléfono y cómo está (en línea y batería), chico y en el renglón de arriba, entre la ✕ y la ayuda (?). */
 export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
   const s = estilos(P);
   const bateria = useBateria();
@@ -152,33 +152,52 @@ export function CabezaInicio({ paleta: P, nombre, enLinea }: CabezaProps) {
   );
 }
 
-export type SeccionBarra = "inicio" | "familia" | "perfil" | "configuracion";
+export type SeccionBarra = "inicio" | "perfil" | "configuracion";
 
 type BarraProps = {
   paleta: Paleta;
-  /** En cuál de las cuatro pantallas se está (todos los grupos de Configuración cuentan como "configuracion"). */
+  /** En cuál de las tres pantallas se está (todos los grupos de Configuración, también Familia y amigos, cuentan como "configuracion"). */
   actual: SeccionBarra;
   onElegir: (destino: SeccionBarra) => void;
   /** Abre el panel Ojo Guard MS entrando directo, sin pedir códigos. */
   onPanel: () => void;
   /** Mientras se pide el acceso y se abre el panel. */
   abriendo?: boolean;
+  /** El cuadradito del SOS (ver SosBlock.tsx), que va primero en la barra. No aparece si este teléfono no está en una familia. */
+  sos?: ReactNode;
 };
 
 /**
- * La barra de arriba, fija en todas las pantallas (como las pestañas de Ojo Guard MS): Inicio, Familia, Perfil, Ajustes y, destacado,
- * "Panel", que abre Ojo Guard MS entrando directo. Así se cambia de pantalla sin volver atrás, y el panel está siempre a un toque.
+ * La barra de abajo, fija en todas las pantallas (como las pestañas de Ojo Guard MS): el SOS (cuadradito rojo), Inicio, Perfil, Ajustes y,
+ * destacado, "Panel", que abre Ojo Guard MS entrando directo. Todo en una línea: se cambia de pantalla sin volver atrás, el SOS y el panel
+ * están siempre a un toque, y el mapa se queda con casi toda la pantalla. Familia y amigos está dentro de Ajustes (las personas se ven en el mapa).
  */
-export function BarraSuperior({ paleta: P, actual, onElegir, onPanel, abriendo = false }: BarraProps) {
+/** Mientras se escribe, la barra de abajo se esconde para no quitarle lugar al teclado. */
+function useTecladoVisible() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const mostrar = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setVisible(true));
+    const ocultar = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setVisible(false));
+    return () => {
+      mostrar.remove();
+      ocultar.remove();
+    };
+  }, []);
+  return visible;
+}
+
+export function BarraInferior({ paleta: P, actual, onElegir, onPanel, abriendo = false, sos }: BarraProps) {
   const s = estilos(P);
+  const tecladoVisible = useTecladoVisible();
+  if (tecladoVisible) return null;
   const items: Array<{ clave: SeccionBarra; texto: string; icono: ImageSourcePropType }> = [
     { clave: "inicio", texto: "Inicio", icono: ICONO_INICIO },
-    { clave: "familia", texto: "Familia", icono: ICONOS.familia },
     { clave: "perfil", texto: "Perfil", icono: ICONO_PERFIL },
     { clave: "configuracion", texto: "Ajustes", icono: ICONO_TUERCA },
   ];
   return (
     <View style={s.barra}>
+      {sos}
       {items.map(({ clave, texto, icono }) => {
         const activo = clave === actual;
         return (
@@ -277,7 +296,7 @@ type TarjetasProps = {
   onElegir: (grupo: GrupoConfiguracion) => void;
 };
 
-/** Configuración: seis tarjetas grandes con ícono, de a dos por fila. Cada una abre los bloques de siempre de su grupo. */
+/** Configuración: Familia y amigos (tarjeta ancha) y seis tarjetas grandes con ícono, de a dos por fila. Cada una abre los bloques de siempre de su grupo. */
 export function TarjetasConfiguracion({ paleta: P, android, intentos, pendientes, cercania, radioMetros, conexion, onElegir }: TarjetasProps) {
   const s = estilos(P);
   const tarjetas: Array<{ grupo: Exclude<GrupoConfiguracion, "permisos" | "perfil">; detalle: string }> = [
@@ -297,6 +316,19 @@ export function TarjetasConfiguracion({ paleta: P, android, intentos, pendientes
 
   return (
     <View style={s.grilla}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Familia y amigos. Unirme con un código, pausar mi ubicación y el SOS"
+        onPress={() => onElegir("familia")}
+        style={s.celdaAncha}
+      >
+        <Image source={ICONOS.familia} style={s.iconoAncho} resizeMode="contain" />
+        <View style={s.celdaAnchaTextos}>
+          <Text style={s.celdaAnchaTitulo}>Familia y amigos</Text>
+          <Text style={s.celdaDetalleIzq}>Unirme con un código, pausar mi ubicación y el SOS</Text>
+        </View>
+        <Text style={s.celdaFlecha}>{"\u203a"}</Text>
+      </Pressable>
       {filas.map((fila, indice) => (
         <View key={indice} style={s.fila}>
           {fila.map(({ grupo, detalle }) => {
@@ -352,12 +384,12 @@ function estilos(P: Paleta) {
     botonesInicio: { flexDirection: "row", gap: 12, marginBottom: 12 },
     botonInicio: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 56, paddingHorizontal: 8, paddingVertical: 10 },
     botonInicioIcono: { height: 28, width: 28 },
-    cabeza: { marginBottom: 8 },
-    cabezaNombre: { color: P.texto, fontSize: 18, fontWeight: "800" },
-    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 2 },
-    cabezaEstadoTexto: { fontSize: 12.5, fontWeight: "700" },
-    // Arriba queda lugar (52) para la ✕ de salir y la ayuda (?), que flotan sobre la pantalla.
-    barra: { flexDirection: "row", gap: 6, paddingBottom: 10, paddingHorizontal: 16, paddingTop: 52 },
+    cabeza: { alignItems: "center", marginBottom: 6, marginHorizontal: 44, paddingTop: Platform.OS === "android" ? 12 : 4 },
+    cabezaNombre: { color: P.texto, fontSize: 16, fontWeight: "800" },
+    cabezaEstado: { alignItems: "center", flexDirection: "row", gap: 6, marginTop: 1 },
+    cabezaEstadoTexto: { fontSize: 12, fontWeight: "700" },
+    // Abajo, fija: encima del mapa si hay un aviso del SOS (zIndex), y con lugar para el gesto de volver de Android.
+    barra: { backgroundColor: P.fondo, borderTopColor: P.borde, borderTopWidth: 1, elevation: 8, flexDirection: "row", gap: 6, paddingBottom: 12, paddingHorizontal: 10, paddingTop: 8, zIndex: 8 },
     barraItem: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 14, borderWidth: 1, flex: 1, gap: 3, justifyContent: "center", paddingHorizontal: 2, paddingVertical: 7 },
     barraItemActivo: { backgroundColor: P.doradoFondo, borderColor: P.doradoBorde },
     barraPanel: { backgroundColor: P.doradoFondoFuerte, borderColor: P.doradoBordeMedio, borderWidth: 1.5 },
@@ -374,6 +406,12 @@ function estilos(P: Paleta) {
     icono: { height: 46, width: 46 },
     celdaTitulo: { color: P.texto, fontSize: 16, fontWeight: "800", marginTop: 10, textAlign: "center" },
     celdaDetalle: { color: P.textoTenue, fontSize: 12, lineHeight: 16, marginTop: 5, textAlign: "center" },
+    celdaAncha: { alignItems: "center", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: 14, minHeight: 84, paddingHorizontal: 16, paddingVertical: 14 },
+    iconoAncho: { height: 46, width: 46 },
+    celdaAnchaTextos: { flex: 1 },
+    celdaAnchaTitulo: { color: P.texto, fontSize: 16, fontWeight: "800" },
+    celdaDetalleIzq: { color: P.textoTenue, fontSize: 12, lineHeight: 16, marginTop: 3 },
+    celdaFlecha: { color: P.doradoTexto, fontSize: 28, lineHeight: 30 },
     cabecera: { marginBottom: 16, marginTop: 8 },
     volver: { alignSelf: "flex-start", backgroundColor: P.superficieHonda, borderColor: P.borde, borderRadius: 18, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8 },
     volverTexto: { color: P.doradoTexto, fontSize: 16, fontWeight: "800" },

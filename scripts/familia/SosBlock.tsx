@@ -4,14 +4,16 @@ import { ActivityIndicator, Animated, AppState, Easing, Platform, Pressable, Sha
 import { isSosGestureEnabled, openSosAccessibilitySettings, openSosAppInfo, openSosChannelSettings, sosGestureAvailable } from "../modules/sos-trigger";
 import { markPendingSystemActivity } from "./pendingSystemActivity";
 import { Plegable } from "./Plegable";
-import type { NativeEnrollment } from "./remoteStorage";
+import { fetchFamily } from "./remoteApi";
+import { loadNativeEnrollment, type NativeEnrollment } from "./remoteStorage";
 import { cancelSos, fetchMySos, sendSos, SosError, type SosEstado } from "./sos";
 import "./sosMapa";
 import { sosShortcutLink } from "./sosTask";
 
 /**
- * El SOS. El botón vive en el Inicio, en una franja baja (modo `compacto`); la pantalla de Familia solo trae las ayudas para pedirlo sin
- * abrir la app (así el botón no se repite). Hay que mantenerlo apretado 3 segundos (para que no salga por un toque
+ * El SOS. El botón es un cuadradito rojo dentro de la barra de abajo, fija en todas las pantallas (modo `cuadrado`, ver SosEnBarra); la
+ * pantalla de Familia y amigos solo trae las ayudas para pedirlo sin abrir la app (así el botón no se repite). El modo `compacto` (la franja
+ * ancha que había en el Inicio) ya no se usa, pero se deja. Hay que mantenerlo apretado 3 segundos (para que no salga por un toque
  * sin querer): vibra, manda el pedido y muestra a quién se le avisó, con "Estoy bien" para cancelarlo.
  *
  * Se ve solo si este teléfono está en una familia. Lo que pasa del otro lado (sirena, mail, mapa) está en sos.ts y en el
@@ -31,6 +33,8 @@ type Props = {
   visible: boolean;
   /** Inicio con mapa: solo el botón (o "SOS enviado" con "Estoy bien"), en una franja baja. Lo demás queda en Familia. */
   compacto?: boolean;
+  /** En la barra de abajo: un cuadradito con "SOS" y "3 s" (mantener apretado 3 segundos). */
+  cuadrado?: boolean;
   paleta: Paleta;
   botones: {
     secundario: StyleProp<ViewStyle>;
@@ -55,7 +59,7 @@ function listaDeNombres(nombres: string[]) {
   return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
 }
 
-export function SosBlock({ enrollment, visible, compacto = false, paleta: P, botones }: Props) {
+export function SosBlock({ enrollment, visible, compacto = false, cuadrado = false, paleta: P, botones }: Props) {
   const [sos, setSos] = useState<SosEstado | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [mensaje, setMensaje] = useState("");
@@ -139,9 +143,66 @@ export function SosBlock({ enrollment, visible, compacto = false, paleta: P, bot
     }
   }
 
+  // En el cuadradito el aviso flota arriba de la barra: se va solo a los 8 segundos.
+  useEffect(() => {
+    if (!cuadrado || !mensaje) return;
+    const espera = setTimeout(() => setMensaje(""), 8_000);
+    return () => clearTimeout(espera);
+  }, [cuadrado, mensaje]);
+
   if (!visible || !enrollment) return null;
   const s = estilos(P);
   const ancho = avance.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+
+  if (cuadrado) {
+    const aviso = mensaje || (sos ? `SOS enviado. Le avisamos a ${listaDeNombres(sos.to)}.` : "");
+    return (
+      <View style={s.cuadradoCaja}>
+        {sos ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Estoy bien. Cancelar el SOS"
+            disabled={trabajando}
+            onPress={() => void estoyBien()}
+            style={[s.cuadrado, s.cuadradoEnCurso, trabajando && s.apagado]}
+          >
+            {trabajando ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={s.cuadradoEstoyBien}>{"Estoy\nbien"}</Text>
+            )}
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Pedir ayuda"
+            accessibilityHint="Mantenelo apretado 3 segundos para avisarle a tu familia"
+            delayLongPress={MANTENER_MS}
+            disabled={trabajando}
+            onLongPress={() => void enviar()}
+            onPressIn={empezar}
+            onPressOut={soltar}
+            style={s.cuadrado}
+          >
+            <Animated.View pointerEvents="none" style={[s.relleno, { width: ancho }]} />
+            {trabajando ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <View pointerEvents="none" style={s.cuadradoTextos}>
+                <Text style={s.cuadradoSos}>SOS</Text>
+                <Text style={s.cuadradoSub}>3 s</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
+        {aviso ? (
+          <View pointerEvents="none" style={s.flotante}>
+            <Text style={s.flotanteTexto}>{aviso}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
 
   if (compacto) {
     return (
@@ -266,6 +327,16 @@ export function SosBlock({ enrollment, visible, compacto = false, paleta: P, bot
 function estilos(P: Paleta) {
   return StyleSheet.create({
     bloque: { marginTop: 18 },
+    // El cuadradito de la barra de abajo: ocupa lo mismo que cada botón de la barra (flex 1) y es rojo.
+    cuadradoCaja: { flex: 1 },
+    cuadrado: { alignItems: "center", backgroundColor: ROJO, borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 52, overflow: "hidden", paddingHorizontal: 2 },
+    cuadradoEnCurso: { backgroundColor: ROJO_OSCURO },
+    cuadradoTextos: { alignItems: "center" },
+    cuadradoSos: { color: "#ffffff", fontSize: 17, fontWeight: "900", letterSpacing: 1.5 },
+    cuadradoSub: { color: "#ffd9d4", fontSize: 12, fontWeight: "800", marginTop: -1 },
+    cuadradoEstoyBien: { color: "#ffffff", fontSize: 14, fontWeight: "900", lineHeight: 17, textAlign: "center" },
+    flotante: { backgroundColor: ROJO_OSCURO, borderRadius: 12, bottom: "100%", left: 0, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 8, position: "absolute", width: 250 },
+    flotanteTexto: { color: "#ffffff", fontSize: 13, fontWeight: "700", lineHeight: 18 },
     compacto: { marginTop: 8 },
     botonCompacto: { height: 56 },
     botonCompactoTextos: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "center", paddingHorizontal: 12 },
@@ -290,4 +361,39 @@ function estilos(P: Paleta) {
     espacio: { marginTop: 10 },
     enlace: { color: P.texto, fontSize: 13, marginTop: 10, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: P.borde },
   });
+}
+
+/**
+ * El SOS dentro de la barra de abajo (BarraInferior): mira si este teléfono está en una familia (o ve a alguien) y, solo en ese caso, muestra el
+ * cuadradito. Se vuelve a mirar cada vez que se vuelve a la app.
+ */
+export function SosEnBarra({ paleta, botones }: { paleta: Paleta; botones: Props["botones"] }) {
+  const [vinculo, setVinculo] = useState<NativeEnrollment | null | undefined>(undefined);
+  const [conFamilia, setConFamilia] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    const mirar = async () => {
+      const actual = await loadNativeEnrollment().catch(() => null);
+      if (!vivo) return;
+      setVinculo(actual);
+      if (!actual) return;
+      try {
+        const datos = await fetchFamily(actual);
+        if (vivo) setConFamilia(datos.me.memberships > 0 || datos.people.length > 0);
+      } catch {
+        // Sin red se deja como estaba.
+      }
+    };
+    void mirar();
+    const suscripcion = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") void mirar();
+    });
+    return () => {
+      vivo = false;
+      suscripcion.remove();
+    };
+  }, []);
+
+  return <SosBlock enrollment={vinculo} visible={conFamilia} cuadrado paleta={paleta} botones={botones} />;
 }

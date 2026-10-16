@@ -9,11 +9,10 @@ import { fetchFamily, joinFamily, leaveFamily, pauseFamilyLocation, type FamilyP
 import { loadNativeEnrollment, type NativeEnrollment } from "./remoteStorage";
 
 /**
- * La pantalla "Familia y amigos" (botón Familia de la barra de arriba), con el orden de la lista de Personas de "Buscar" de Apple:
- * primero quién está y cómo (en vivo, hace cuánto, dónde, batería), después lo que uno hace (sumarse con un código, pausar la propia
- * ubicación, pedir ayuda sin abrir la app, salir). Es el mismo contenido y las mismas funciones de antes (FamilySection.tsx), con
- * tres cambios de orden: sin el título repetido adentro (ya lo dice la cabecera), tocar a una persona la lleva al mapa del Inicio
- * (en Android y en iPhone; antes "Mapa ›" tapaba la etiqueta del rol) y cada cosa en su tarjeta con su título.
+ * "Familia y amigos", un grupo de Ajustes (tarjeta ancha de arriba). Las personas ya se ven, con cómo están y qué se puede hacer con cada una,
+ * en el mapa del Inicio (y ahí mismo se suma gente con el botón «Sumar»), así que acá no se repite la lista. Quedan las cosas que el mapa no
+ * hace: cuántas personas comparten su ubicación con vos, el aviso del iPhone («Siempre»), pausar la propia ubicación, el SOS y sus ayudas para
+ * pedirlo sin abrir la app, unirse a una familia con un código y salir de una familia. Son las mismas funciones de antes (FamilySection.tsx).
  *
  * Reemplaza a FamilySection en App.tsx con solo cambiar el import (exporta el mismo nombre y las mismas propiedades).
  */
@@ -24,7 +23,7 @@ type Props = {
   paleta: Paleta;
   /** Ya no se usa (la pantalla no es un acordeón); se acepta para no cambiar App.tsx. */
   Seccion?: ComponentType<{ title: string; subtitle?: string; defaultOpen?: boolean; children: ReactNode }>;
-  /** Al tocar a una persona: lleva al mapa del Inicio (si no se pasa, se abre Google Maps afuera, como antes). */
+  /** Lleva al mapa del Inicio, donde se ve y se suma a la gente. */
   onVerEnMapa?: () => void;
   botones: {
     primario: StyleProp<ViewStyle>;
@@ -35,8 +34,6 @@ type Props = {
   };
 };
 
-const ROLES: Record<string, string> = { adulto: "ADULTO", menor: "MENOR", amigo: "AMIGO" };
-
 const ERRORES: Record<string, string> = {
   invalid_code: "El código tiene 6 letras o números.",
   code_not_found_or_expired: "Ese código no existe o ya venció. Pedí uno nuevo.",
@@ -44,42 +41,6 @@ const ERRORES: Record<string, string> = {
   minor_cannot_pause: "Como menor, tu ubicación no se puede pausar.",
   unauthorized: "Este teléfono no está vinculado con Ojo Guard MS.",
 };
-
-const VIVO_MS = 10 * 60_000;
-const SIN_CONEXION_MS = 3 * 3600_000;
-
-function haceCuanto(fecha: string | null) {
-  if (!fecha) return "sin ubicación todavía";
-  const s = Math.max(0, (Date.now() - new Date(fecha).getTime()) / 1000);
-  if (s < 90) return "hace un momento";
-  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
-  if (s < 86_400) return `hace ${Math.round(s / 3600)} h`;
-  const dias = Math.round(s / 86_400);
-  return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
-}
-
-type Tono = "vivo" | "apagado" | "alerta" | "normal";
-
-/** Cómo está esa persona, con las mismas reglas del mapa: en vivo (10 min), sin conexión (3 h sin señales) o hace cuánto. */
-function estadoDe(p: FamilyPerson): { texto: string; tono: Tono } {
-  if (p.paused) return { texto: "Ubicación pausada", tono: "apagado" };
-  if (!p.lastLocationAt) return { texto: "Sin ubicación todavía", tono: "apagado" };
-  const edad = Date.now() - new Date(p.lastLocationAt).getTime();
-  const cuando = haceCuanto(p.lastLocationAt);
-  if (edad <= VIVO_MS) return { texto: `En vivo · ${cuando}`, tono: "vivo" };
-  if (!p.online && edad > SIN_CONEXION_MS) return { texto: `Sin conexión · ${cuando}`, tono: "alerta" };
-  return { texto: cuando.charAt(0).toUpperCase() + cuando.slice(1), tono: "normal" };
-}
-
-// Abre a la persona en Google Maps (solo si la pantalla no recibe cómo ir al mapa del Inicio).
-function abrirEnMapa(p: FamilyPerson) {
-  const lat = Number(p.lastLocation?.latitude);
-  const lng = Number(p.lastLocation?.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-  // Volver de Google Maps no tiene que mandar la app a la pantalla de bloqueo.
-  markPendingSystemActivity();
-  void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`).catch(() => undefined);
-}
 
 function mensajeDeError(error: unknown) {
   const clave = error instanceof Error ? error.message : "";
@@ -196,7 +157,6 @@ export function FamilySection({ paleta: P, botones, onVerEnMapa }: Props) {
   }
 
   const s = estilos(P);
-  const colorDeTono = (tono: Tono) => (tono === "vivo" ? P.exito : tono === "alerta" ? P.peligroFuerte : tono === "apagado" ? P.textoDebil : P.textoClaro);
   const codigoListo = codigo.replace(/[^A-Z0-9]/g, "").length === 6;
   const hayFamilia = me.memberships > 0 || people.length > 0;
 
@@ -223,62 +183,26 @@ export function FamilySection({ paleta: P, botones, onVerEnMapa }: Props) {
       {enrollment ? (
         <>
           <View style={s.etiquetaFila}>
-            <Text style={s.etiqueta}>
-              {people.length ? (people.length === 1 ? "1 PERSONA" : `${people.length} PERSONAS`) : "PERSONAS"}
-            </Text>
+            <Text style={s.etiqueta}>MI FAMILIA</Text>
             <Pressable accessibilityRole="button" hitSlop={10} onPress={() => { setMensaje(""); void cargar(enrollment); }}>
               <Text style={s.actualizar}>Actualizar</Text>
             </Pressable>
           </View>
-
-          {people.length ? (
-            <View style={s.tarjetaLista}>
-              {people.map((p, i) => {
-                const estado = estadoDe(p);
-                const sePuedeVer = Boolean(p.lastLocation) && !p.paused;
-                const direccion = p.paused ? "" : p.lastLocation?.address ?? "";
-                const bateria = typeof p.battery === "number" && Number.isFinite(p.battery) ? Math.round(p.battery) : null;
-                return (
-                  <Pressable
-                    key={p.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${p.name}. ${estado.texto}${direccion ? `. ${direccion}` : ""}${sePuedeVer ? ". Ver en el mapa" : ""}`}
-                    disabled={!sePuedeVer}
-                    onPress={() => (onVerEnMapa ? onVerEnMapa() : abrirEnMapa(p))}
-                    style={[s.fila, i > 0 && s.filaConLinea]}
-                  >
-                    <View style={[s.avatar, { borderColor: estado.tono === "vivo" ? P.exito : P.doradoBorde }]}>
-                      <Text style={s.avatarTexto}>{(p.name || "?").trim()[0]?.toUpperCase() ?? "?"}</Text>
-                    </View>
-                    <View style={s.filaTexto}>
-                      <View style={s.nombreFila}>
-                        <Text numberOfLines={1} style={s.nombre}>{p.name}</Text>
-                        {ROLES[p.role] && !p.owner ? <Text style={s.rol}>{ROLES[p.role]}</Text> : null}
-                      </View>
-                      <View style={s.estadoFila}>
-                        <View style={[s.punto, { backgroundColor: colorDeTono(estado.tono) }]} />
-                        <Text style={[s.estado, { color: colorDeTono(estado.tono) }]}>{estado.texto}</Text>
-                      </View>
-                      {direccion ? <Text numberOfLines={1} style={s.direccion}>{direccion}</Text> : null}
-                    </View>
-                    <View style={s.derecha}>
-                      {bateria !== null ? <Text style={[s.bateria, bateria < 20 && { color: P.peligroFuerte }]}>{bateria} %</Text> : null}
-                      {sePuedeVer ? <Text style={s.flecha}>{"›"}</Text> : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={s.tarjeta}>
-              <Text style={s.tarjetaTitulo}>Todavía no hay nadie</Text>
-              <Text style={botones.ayuda}>
-                Para sumar a alguien, invitalo desde el mapa del Inicio (el botón de invitar), o pedile a tu familia un código y escribilo más abajo.
-              </Text>
-            </View>
-          )}
-
-          {people.some((p) => p.lastLocation && !p.paused) ? <Text style={s.nota}>Tocá a una persona para verla en el mapa.</Text> : null}
+          <View style={s.tarjeta}>
+            <Text style={s.tarjetaTitulo}>
+              {people.length ? `${people.length} ${people.length === 1 ? "persona comparte" : "personas comparten"} su ubicación con vos` : "Todavía no hay nadie"}
+            </Text>
+            <Text style={botones.ayuda}>
+              {people.length
+                ? "Las ves en el mapa del Inicio, con cómo están y lo que podés hacer con cada una. Para sumar a alguien, tocá «Sumar» en la lista de abajo del mapa."
+                : "Para sumar a alguien, tocá «Sumar» en la lista de abajo del mapa del Inicio, o pedile a tu familia un código y escribilo más abajo."}
+            </Text>
+            {onVerEnMapa ? (
+              <Pressable accessibilityRole="button" onPress={onVerEnMapa} style={botones.secundario}>
+                <Text style={botones.secundarioTexto}>Ir al mapa</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </>
       ) : null}
 
@@ -367,23 +291,6 @@ function estilos(P: Paleta) {
     tarjeta: { backgroundColor: P.superficie, borderColor: P.borde, borderRadius: 18, borderWidth: 1, gap: 10, padding: 16 },
     sinHueco: { marginTop: -26 },
     tarjetaTitulo: { color: P.texto, fontSize: 16, fontWeight: "800" },
-    tarjetaLista: { backgroundColor: P.superficie, borderColor: P.borde, borderRadius: 18, borderWidth: 1, overflow: "hidden" },
-    fila: { alignItems: "center", flexDirection: "row", gap: 12, minHeight: 72, paddingHorizontal: 14, paddingVertical: 12 },
-    filaConLinea: { borderTopColor: P.borde, borderTopWidth: 1 },
-    avatar: { alignItems: "center", backgroundColor: P.doradoFondo, borderRadius: 24, borderWidth: 2, height: 48, justifyContent: "center", width: 48 },
-    avatarTexto: { color: P.doradoTexto, fontSize: 18, fontWeight: "800" },
-    filaTexto: { flex: 1, gap: 2 },
-    nombreFila: { alignItems: "center", flexDirection: "row", gap: 8 },
-    nombre: { color: P.texto, flexShrink: 1, fontSize: 17, fontWeight: "800" },
-    rol: { borderColor: P.doradoBorde, borderRadius: 6, borderWidth: 1, color: P.doradoTexto, fontSize: 10, fontWeight: "800", letterSpacing: 1, paddingHorizontal: 6, paddingVertical: 1 },
-    estadoFila: { alignItems: "center", flexDirection: "row", gap: 6 },
-    punto: { borderRadius: 4, height: 8, width: 8 },
-    estado: { flexShrink: 1, fontSize: 13.5, fontWeight: "700" },
-    direccion: { color: P.textoClaro, fontSize: 13 },
-    derecha: { alignItems: "flex-end", gap: 2, minWidth: 34 },
-    bateria: { color: P.textoClaro, fontSize: 12.5, fontWeight: "700" },
-    flecha: { color: P.doradoTexto, fontSize: 26, lineHeight: 28 },
-    nota: { color: P.textoDebil, fontSize: 12.5, marginTop: 8 },
     codigoFila: { alignItems: "center", flexDirection: "row", gap: 8 },
     codigo: { backgroundColor: P.campo, borderColor: P.bordeMedio, borderRadius: 12, borderWidth: 1, color: P.texto, flex: 1, minWidth: 0, fontSize: 20, fontWeight: "700", letterSpacing: 6, paddingHorizontal: 14, paddingVertical: 12 },
     boton: { flexShrink: 0, paddingHorizontal: 18 },
