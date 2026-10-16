@@ -267,6 +267,22 @@ Actualizado: 16/10/2026.
     mapa), botón "norte" para volver a mirar al norte, y ajustar `centrar`
     para que cuente el giro (el desplazamiento por la tarjeta hoy supone norte
     arriba). No eligió "Tarjeta que se achica" (queda como idea).
+    **Rotar, Map ID creado (16/10/2026):** proyecto de Google Cloud `ojo-guard`
+    (número 798400186504), Map ID `1b7239dd38bbcc4a7271dd0d` (nombre OJO GUARD,
+    vector con rotación; la consola ya muestra vista previa Claro/Oscuro por
+    Map ID). Script `aplicar-mapa-rotar-panel.ps1` (solo panel): `mapId`,
+    `renderingType` vectorial, giro con dos dedos, sin inclinación,
+    `colorScheme` claro/noche, brujula junto a Mapa/Satélite y `centrar` que
+    cuenta el giro; probado con un Google simulado (opciones, brújula y
+    enfoque con 0, 40, 135 y 270 grados). Sin probar contra Google real:
+    riesgos a mirar en el teléfono: (1) que el Map ID sea del mismo proyecto
+    que la clave del mapa (si no, el mapa sale gris o sin estilo); (2) que los
+    comercios y el transporte aparezcan (el estilo del código `styles` ya no
+    vale: se oculta desde "Estilos de mapa" de la consola y se asocia al Map
+    ID, o se importa el JSON de estilo); (3) en Satélite no gira (límite de
+    Google); (4) cambiar claro/noche con el mapa abierto puede no verse hasta
+    reabrir (el `colorScheme` se fija al crear el mapa). Si algo sale mal:
+    copiar los `.bak-rotar` de `src\` y publicar.
     Android):** funciona el mapa chico, la lista con "Sumar" y la barra con el
     SOS cuadradito. Problemas: (1) **la barra se superponía con los botones
     de Android** (atrás/inicio/recientes) y se comían los toques: por eso el
