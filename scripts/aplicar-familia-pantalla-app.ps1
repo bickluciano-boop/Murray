@@ -8,7 +8,7 @@
 #    titulo: Mi ubicacion (pausar 1 hora / reanudar), SOS y ayuda (pedir ayuda sin abrir la app) y Unirme a una familia (con el codigo), y al final
 #    "Salir de la familia". No se saca ninguna funcion. El mapa de Apple que habia arriba en iPhone ya no esta: el mapa de todos es el del Inicio.
 # Suma src\FamiliaPantalla.tsx y toca App.tsx (el import de la pantalla y el boton de Ajustes). Va en la carpeta de la APP (la que tiene
-# app.json). Respaldo .bak-familia. Es solo codigo de la app (nada nativo): sale en la PROXIMA build.
+# app.json). Respaldo .bak-famlista. Es solo codigo de la app (nada nativo): sale en la PROXIMA build.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -84,14 +84,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-familia")) { Mal ("Ya existe " + $t + ".bak-familia. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-famlista")) { Mal ("Ya existe " + $t + ".bak-famlista. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-familia"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-famlista"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-familia): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-famlista): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -124,7 +124,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-familia") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-famlista") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."
