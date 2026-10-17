@@ -279,6 +279,12 @@ Actualizado: 16/10/2026.
     distancia); (2) en el mapa vectorial `panTo` + `setZoom` seguidos se pisan:
     `aplicar-mapa-centrar-panel.ps1` mueve la cámara de una vez
     (`moveCamera({ center, zoom })`, con respaldo para mapas sin esa función).
+    **Luciano (17/10/2026): "toque el icono que toque de dispositivos, no va
+    ahí, se queda en el lugar".** Causa: tocar un PIN en el mapa solo elegía al
+    equipo (`elegir(equipo.id, false)`, a propósito en el panel de la compu) y el
+    mapa no se movía; solo la lista centraba. `aplicar-mapa-pin-centrar-panel.ps1`
+    (solo panel, independiente del anterior): en la app el pin pasa
+    `elegir(equipo.id, EN_APP)`, o sea también lleva el mapa hasta ahí.
     **Rotar, Map ID creado (16/10/2026):** proyecto de Google Cloud `ojo-guard`
     (número 798400186504), Map ID `1b7239dd38bbcc4a7271dd0d` (nombre OJO GUARD,
     vector con rotación; la consola ya muestra vista previa Claro/Oscuro por
