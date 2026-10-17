@@ -341,7 +341,14 @@ Actualizado: 16/10/2026.
     de Android hecha e instalada (a probar) y build 32 de iPhone terminada el
     17/10/2026 (falta `eas submit` a TestFlight y probar la ✕ y el ?). Aviso de
     Expo: ya van 56 builds por encima de lo incluido (USD 24 de uso adicional
-    este período): conviene juntar cambios de app antes de cada build. Dato:
+    este período): conviene juntar cambios de app antes de cada build.
+    **Probado por Luciano en el iPhone (build 32, versión por TestFlight,
+    17/10/2026, foto 13:09):** la ✕ y el ? ya quedan debajo de la hora y la
+    batería; "Mi IPHONE 13 Pro · En línea · 90%" en un renglón; barra de abajo
+    más baja con el SOS; mapa con pines chicos, tarjeta en una fila y filtro En
+    vivo/Hoy/7 días al elegir a alguien. Detalle menor para la próxima build de
+    app: en iPhone el título queda unos puntos más arriba que la ✕ y el ? (el
+    `paddingTop: 4` de `cabeza` en iOS, contra `8 + insets.top` de los botones). Dato:
     la tarjeta ya se pliega tocando su encabezado (nombre) o arrastrando la
     manija (`ogm-plegada`); desde `aplicar-mapa-tarjeta-fila-panel.ps1`
     (aplicado el 16/10/2026, versión 33bb086a) empieza plegada en una fila.
