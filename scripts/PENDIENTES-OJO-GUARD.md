@@ -827,6 +827,24 @@ Actualizado: 16/10/2026.
   probado el 09/10/2026: con el iPhone bloqueado, la app cerrada y la perilla
   con sonido, la sirena sonó unos 30 s). En silencio no suena: para eso hacen
   falta las Alertas críticas.
+- [ ] **IDEA (17/10/2026, caso real): "Referentes de emergencia" / caja negra
+  del celular.** Luciano contó que un chico de 16 años desapareció saliendo de un
+  boliche, con el celular sin batería y sin ninguna app de ubicación vinculada,
+  así que la familia no tiene cómo saber dónde estuvo por última vez. Pidió pensar
+  una lista de referentes que reciban la última ubicación del celular, elegida de
+  antemano por la propia persona "por las dudas". Propuesta para charlar (todavía
+  sin decidir ni construir): la persona elige 1 a 5 referentes; en el día a día
+  nadie ve nada; el teléfono manda de a poco puntos de ubicación (solo cambios
+  grandes, poca batería) y el servidor se queda con el último; los referentes
+  reciben (1) aviso de batería baja con la última ubicación, (2) aviso de "sin
+  señal hace N horas" con la última ubicación, y (3) un botón "Pedir última
+  ubicación" que deja registro y le avisa a la persona. Va como un rol nuevo de
+  Familia ("Referente", visibilidad solo en emergencia). Cuidados: lo activa la
+  propia persona (también un menor, con sus padres al tanto), lista visible de
+  quién tiene acceso, registro de cada consulta, qué datos se guardan y por cuánto
+  tiempo. Límites técnicos: en iPhone hace falta permiso de ubicación "Siempre";
+  no se puede mandar nada cuando el celular ya se apagó, por eso el servidor tiene
+  que tener siempre el último punto.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
