@@ -930,11 +930,16 @@ Actualizado: 16/10/2026.
   **17/10/2026 16:35 a 16:36, validado con mails reales (capturas de Luciano):** el referente aceptó
   ("aceptó ser tu referente") y apretó "No lo encuentro" ("quiere saber si estás bien", con botón "Estoy
   bien"). Los dos mails llegaron, así que Resend manda bien. Luciano: "yo no acepté nada en ningún
-  momento". En el código lo único que deja a un referente como aceptado es abrir SU enlace personal y
-  tocar "Aceptar ser referente" (revisado: no hay otro camino), así que lo más probable es que lo hizo
-  la referente (Mariana) con el mail de invitación, que va al correo DEL REFERENTE y no al del dueño
-  (por eso a Luciano "no le llegó"). Sin confirmar: preguntarle a Mariana y mirar el Registro.
-  Para probar solo: elegir un segundo referente con otro mail propio. Falta probar: (1) que se muestre la última señal (bajando
+  momento" y Mariana dice que no le llegó ningún mail. **Registro del servidor (hora UTC, Argentina
+  es 3 h menos):** 19:34:44 se sumó a MARIANA FLOMBAUM (correo `marinaflombaum@gmail.com`: ojo, "marina"
+  y no "mariana", puede ser un error de tipeo o su mail real, a confirmar), 19:35:08 y 19:35:10 se
+  reenvió el enlace (dos veces seguidas), 19:35:52 aceptó (42 s después), 19:36:04 apretó "No lo
+  encuentro". Esos tiempos coinciden con los pasos que se le dieron a Luciano para probar (Reenviar,
+  abrir el enlace en otro navegador, Aceptar, No lo encuentro), así que casi seguro lo hizo él probando.
+  En el código lo único que acepta es abrir el enlace personal y tocar "Aceptar ser referente".
+  Si el correo del referente estuviera mal escrito, hay que "Quitar" ese referente (el enlace deja de
+  servir) y elegirlo de nuevo con la dirección correcta. Para probar solo: otro referente con otro mail propio.
+  Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
   ya dijo que está bien.
