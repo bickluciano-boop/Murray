@@ -72,7 +72,12 @@ Regla de partida: **3 de las 4** señales. Con 2 señales: solo el "¿Estás bie
 
 ## Privacidad
 
-- Lo activa la propia persona (un menor, con sus padres al tanto). Lista visible de quién tiene acceso.
+- **Mayor de edad:** lo activa la propia persona; sin su consentimiento no se activa.
+- **Menor de 18:** lo activa y administra el tutor (el mayor responsable, como ya pasa con el rol "Menor" de Familia). Luciano
+  (17/10/2026): al ser menor no haría falta el consentimiento del chico porque la tutela la tiene el mayor. Aun así se
+  mantiene el aviso al menor de que alguien consultó su última señal (la app ya le avisa cuando un tutor le pide foto o
+  audio): es una decisión de confianza del producto, no una exigencia que haya que cumplir. Lo legal lo confirma un abogado.
+- Lista visible de quién tiene acceso.
 - Se guarda lo mínimo: el último punto y, con señales de riesgo, los últimos 30 minutos; tiempo de guardado a definir.
 - Revisar con un abogado antes de lanzarlo (menores, consentimiento, registro de consultas).
 
