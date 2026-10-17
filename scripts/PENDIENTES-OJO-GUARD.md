@@ -939,6 +939,13 @@ Actualizado: 16/10/2026.
   En el código lo único que acepta es abrir el enlace personal y tocar "Aceptar ser referente".
   Si el correo del referente estuviera mal escrito, hay que "Quitar" ese referente (el enlace deja de
   servir) y elegirlo de nuevo con la dirección correcta. Para probar solo: otro referente con otro mail propio.
+  **Confirmado por Luciano: el mail correcto es `marianaflombaum@gmail.com`** (se había cargado
+  `marinaflombaum`, sin la "a"), así que el enlace fue a otra dirección. "Quitar" lo mata (el código
+  rechaza los enlaces de referentes dados de baja) y el Registro muestra una sola consulta (la suya),
+  o sea que nadie más lo usó. Protección preparada: `aplicar-por-las-dudas-correo-panel.ps1` (al elegir un
+  referente, la página muestra el mail completo y pide confirmar letra por letra; trae también el texto de
+  dónde está "No lo encuentro" si todavía no estaba). Idea para más adelante: que el mail de invitación avise
+  a quien lo recibe por error cómo avisar que no es para él.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que

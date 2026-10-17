@@ -1,0 +1,23 @@
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const B = 'http://localhost:8799';
+(async () => {
+  const nav = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+  const pag = await (await nav.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  const err = []; pag.on('pageerror', (e) => err.push(e.message));
+  let msg = '', aceptar = false;
+  pag.on('dialog', (d) => { msg = d.message(); aceptar ? d.accept() : d.dismiss(); });
+  await pag.goto(B + '/por-las-dudas');
+  await pag.waitForFunction(() => document.getElementById('hoy').textContent.includes('señales'));
+  await pag.fill('#rNombre', 'Mariana'); await pag.fill('#rCorreo', '  marianaflombaum@gmail.com ');
+  await pag.click('#rAgregar'); await pag.waitForTimeout(600);
+  const n1 = (await (await fetch(B + '/__correos')).json()).length;
+  console.log('mensaje:', msg);
+  console.log('1) cancelo -> mails mandados:', n1, '| el nombre sigue escrito:', await pag.inputValue('#rNombre'));
+  aceptar = true;
+  await pag.click('#rAgregar');
+  await pag.waitForFunction(() => document.getElementById('invitacion').textContent.includes('Mariana'));
+  const c = await (await fetch(B + '/__correos')).json();
+  console.log('2) acepto -> mails:', c.length, '| a:', c[0].to);
+  console.log('errores:', err.length ? err : 'ninguno');
+  await nav.close();
+})().catch((e) => { console.log('FALLO', e.message); process.exit(1); });
