@@ -315,7 +315,11 @@ Actualizado: 16/10/2026.
     bajan `initialWindowMetrics.insets.top`. Reemplaza `src\GruposConfiguracion.tsx`
     y `src\SosBlock.tsx` (revisa que sean los de `aplicar-barra-ajustes-app.ps1`)
     y toca 3 lugares de `App.tsx` (import y dos `top`); respaldo `.bak-barrachica`;
-    termina con `npx tsc --noEmit`. Luego: build de Android y de iPhone. Dato:
+    termina con `npx tsc --noEmit`. Aplicado por Luciano el 16/10/2026: build
+    de Android hecha e instalada (a probar) y build 32 de iPhone terminada el
+    17/10/2026 (falta `eas submit` a TestFlight y probar la ✕ y el ?). Aviso de
+    Expo: ya van 56 builds por encima de lo incluido (USD 24 de uso adicional
+    este período): conviene juntar cambios de app antes de cada build. Dato:
     la tarjeta ya se pliega tocando su encabezado (nombre) o arrastrando la
     manija (`ogm-plegada`); desde `aplicar-mapa-tarjeta-fila-panel.ps1`
     (aplicado el 16/10/2026, versión 33bb086a) empieza plegada en una fila.
