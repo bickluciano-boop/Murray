@@ -829,7 +829,13 @@ Actualizado: 16/10/2026.
   falta las Alertas críticas.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
-  si en 2 o 3 semanas no hay respuesta, volver a enviarlo con los mismos
+  **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
+  los del contrato de desarrollador del 15/09/2026) **y Apple no tiene pantalla
+  de estado**. Texto para escribirle a soporte ya preparado en
+  `scripts/TEXTO-APPLE-ALERTAS-CRITICAS.md`; Luciano pidió mandarlo si a los 4
+  días (**21/10/2026**) no pasó nada (recordatorio agendado para ese día).
+  Mientras tanto mirar developer.apple.com → Identifiers → `app.ojoguard.mobile`
+  → Capabilities por si "Critical Alerts" aparece para tildar. Antes decía: si en 2 o 3 semanas no hay respuesta, volver a enviarlo con los mismos
   textos (página "Pedido de Alertas críticas",
   https://claude.ai/artifact/KWJeEVMrjYhSTELXtJwpRc). Si lo aprueban: permiso
   `com.apple.developer.usernotifications.critical-alerts`, sonido de alarma
