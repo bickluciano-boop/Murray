@@ -858,6 +858,22 @@ Actualizado: 16/10/2026.
   puede avisar solo). Los referentes pueden ser solo un mail (sin app) con un
   enlace al mapa. Anti falsas alarmas: Lugares seguros (casa de un amigo),
   "esta noche duermo afuera" (pausa por horas), cada referente puede silenciar.
+  **Caso robo (Luciano, 17/10/2026): "lo robaron y a los 5 minutos apagaron el
+  celular".** Ninguna app puede mandar nada después de apagado ni interceptar el
+  apagado en iPhone (en Android es poco confiable): hay que tener el dato ANTES.
+  Ideas: (1) reporte adaptativo: con señales de riesgo (sacudón fuerte, velocidad
+  de vehículo, de noche, lejos de casa) pasar a un punto cada 10 a 20 s y que el
+  servidor guarde los últimos 30 minutos (rumbo y velocidad aunque lo apaguen);
+  (2) detectar el arrebato (aceleración brusca + movimiento rápido) y mandar
+  ya el aviso a los referentes; (3) la intención del silencio importa: silencio
+  repentino con batería ALTA y en movimiento = apagado a mano o robo, alertar en
+  5 a 10 minutos; silencio con batería muy baja = probable batería muerta, más
+  espera (90 min de noche); (4) foto del intruso y captura silenciosa en Android
+  (ya existen) mandadas al instante ante un intento de desbloqueo fallido (a
+  decidir por privacidad); (5) recomendar lo del sistema, que sigue funcionando
+  apagado: iPhone "Buscar" con la red de Buscar y Protección de dispositivo
+  robado; Android "Encontrar mi dispositivo / Find Hub" y el bloqueo por
+  detección de robo (según modelo y versión).
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
