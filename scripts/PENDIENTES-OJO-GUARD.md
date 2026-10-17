@@ -845,6 +845,19 @@ Actualizado: 16/10/2026.
   tiempo. Límites técnicos: en iPhone hace falta permiso de ubicación "Siempre";
   no se puede mandar nada cuando el celular ya se apagó, por eso el servidor tiene
   que tener siempre el último punto.
+  **Regla automática (Luciano, 17/10/2026):** que el aviso salte solo cuando
+  coinciden varias señales: hace mucho que el teléfono no se conecta, está lejos
+  de su residencia, batería baja y horario raro (21 a 06). Propuesta: puntaje de
+  4 señales (sin reportar: 90 min de noche / 6 h de día; lejos: más de 3 km de
+  Casa y fuera de sus Lugares; batería menor o igual a 15 %; horario 21 a 06,
+  configurable); con 2 señales un "¿Estás bien?" a la propia persona (botón
+  "Estoy bien" que ya existe en el SOS) y un ping de ubicación; con 3 o más y sin
+  respuesta en 15 min, aviso a los referentes con la última ubicación, la hora y
+  la batería, repetido cada 30 min y con "Ya reconectó" cuando vuelve. Se evalúa
+  en el servidor con el cron de 15 min que ya existe (el teléfono apagado no
+  puede avisar solo). Los referentes pueden ser solo un mail (sin app) con un
+  enlace al mapa. Anti falsas alarmas: Lugares seguros (casa de un amigo),
+  "esta noche duermo afuera" (pausa por horas), cada referente puede silenciar.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
