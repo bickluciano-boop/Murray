@@ -905,6 +905,15 @@ Actualizado: 16/10/2026.
   **Instalada y publicada por Luciano el 17/10/2026 (versión 6bb4d53a):** las cuatro
   tablas `pld_*` creadas en la base y las páginas en el servidor; falta que la pruebe
   (`https://ojo-guard-ms-api.bickluciano.workers.dev/por-las-dudas`).
+- [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
+  prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
+  código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"
+  (consola, Cuenta) ni el SMS del SOS; el mail y el aviso en el teléfono siguen
+  funcionando. Para volver a usarlo: en console.twilio.com pasar la cuenta de
+  prueba a una cuenta paga (cargar saldo y medio de pago); cada mensaje se paga
+  y hay que tener habilitada Argentina en los permisos geográficos. Decisión de
+  Luciano si vale la pena. "Por las dudas" usa mail y aviso en el teléfono, no
+  necesita SMS.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
