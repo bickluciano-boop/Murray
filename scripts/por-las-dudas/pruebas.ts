@@ -144,5 +144,26 @@ for (const [nombre, f] of [["duenio", pldPaginaDuenio], ["referente", pldPaginaR
 }
 const reg = (await (await api()).json() as any).registro;
 ok(reg.length > 5 && reg.some((x: any) => x.kind === "consulta") && reg.some((x: any) => x.kind === "estoy-bien"), "el registro guarda consultas y respuestas");
+console.log("== Enlace del referente (por si el mail no llega)");
+setSesion({ email: DUENIO, method: "passkey" });
+sqlite.exec("DELETE FROM pld_referentes");
+let rr: any = await (await api({ accion: "agregar", name: "Tio", email: "tio@correo.com" })).json();
+ok(rr.invitacion && rr.invitacion.enviado === true && /\/referente\?t=ref[a-f0-9]+\.[a-f0-9]{36}$/.test(rr.invitacion.enlace), "al agregar la API devuelve el enlace y que el mail salio");
+const tokenTio = rr.invitacion.enlace.split("t=")[1];
+let es: any = await (await pldApiReferenteEstado(pedido(ORIGEN + "/x", "POST", { t: tokenTio }), env)).json();
+ok(es.ok && es.referente === "Tio", "ese enlace sirve para entrar como referente");
+setCorreoOk(false);
+rr = await (await api({ accion: "agregar", name: "Prima", email: "prima@correo.com" })).json();
+ok(rr.invitacion && rr.invitacion.enviado === false && rr.invitacion.enlace.includes("/referente?t="), "si el mail falla, lo dice y igual da el enlace");
+setCorreoOk(true);
+const idTio = rr.referentes.find((x: any) => x.name === "Tio").id;
+rr = await (await api({ accion: "reenviar", id: idTio })).json();
+const tokenTio2 = rr.invitacion.enlace.split("t=")[1];
+ok(rr.invitacion.enviado === true && tokenTio2 !== tokenTio, "reenviar da un enlace nuevo");
+ok((await pldApiReferenteEstado(pedido(ORIGEN + "/x", "POST", { t: tokenTio }), env)).status === 404, "el enlace viejo deja de servir");
+ok((await pldApiReferenteEstado(pedido(ORIGEN + "/x", "POST", { t: tokenTio2 }), env)).status === 200, "el enlace nuevo sirve");
+const panorama: any = await (await api()).json();
+ok(!("invitacion" in panorama), "una consulta comun no repite el enlace");
+
 console.log(`\n${total - fallos}/${total} pruebas ok`);
 if (fallos) process.exit(1);

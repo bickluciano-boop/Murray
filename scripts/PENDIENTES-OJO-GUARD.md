@@ -895,7 +895,7 @@ Actualizado: 16/10/2026.
   las condiciones. Especificación completa y plan de primera versión (solo servidor
   y panel, sin build) en `scripts/POR-LAS-DUDAS-ESPECIFICACION.md`.
   **Primera parte armada (17/10/2026), sin instalar todavía:**
-  `aplicar-por-las-dudas-panel.ps1` (código y 47 pruebas en `scripts/por-las-dudas/`).
+  `aplicar-por-las-dudas-panel.ps1` (código y pruebas en `scripts/por-las-dudas/`; hoy 54).
   Páginas `/por-las-dudas`, `/referente` y `/estoy-bien`, cuatro tablas `pld_*`, botón
   "No lo encuentro" con el "¿Estás bien?", condiciones, emergencia, apagado en movimiento
   con batería alta, lugares seguros, pausa y registro. Probado con una base SQLite en
@@ -911,6 +911,16 @@ Actualizado: 16/10/2026.
   datos y tarjeta "Falta entrar al panel" con botón "Entrar al panel"). Idea: un acceso a
   esta página desde el panel y desde la app (hoy hay que escribir la dirección). Aplicada y publicada por
   Luciano el 17/10/2026 (versión 312f5d90); falta que cuente cómo se ve.
+  **17/10/2026, segunda prueba:** Luciano cargó las condiciones y eligió un referente, y
+  **"No me llegó"** el mail de invitación (hasta ahora la página decía "Listo" aunque el
+  mail fallara; puede ser Spam o un fallo de Resend, hay que mirar). Arreglo preparado:
+  `aplicar-por-las-dudas-enlace-panel.ps1` (al elegir o reenviar, la página dice si el mail
+  salió o falló y muestra el enlace personal del referente con "Copiar enlace" y "Mandar por
+  WhatsApp"; el enlace solo se le muestra a quien entró al panel). 54 pruebas y navegador
+  real ok. Cuando esté aplicado: reenviar al referente, abrir el enlace en otro navegador,
+  aceptar, apretar "No lo encuentro" y seguir con "¿Estás bien?" → "Estoy bien".
+  Para saber por qué no llegó el mail: mirar Spam y el panel de Resend (resend.com → Emails);
+  si el dominio de `MAIL_FROM` no está verificado, Resend solo deja mandar a la cuenta dueña.
 - [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
   prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
   código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"

@@ -7,9 +7,11 @@
   ayudantes del servidor (`now`, `hash`, `json`, mails...). Para correrlas, con `tablas.sql` en la carpeta actual:
   1. convertir los acentos: `python3 -c "import re;s=open('pld.ts',encoding='utf-8').read();open('pld_ascii.ts','w').write(re.sub(r'[^\x00-\x7f]',lambda m:'\\\\u%04x'%ord(m.group(0)),s))"`
   2. `cat stubs.ts pld_ascii.ts pruebas.ts > harness.mts` y cambiar `new URL("./tablas.sql", import.meta.url)` por una ruta
-     absoluta, y `node --no-warnings harness.mts` (47 pruebas).
+     absoluta, y `node --no-warnings harness.mts` (54 pruebas).
 - `servidor.ts` y `e2e.js`: un servidor local con las mismas funciones y un recorrido en navegador real (Playwright):
   la persona agrega un referente, el referente acepta y aprieta "No lo encuentro", la persona responde "Estoy bien".
+- `e2e-enlace.js`: recorrido en navegador del enlace personal del referente ("Copiar enlace", "Mandar por WhatsApp", mail que falla,
+  "Reenviar"); necesita el interruptor `POST /__correo-falla` de `servidor.ts`.
 - `generar_pld.py`: arma el instalador `.ps1` a partir de `pld.ts` (hay que pasarlo antes por la conversión de acentos).
 
 Especificación: `../POR-LAS-DUDAS-ESPECIFICACION.md`. Falta (segunda parte): avisos automáticos con el cron, pantalla en la app,

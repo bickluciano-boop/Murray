@@ -27,7 +27,9 @@ const normalizeEmail = (e: string) => String(e).trim().toLowerCase();
 const escapeHtml = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 const json = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { "content-type": "application/json" } });
 const hash = async (v: string) => createHash("sha256").update(v).digest("hex");
-const fetchCorreo = async (_u: string, init: any) => { const b = JSON.parse(init.body); correos.push({ to: b.to[0], subject: b.subject, html: b.html }); return new Response("{}", { status: 200 }); };
+let correoOk = true;
+function setCorreoOk(v: boolean) { correoOk = v; }
+const fetchCorreo = async (_u: string, init: any) => { if (!correoOk) return new Response("fallo", { status: 500 }); const b = JSON.parse(init.body); correos.push({ to: b.to[0], subject: b.subject, html: b.html }); return new Response("{}", { status: 200 }); };
 const sendExpoNotice = async (token: string | null, title: string, body: string, _o?: any) => { avisos.push({ token, title, body }); return true; };
 const queueAutoLocateCommand = async (_e: any, d: any) => { pings.push(d); };
 const readSessionInfo = async (_r: Request, _s: string) => sesionActual;

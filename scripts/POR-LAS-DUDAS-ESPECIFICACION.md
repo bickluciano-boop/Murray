@@ -88,6 +88,8 @@ Regla de partida: **3 de las 4** señales. Con 2 señales: solo el "¿Estás bie
   (la persona), `/referente` (el enlace del referente) y `/estoy-bien`; tablas `pld_*`; "No lo encuentro" con el
   "¿Estás bien?", condiciones, emergencia, apagado en movimiento, lugares seguros, pausa y registro.
 - **Instalada y publicada el 17/10/2026 (versión 6bb4d53a)**; falta que Luciano la pruebe con un referente real.
+- **Primera prueba (17/10/2026):** la invitación por mail al referente no llegó. Se agregó el enlace personal
+  visible para la persona (copiar / WhatsApp) y el aviso claro cuando el mail falla.
 - **Falta:** avisos automáticos del cron (segunda parte), pantalla en la app, que el tutor administre a un menor,
   reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
 

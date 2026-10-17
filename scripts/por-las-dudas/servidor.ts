@@ -21,6 +21,7 @@ const servidor = createServer(async (req, res) => {
     else if (ruta === "GET /estoy-bien") r = pldPaginaEstoyBien();
     else if (ruta === "POST /api/estoy-bien") r = await pldApiEstoyBien(request, env);
     else if (ruta === "GET /__correos") r = json(correos);
+    else if (ruta === "POST /__correo-falla") { setCorreoOk(cuerpo !== "1"); r = json({ ok: true }); }
     else if (ruta === "POST /__sesion") { setSesion(JSON.parse(cuerpo || "null")); r = json({ ok: true }); }
     else r = new Response("no", { status: 404 });
   } catch (e) { console.error("ERROR", e); r = new Response("error", { status: 500 }); }

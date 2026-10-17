@@ -254,7 +254,7 @@ async function pldReferentePorToken(env: Env, token: unknown): Promise<PldRefere
 async function pldInvitar(env: Env, origen: string, duenio: string, cfg: PldConfig, referente: { id: string; name: string; email: string }, secreto: string) {
   const quien = pldNombreDe(duenio, cfg);
   const enlace = `${origen}/referente?t=${referente.id}.${secreto}`;
-  await pldCorreo(
+  const enviado = await pldCorreo(
     env, referente.email, `${quien} te eligió como referente en Ojo Guard`,
     `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(referente.name)},</p>`
     + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> te eligió como <strong style="color:#fff">referente</strong>: una persona de confianza a la que recurrir <em>por las dudas</em>, si no logra comunicarse con ${escapeHtml(quien)} y algo parece raro.</p>`
@@ -262,6 +262,7 @@ async function pldInvitar(env: Env, origen: string, duenio: string, cfg: PldConf
     + pldBoton(enlace, "Aceptar y guardar mi enlace")
     + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Guardá este mail: el enlace es personal y es el que vas a usar si alguna vez necesitás el botón <strong>No lo encuentro</strong>.</p>`,
   );
+  return { enviado, enlace };
 }
 
 /** Lo que ve el dueño en su página: referentes, condiciones, cómo está hoy y el registro. */
@@ -301,6 +302,7 @@ async function pldApiDuenio(request: Request, env: Env) {
   const accion = String(cuerpo.accion ?? "");
   const cfg = await pldLeerConfig(env, email);
   const origen = new URL(request.url).origin;
+  let extra: Record<string, unknown> = {};
 
   if (accion === "config") {
     const c = (cuerpo.config ?? {}) as Record<string, unknown>;
@@ -330,7 +332,8 @@ async function pldApiDuenio(request: Request, env: Env) {
     const id = `ref${pldSecreto().slice(0, 14)}`, secreto = pldSecreto();
     await env.DB.prepare("INSERT INTO pld_referentes (id,owner_email,name,email,token_hash,status,created_at) VALUES (?,?,?,?,?,?,?)")
       .bind(id, email, nombre, correo, await hash(secreto), "pendiente", now()).run();
-    await pldInvitar(env, origen, email, cfg, { id, name: nombre, email: correo }, secreto);
+    const inv = await pldInvitar(env, origen, email, cfg, { id, name: nombre, email: correo }, secreto);
+    extra = { invitacion: { nombre, enlace: inv.enlace, enviado: inv.enviado } };
     await pldRegistrar(env, email, id, "referente", `Se sumó a ${nombre} como referente.`);
   } else if (accion === "reenviar") {
     const id = String(cuerpo.id ?? "");
@@ -338,7 +341,8 @@ async function pldApiDuenio(request: Request, env: Env) {
     if (!r) return json({ error: "not_found" }, 404);
     const secreto = pldSecreto();
     await env.DB.prepare("UPDATE pld_referentes SET token_hash=? WHERE id=?").bind(await hash(secreto), id).run();
-    await pldInvitar(env, origen, email, cfg, r, secreto);
+    const inv = await pldInvitar(env, origen, email, cfg, r, secreto);
+    extra = { invitacion: { nombre: r.name, enlace: inv.enlace, enviado: inv.enviado } };
     await pldRegistrar(env, email, id, "referente", `Se reenvió el enlace a ${r.name}.`);
   } else if (accion === "quitar") {
     const id = String(cuerpo.id ?? "");
@@ -363,7 +367,7 @@ async function pldApiDuenio(request: Request, env: Env) {
   } else {
     return json({ error: "accion_desconocida" }, 400);
   }
-  return json(await pldPanorama(env, email));
+  return json({ ...(await pldPanorama(env, email)), ...extra });
 }
 
 /** Estado que ve el referente al abrir su enlace (sin sesión: el enlace es personal). */
@@ -487,7 +491,7 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
-<p><button id="rAgregar">Elegir referente</button></p><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small></div>
+<p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small></div>
 <div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez.</small>
 <label>Cómo te llaman tus referentes</label><input id="cNombre" maxlength="60">
 <div class="dos"><div><label>De noche desde (hora)</label><input id="cDesde" type="number" min="0" max="23"></div><div><label>hasta (hora)</label><input id="cHasta" type="number" min="0" max="23"></div></div>
@@ -529,7 +533,21 @@ function pintar(d){
   var g=$("registro");limpiar(g);if(!d.registro.length){texto(g,"Todavía no hay nada.")}
   d.registro.forEach(function(x){var f=document.createElement("div");f.className="fila";var t=document.createElement("span");t.textContent=x.detail;var w=document.createElement("small");w.textContent=fecha(x.createdAt);w.className="suave";f.appendChild(t);f.appendChild(w);g.appendChild(f)});
 }
-function accion(cuerpo,ok){aviso("");return api(cuerpo).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(e.message)})}
+function mostrarInvitacion(i){
+  var c=$("invitacion");limpiar(c);if(!i)return;
+  var caja=document.createElement("div");caja.className="tarjeta";
+  var tx=document.createElement("p");tx.className=i.enviado?"":"mal";
+  tx.textContent=i.enviado?("Le mandamos el mail a "+i.nombre+". Si no le llega (que mire Spam), mandale este enlace vos:"):("No pudimos mandar el mail a "+i.nombre+". Mandale este enlace vos:");
+  caja.appendChild(tx);
+  var inp=document.createElement("input");inp.readOnly=true;inp.value=i.enlace;inp.onclick=function(){inp.select()};caja.appendChild(inp);
+  var b1=document.createElement("button");b1.className="sec chico";b1.textContent="Copiar enlace";b1.style.margin="10px 8px 0 0";
+  b1.onclick=function(){inp.select();try{navigator.clipboard.writeText(i.enlace).then(function(){b1.textContent="Copiado"},function(){document.execCommand("copy");b1.textContent="Copiado"})}catch(e){document.execCommand("copy");b1.textContent="Copiado"}};
+  caja.appendChild(b1);
+  var b2=document.createElement("button");b2.className="sec chico";b2.textContent="Mandar por WhatsApp";b2.style.marginTop="10px";
+  b2.onclick=function(){window.open("https://wa.me/?text="+encodeURIComponent("Te elegí como mi referente en Ojo Guard, por las dudas. Entrá a este enlace para aceptar y guardalo: "+i.enlace),"_blank")};
+  caja.appendChild(b2);c.appendChild(caja);
+}
+function accion(cuerpo,ok){aviso("");return api(cuerpo).then(function(d){pintar(d);mostrarInvitacion(d.invitacion);if(d.invitacion&&!d.invitacion.enviado)aviso("No pudimos mandar el mail. Usá el enlace de abajo.");else if(ok)aviso(ok)}).catch(function(e){aviso(e.message)})}
 $("rAgregar").onclick=function(){accion({accion:"agregar",name:$("rNombre").value,email:$("rCorreo").value},"Listo: le mandamos el mail a tu referente.").then(function(){$("rNombre").value="";$("rCorreo").value=""})};
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value,enabled:$("cActivo").checked}},"Condiciones guardadas.")};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
