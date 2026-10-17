@@ -286,7 +286,9 @@ Actualizado: 16/10/2026.
     mapa no se movía; solo la lista centraba. `aplicar-mapa-pin-centrar-panel.ps1`
     (solo panel, independiente del anterior): en la app el pin pasa
     `elegir(equipo.id, EN_APP)`, o sea también lleva el mapa hasta ahí. Aplicado y
-    publicado por Luciano el 17/10/2026 (versión fbe45142); falta que cuente.
+    publicado por Luciano el 17/10/2026 (versión fbe45142). **Probado por
+    Luciano el 17/10/2026 en Android: "perfecto, funcionaron los 4 pasos"** (tocar
+    el pin y el nombre en la lista lleva el mapa hasta el equipo, y el ◎).
     **Rotar, Map ID creado (16/10/2026):** proyecto de Google Cloud `ojo-guard`
     (número 798400186504), Map ID `1b7239dd38bbcc4a7271dd0d` (nombre OJO GUARD,
     vector con rotación; la consola ya muestra vista previa Claro/Oscuro por
