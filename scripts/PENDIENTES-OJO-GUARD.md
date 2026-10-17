@@ -929,8 +929,12 @@ Actualizado: 16/10/2026.
   referente aceptó, el enlace ya no se puede volver a mostrar porque solo se guarda su hash).
   **17/10/2026 16:35 a 16:36, validado con mails reales (capturas de Luciano):** el referente aceptó
   ("aceptó ser tu referente") y apretó "No lo encuentro" ("quiere saber si estás bien", con botón "Estoy
-  bien"). Los dos mails llegaron, así que Resend manda bien; el mail de invitación que no llegó
-  probablemente quedó en Spam del referente. Falta probar: (1) que se muestre la última señal (bajando
+  bien"). Los dos mails llegaron, así que Resend manda bien. Luciano: "yo no acepté nada en ningún
+  momento". En el código lo único que deja a un referente como aceptado es abrir SU enlace personal y
+  tocar "Aceptar ser referente" (revisado: no hay otro camino), así que lo más probable es que lo hizo
+  la referente (Mariana) con el mail de invitación, que va al correo DEL REFERENTE y no al del dueño
+  (por eso a Luciano "no le llegó"). Sin confirmar: preguntarle a Mariana y mirar el Registro.
+  Para probar solo: elegir un segundo referente con otro mail propio. Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
   ya dijo que está bien.
