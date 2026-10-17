@@ -81,6 +81,15 @@ Regla de partida: **3 de las 4** señales. Con 2 señales: solo el "¿Estás bie
 - Se guarda lo mínimo: el último punto y, con señales de riesgo, los últimos 30 minutos; tiempo de guardado a definir.
 - Revisar con un abogado antes de lanzarlo (menores, consentimiento, registro de consultas).
 
+## Estado de la construcción
+
+- **Primera parte armada y probada con una base simulada y un navegador real (17/10/2026), todavía sin instalar:**
+  `scripts/aplicar-por-las-dudas-panel.ps1` (código y pruebas en `scripts/por-las-dudas/`). Páginas `/por-las-dudas`
+  (la persona), `/referente` (el enlace del referente) y `/estoy-bien`; tablas `pld_*`; "No lo encuentro" con el
+  "¿Estás bien?", condiciones, emergencia, apagado en movimiento, lugares seguros, pausa y registro.
+- **Falta:** avisos automáticos del cron (segunda parte), pantalla en la app, que el tutor administre a un menor,
+  reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
+
 ## Plan
 
 **Primera versión (sin build de la app):** solo servidor y panel.

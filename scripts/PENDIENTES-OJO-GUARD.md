@@ -894,6 +894,14 @@ Actualizado: 16/10/2026.
   unas 3 horas sin señal, se muestra la última señal aunque no se cumplan todas
   las condiciones. Especificación completa y plan de primera versión (solo servidor
   y panel, sin build) en `scripts/POR-LAS-DUDAS-ESPECIFICACION.md`.
+  **Primera parte armada (17/10/2026), sin instalar todavía:**
+  `aplicar-por-las-dudas-panel.ps1` (código y 47 pruebas en `scripts/por-las-dudas/`).
+  Páginas `/por-las-dudas`, `/referente` y `/estoy-bien`, cuatro tablas `pld_*`, botón
+  "No lo encuentro" con el "¿Estás bien?", condiciones, emergencia, apagado en movimiento
+  con batería alta, lugares seguros, pausa y registro. Probado con una base SQLite en
+  memoria y un navegador real; NO probado contra el servidor verdadero ni con teléfonos
+  reales. Falta la segunda parte (avisos automáticos del cron, pantalla en la app, tutor
+  que administra a un menor).
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están

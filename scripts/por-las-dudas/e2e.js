@@ -1,0 +1,59 @@
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const B = 'http://localhost:8799';
+(async () => {
+  const nav = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+  const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'es-AR' });
+  const pag = await ctx.newPage();
+  const errores = [];
+  pag.on('pageerror', (e) => errores.push('pageerror: ' + e.message));
+  pag.on('console', (m) => { if (m.type() === 'error') errores.push('console: ' + m.text()); });
+  pag.on('dialog', (d) => d.accept());
+  // --- Dueno
+  await pag.goto(B + '/por-las-dudas');
+  await pag.waitForFunction(() => document.getElementById('hoy').textContent.includes('señales'));
+  console.log('hoy:', (await pag.textContent('#hoy')).slice(0, 160));
+  await pag.fill('#rNombre', 'Mamá');
+  await pag.fill('#rCorreo', 'mama@correo.com');
+  await pag.click('#rAgregar');
+  await pag.waitForFunction(() => document.getElementById('referentes').textContent.includes('Mamá'));
+  console.log('referentes:', (await pag.textContent('#referentes')).slice(0, 120).replace(/\s+/g, ' '));
+  console.log('aviso:', await pag.textContent('#aviso'));
+  await pag.fill('#cNombre', 'Lucas');
+  await pag.click('#cCasa');
+  await pag.waitForFunction(() => document.getElementById('casa').textContent.includes('Casa marcada'));
+  await pag.click('#cGuardar');
+  await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('guardadas'));
+  await pag.screenshot({ path: 'e2e_duenio.png', fullPage: true });
+  // --- Referente
+  const correos = await (await fetch(B + '/__correos')).json();
+  const link = /href="([^"]*\/referente\?t=[^"]+)"/.exec(correos.find((c) => c.to === 'mama@correo.com').html)[1];
+  const ref = await ctx.newPage();
+  ref.on('pageerror', (e) => errores.push('pageerror ref: ' + e.message));
+  await ref.goto(link.replace(/^https?:\/\/[^/]+/, B));
+  await ref.waitForSelector('button');
+  console.log('referente (antes de aceptar):', (await ref.textContent('#cuerpo')).slice(0, 100));
+  await ref.click('text=Aceptar ser referente');
+  await ref.waitForSelector('button.grande');
+  await ref.click('button.grande');
+  await ref.waitForSelector('.tarjeta');
+  console.log('resultado:', (await ref.textContent('.tarjeta')).replace(/\s+/g, ' ').slice(0, 220));
+  await ref.screenshot({ path: 'e2e_referente.png', fullPage: true });
+  // --- Estoy bien
+  const mails = await (await fetch(B + '/__correos')).json();
+  const chk = /href="([^"]*\/estoy-bien\?t=[^"]+)"/.exec(mails.filter((c) => c.to === 'lucas@correo.com').pop().html)[1];
+  const eb = await ctx.newPage();
+  await eb.goto(chk.replace(/^https?:\/\/[^/]+/, B));
+  await eb.click('#b');
+  await eb.waitForFunction(() => document.getElementById('aviso').textContent.includes('Gracias'));
+  console.log('estoy bien:', await eb.textContent('#aviso'));
+  await ref.click('button.grande');
+  await ref.waitForFunction(() => document.querySelector('.tarjeta') && document.querySelector('.tarjeta').textContent.includes('está bien'));
+  console.log('referente tras Estoy bien:', (await ref.textContent('.tarjeta')).replace(/\s+/g, ' ').slice(0, 120));
+  // --- sin sesion en la pagina del dueno
+  await fetch(B + '/__sesion', { method: 'POST', body: 'null' });
+  await pag.reload();
+  await pag.waitForFunction(() => document.getElementById('aviso').textContent.length > 0);
+  console.log('sin sesion:', await pag.textContent('#aviso'));
+  console.log('ERRORES DE PAGINA:', errores.length ? errores : 'ninguno');
+  await nav.close();
+})().catch((e) => { console.log('FALLO E2E:', e.message); process.exit(1); });
