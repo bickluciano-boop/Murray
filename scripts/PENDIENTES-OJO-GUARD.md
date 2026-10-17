@@ -960,6 +960,8 @@ Actualizado: 16/10/2026.
   enlace de nuevo" también para quien ya aceptó: pide confirmar, el enlace anterior deja de servir; y
   "1 minuto" en singular). Idea más adelante: que el referente pueda instalar su enlace como ícono en el celular
   y que desde la app el dueño le pueda mandar el enlace con un toque.
+  **Aplicado y publicado por Luciano el 17/10/2026** (versión 16aff6c9). Sigue: la prueba de la última señal con
+  silencio (sin usar todavía "Mandar enlace de nuevo", porque deja sin efecto el enlace que Mariana ya guardó).
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
