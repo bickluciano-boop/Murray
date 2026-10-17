@@ -902,6 +902,9 @@ Actualizado: 16/10/2026.
   memoria y un navegador real; NO probado contra el servidor verdadero ni con teléfonos
   reales. Falta la segunda parte (avisos automáticos del cron, pantalla en la app, tutor
   que administra a un menor).
+  **Instalada y publicada por Luciano el 17/10/2026 (versión 6bb4d53a):** las cuatro
+  tablas `pld_*` creadas en la base y las páginas en el servidor; falta que la pruebe
+  (`https://ojo-guard-ms-api.bickluciano.workers.dev/por-las-dudas`).
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
