@@ -482,6 +482,8 @@ function pldPaginaDuenio() {
 <p>Elegí a quién recurrir si algún día no podés comunicarte y algo parece raro. En el día a día nadie ve nada: solo se ve tu <b>última señal</b> si se cumplen las condiciones que vos permitís acá.</p>
 <p class="suave">Esta función está en validación: todavía no la probamos de punta a punta en un teléfono real.</p>
 <div id="aviso"></div>
+<div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes tenés que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entrá, y después volvé a esta página.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entré, probar de nuevo</button></p></div>
+<div id="contenido" style="opacity:.4;pointer-events:none">
 <div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
@@ -496,11 +498,12 @@ function pldPaginaDuenio() {
 <p><button id="cGuardar">Guardar condiciones</button> <button class="sec" id="cCasa">Mi casa es donde está mi teléfono ahora</button></p><div id="casa" class="suave"></div></div>
 <div class="tarjeta"><h2>Esta noche, afuera</h2><small class="suave">Si dormís en otro lado, pausá los avisos por unas horas.</small><p><button class="sec" data-h="8">Pausar 8 horas</button> <button class="sec" data-h="0">Quitar pausa</button></p><div id="pausa" class="suave"></div></div>
 <div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando…</div></div>
+</div>
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
 function aviso(t){$("aviso").textContent=t||""}
-function api(cuerpo){return fetch("/api/remote/por-las-dudas",{method:cuerpo?"POST":"GET",headers:{"content-type":"application/json"},body:cuerpo?JSON.stringify(cuerpo):undefined,credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(r.status===401){throw new Error("Entrá primero al panel de Ojo Guard MS con tu cuenta y volvé a abrir esta página.")}if(!r.ok){throw new Error(({invalid_referente:"Revisá el nombre y el correo.",referente_es_vos:"El referente no puede ser vos.",demasiados_referentes:"Ya tenés 5 referentes.",referente_repetido:"Ese correo ya es referente.",sin_ubicacion:"Todavía no hay una ubicación de tu teléfono."})[d.error]||"No se pudo. Probá de nuevo.")}return d})})}
+function api(cuerpo){return fetch("/api/remote/por-las-dudas",{method:cuerpo?"POST":"GET",headers:{"content-type":"application/json"},body:cuerpo?JSON.stringify(cuerpo):undefined,credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(r.status===401){var er=new Error("Entrá primero al panel de Ojo Guard MS con tu cuenta y volvé a abrir esta página.");er.sinSesion=true;throw er}if(!r.ok){throw new Error(({invalid_referente:"Revisá el nombre y el correo.",referente_es_vos:"El referente no puede ser vos.",demasiados_referentes:"Ya tenés 5 referentes.",referente_repetido:"Ese correo ya es referente.",sin_ubicacion:"Todavía no hay una ubicación de tu teléfono."})[d.error]||"No se pudo. Probá de nuevo.")}return d})})}
 function fecha(s){if(!s)return"";try{return new Date(s).toLocaleString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return s}}
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 function texto(n,t){n.appendChild(document.createTextNode(t))}
@@ -531,7 +534,7 @@ $("rAgregar").onclick=function(){accion({accion:"agregar",name:$("rNombre").valu
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value,enabled:$("cActivo").checked}},"Condiciones guardadas.")};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por 8 horas.")}});
-api().then(pintar).catch(function(e){aviso(e.message)});
+api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d)}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});
 })();
 </script>`);
 }
