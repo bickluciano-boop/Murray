@@ -267,6 +267,18 @@ Actualizado: 16/10/2026.
     mapa), botón "norte" para volver a mirar al norte, y ajustar `centrar`
     para que cuente el giro (el desplazamiento por la tarjeta hoy supone norte
     arriba). No eligió "Tarjeta que se achica" (queda como idea).
+    **Prueba de la build de Android con todo (foto de Luciano, 17/10/2026):**
+    anda el nombre en un renglón ("Android Luciano · En línea · 39%"), la barra
+    más baja y las pestañas Personas · 1 | Dispositivos · 2. Problema: "no
+    funciona el circuito (círculo) para centrar en el mapa": al tocar a una
+    persona o equipo de la lista esperaba que el mapa se acerque y lo deje a la
+    vista; la foto muestra el mundo entero y "LB iPhone" en el océano Índico
+    (≈ 3°N, 74°E), con Mi teléfono y Notebook LB en Buenos Aires. Dos cosas: (1)
+    el encuadre inicial incluye al iPhone y por eso se aleja al mundo (ubicación
+    rara del iPhone: a revisar la fila de "LB iPhone" en la lista, dirección y
+    distancia); (2) en el mapa vectorial `panTo` + `setZoom` seguidos se pisan:
+    `aplicar-mapa-centrar-panel.ps1` mueve la cámara de una vez
+    (`moveCamera({ center, zoom })`, con respaldo para mapas sin esa función).
     **Rotar, Map ID creado (16/10/2026):** proyecto de Google Cloud `ojo-guard`
     (número 798400186504), Map ID `1b7239dd38bbcc4a7271dd0d` (nombre OJO GUARD,
     vector con rotación; la consola ya muestra vista previa Claro/Oscuro por
