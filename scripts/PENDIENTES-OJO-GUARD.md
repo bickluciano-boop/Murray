@@ -946,6 +946,9 @@ Actualizado: 16/10/2026.
   referente, la página muestra el mail completo y pide confirmar letra por letra; trae también el texto de
   dónde está "No lo encuentro" si todavía no estaba). Idea para más adelante: que el mail de invitación avise
   a quien lo recibe por error cómo avisar que no es para él.
+  **Aplicada y publicada por Luciano el 17/10/2026** (versión 513cfddf, los dos cambios). Falta: quitar al referente
+  con el mail mal escrito, elegir a Mariana con `marianaflombaum@gmail.com`, que ella acepte desde su teléfono y probar
+  la última señal.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
