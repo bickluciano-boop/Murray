@@ -32,15 +32,15 @@ $f = Leer $indice
 if ((Contar $f.texto 'id="sinSesion"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function pldApiDuenio') -ne 1) { Mal "Falta aplicar antes aplicar-por-las-dudas-panel.ps1."; return }
 $cambios = @(
-    @('sin sesion: el error se marca', 'if(r.status===401){throw new Error("Entr\u00e1 primero al panel de Ojo Guard MS con tu cuenta y volv\u00e9 a abrir esta p\u00e1gina.")}', 'if(r.status===401){var er=new Error("Entr\u00e1 primero al panel de Ojo Guard MS con tu cuenta y volv\u00e9 a abrir esta p\u00e1gina.");er.sinSesion=true;throw er}')
-    ,@('tarjeta Entrar al panel y contenido bloqueado', '<div class="tarjeta"><h2>C\u00f3mo est\u00e1s hoy</h2>', '<div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes ten\u00e9s que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entr\u00e1, y despu\u00e9s volv\u00e9 a esta p\u00e1gina.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entr\u00e9, probar de nuevo</button></p></div>
+    @('sin sesion: el error se marca', 'if(r.status===401){throw new Error("Entr\u00e1 primero al panel de Ojo Guard MS con tu cuenta y volv\u00e9 a abrir esta p\u00e1gina.")}', 'if(r.status===401){var er=new Error("Entr\u00e1 primero al panel de Ojo Guard MS con tu cuenta y volv\u00e9 a abrir esta p\u00e1gina.");er.sinSesion=true;throw er}'),
+    @('tarjeta Entrar al panel y contenido bloqueado', '<div class="tarjeta"><h2>C\u00f3mo est\u00e1s hoy</h2>', '<div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes ten\u00e9s que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entr\u00e1, y despu\u00e9s volv\u00e9 a esta p\u00e1gina.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entr\u00e9, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
-<div class="tarjeta"><h2>C\u00f3mo est\u00e1s hoy</h2>')
-    ,@('el contenido cierra antes del script', '<div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando\u2026</div></div>
+<div class="tarjeta"><h2>C\u00f3mo est\u00e1s hoy</h2>'),
+    @('el contenido cierra antes del script', '<div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando\u2026</div></div>
 <script>', '<div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando\u2026</div></div>
 </div>
-<script>')
-    ,@('al cargar se habilita; sin sesion se muestra el boton', 'api().then(pintar).catch(function(e){aviso(e.message)});', 'api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d)}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});')
+<script>'),
+    @('al cargar se habilita; sin sesion se muestra el boton', 'api().then(pintar).catch(function(e){aviso(e.message)});', 'api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d)}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});')
 )
 $ok = $true
 foreach ($c in $cambios) {
