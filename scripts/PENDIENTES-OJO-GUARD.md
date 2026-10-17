@@ -909,7 +909,8 @@ Actualizado: 16/10/2026.
   navegador no tenía la sesión del panel (cookie `ojo_ms`). Mejora preparada:
   `aplicar-por-las-dudas-pagina-panel.ps1` (contenido bloqueado hasta que carguen los
   datos y tarjeta "Falta entrar al panel" con botón "Entrar al panel"). Idea: un acceso a
-  esta página desde el panel y desde la app (hoy hay que escribir la dirección).
+  esta página desde el panel y desde la app (hoy hay que escribir la dirección). Aplicada y publicada por
+  Luciano el 17/10/2026 (versión 312f5d90); falta que cuente cómo se ve.
 - [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
   prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
   código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"
