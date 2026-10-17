@@ -905,6 +905,11 @@ Actualizado: 16/10/2026.
   **Instalada y publicada por Luciano el 17/10/2026 (versión 6bb4d53a):** las cuatro
   tablas `pld_*` creadas en la base y las páginas en el servidor; falta que la pruebe
   (`https://ojo-guard-ms-api.bickluciano.workers.dev/por-las-dudas`).
+  **17/10/2026, primera prueba:** la página abre y muestra "Entrá primero al panel": ese
+  navegador no tenía la sesión del panel (cookie `ojo_ms`). Mejora preparada:
+  `aplicar-por-las-dudas-pagina-panel.ps1` (contenido bloqueado hasta que carguen los
+  datos y tarjeta "Falta entrar al panel" con botón "Entrar al panel"). Idea: un acceso a
+  esta página desde el panel y desde la app (hoy hay que escribir la dirección).
 - [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
   prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
   código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"
