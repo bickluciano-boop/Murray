@@ -874,6 +874,21 @@ Actualizado: 16/10/2026.
   apagado: iPhone "Buscar" con la red de Buscar y Protección de dispositivo
   robado; Android "Encontrar mi dispositivo / Find Hub" y el bloqueo por
   detección de robo (según modelo y versión).
+  **Nombre y botones (17/10/2026), en borrador:** la función se llamaría "por las
+  dudas"; los que reciben el aviso, "referentes"; el resultado, "última señal".
+  Luciano aclaró que quien se perdió nunca va a apretar nada: el que actúa es el
+  referente preocupado, que NO está en el círculo familiar. Botón del referente:
+  "No lo encuentro" (en una página web simple, sin app, a la que llega por el
+  mail con que se lo eligió y que acepta; con código o enlace personal). Al
+  apretarlo: (1) se le manda a la persona un "¿Estás bien?" a su teléfono; (2) si
+  se cumplen las condiciones que la persona dejó permitidas (por ejemplo sin
+  señal hace X, lejos de casa, batería baja o apagado en movimiento, horario
+  21 a 06) se muestra la "Última señal" con el mapa, la hora y la batería; (3) si
+  no se cumplen, se le dice "su teléfono se está reportando con normalidad; le
+  mandamos un ¿estás bien?" y se vuelve a mirar a los 30 minutos. Todo consulta
+  queda registrada y la persona la ve después. Sin botón nuevo de ayuda: el SOS
+  existente también avisa a los referentes. Botón en Ajustes: "Elegir
+  referentes" dentro de la tarjeta "Por las dudas"; pausa: "Esta noche, afuera".
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
