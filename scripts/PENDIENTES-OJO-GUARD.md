@@ -954,7 +954,12 @@ Actualizado: 16/10/2026.
   condiciones de prueba (noche 0 a 23, 2 de 4), la tarjeta "Cómo estás hoy" dio solo 1 señal (de noche): la batería
   del teléfono es 77 % (el máximo configurable es 50). Para llegar a 2: silencio de 10 min (ponerlo en las dos
   casillas de silencio y modo avión 12 min). Falta: que Mariana apriete "No lo encuentro" y se vea la última señal;
-  después "Estoy bien". Detalle para pulir en el próximo parche: la señal dice "Sin señal hace 1 minutos".
+  después "Estoy bien". Luciano preguntó: "el enlace no se le va? si lo pierde?". Hoy el enlace no vence y
+  queda en el mail que recibió el referente (dice "Guardá este mail"); si lo pierde, antes había que
+  "Quitar" y elegirlo de nuevo. Parche preparado: `aplicar-por-las-dudas-reenviar-panel.ps1` (botón "Mandar
+  enlace de nuevo" también para quien ya aceptó: pide confirmar, el enlace anterior deja de servir; y
+  "1 minuto" en singular). Idea más adelante: que el referente pueda instalar su enlace como ícono en el celular
+  y que desde la app el dueño le pueda mandar el enlace con un toque.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que

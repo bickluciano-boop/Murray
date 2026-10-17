@@ -131,7 +131,8 @@ type PldEstado = {
 function pldTiempo(minutos: number) {
   if (minutos >= 120) return `${Math.round(minutos / 60)} horas`;
   if (minutos >= 60) return "1 hora";
-  return `${Math.max(1, Math.round(minutos))} minutos`;
+  const m = Math.max(1, Math.round(minutos));
+  return m === 1 ? "1 minuto" : `${m} minutos`;
 }
 
 /** Mira cómo está el teléfono de la persona y dice si se cumplen las condiciones que ella permitió. No cambia nada. */
@@ -526,7 +527,7 @@ function pintar(d){
     var b=document.createElement("b");b.textContent=x.name;iz.appendChild(b);iz.appendChild(document.createElement("br"));
     var s=document.createElement("small");s.textContent=x.email+" · "+(x.status==="aceptado"?"aceptó":"esperando que acepte");s.className=x.status==="aceptado"?"ok":"suave";iz.appendChild(s);f.appendChild(iz);
     var dr=document.createElement("div");
-    if(x.status!=="aceptado"){var re=document.createElement("button");re.className="sec chico";re.textContent="Reenviar";re.onclick=function(){accion({accion:"reenviar",id:x.id},"Enlace reenviado.")};dr.appendChild(re);dr.appendChild(document.createTextNode(" "))}
+    var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){if(ya&&!confirm("Se le manda un enlace nuevo a "+x.name+" y el que tiene ahora deja de servir. ¿Seguro?"))return;accion({accion:"reenviar",id:x.id},"Enlace reenviado.")};dr.appendChild(re);dr.appendChild(document.createTextNode(" "));
     var qu=document.createElement("button");qu.className="sec chico";qu.textContent="Quitar";qu.onclick=function(){if(confirm("¿Quitar a "+x.name+"?"))accion({accion:"quitar",id:x.id},"Referente quitado.")};dr.appendChild(qu);f.appendChild(dr);r.appendChild(f)});
   var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;$("cActivo").checked=!!c.enabled;
   $("casa").textContent=c.homeLat===null?"Todavía no marcaste dónde está tu casa: sin eso, la señal “lejos de casa” no cuenta.":"Casa marcada ("+Number(c.homeLat).toFixed(4)+", "+Number(c.homeLng).toFixed(4)+").";
