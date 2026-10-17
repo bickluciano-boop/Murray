@@ -278,7 +278,8 @@ Actualizado: 16/10/2026.
     rara del iPhone: a revisar la fila de "LB iPhone" en la lista, dirección y
     distancia); (2) en el mapa vectorial `panTo` + `setZoom` seguidos se pisan:
     `aplicar-mapa-centrar-panel.ps1` mueve la cámara de una vez
-    (`moveCamera({ center, zoom })`, con respaldo para mapas sin esa función).
+    (`moveCamera({ center, zoom })`, con respaldo para mapas sin esa función). Aplicado y publicado por
+    Luciano el 17/10/2026 (versión 65066e46).
     **Luciano (17/10/2026): "toque el icono que toque de dispositivos, no va
     ahí, se queda en el lugar".** Causa: tocar un PIN en el mapa solo elegía al
     equipo (`elegir(equipo.id, false)`, a propósito en el panel de la compu) y el
