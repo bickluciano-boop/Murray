@@ -889,6 +889,11 @@ Actualizado: 16/10/2026.
   queda registrada y la persona la ve después. Sin botón nuevo de ayuda: el SOS
   existente también avisa a los referentes. Botón en Ajustes: "Elegir
   referentes" dentro de la tarjeta "Por las dudas"; pausa: "Esta noche, afuera".
+  **Decidido el 17/10/2026:** el primer paso del botón "No lo encuentro" es el
+  "¿Estás bien?" a la persona; si el referente marca "es una emergencia" y pasaron
+  unas 3 horas sin señal, se muestra la última señal aunque no se cumplan todas
+  las condiciones. Especificación completa y plan de primera versión (solo servidor
+  y panel, sin build) en `scripts/POR-LAS-DUDAS-ESPECIFICACION.md`.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
