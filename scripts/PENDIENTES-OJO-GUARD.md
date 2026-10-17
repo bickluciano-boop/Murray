@@ -949,6 +949,12 @@ Actualizado: 16/10/2026.
   **Aplicada y publicada por Luciano el 17/10/2026** (versión 513cfddf, los dos cambios). Falta: quitar al referente
   con el mail mal escrito, elegir a Mariana con `marianaflombaum@gmail.com`, que ella acepte desde su teléfono y probar
   la última señal.
+  **17/10/2026 ~17:30:** Luciano quitó al referente con el mail mal escrito (17:14) y cargó a Mariana con su mail
+  correcto (como "mama", 17:15): **ella aceptó desde su teléfono** (la página la muestra "aceptó"). Con las
+  condiciones de prueba (noche 0 a 23, 2 de 4), la tarjeta "Cómo estás hoy" dio solo 1 señal (de noche): la batería
+  del teléfono es 77 % (el máximo configurable es 50). Para llegar a 2: silencio de 10 min (ponerlo en las dos
+  casillas de silencio y modo avión 12 min). Falta: que Mariana apriete "No lo encuentro" y se vea la última señal;
+  después "Estoy bien". Detalle para pulir en el próximo parche: la señal dice "Sin señal hace 1 minutos".
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
