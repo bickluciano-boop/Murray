@@ -921,6 +921,12 @@ Actualizado: 16/10/2026.
   aceptar, apretar "No lo encuentro" y seguir con "¿Estás bien?" → "Estoy bien".
   Para saber por qué no llegó el mail: mirar Spam y el panel de Resend (resend.com → Emails);
   si el dominio de `MAIL_FROM` no está verificado, Resend solo deja mandar a la cuenta dueña.
+  **Enlace aplicado y publicado por Luciano el 17/10/2026** (versión 01b74d7c). Luciano: "tampoco
+  veo que en ningún lado diga No lo encuentro". Es a propósito (el botón lo ve solo el referente,
+  en su enlace, después de aceptar), pero la página no lo explicaba: parche
+  `aplicar-por-las-dudas-donde-panel.ps1` agrega ese texto bajo "Tus referentes". Idea para
+  después: un botón "Ver cómo lo ve mi referente" en la página de la persona (hoy, una vez que el
+  referente aceptó, el enlace ya no se puede volver a mostrar porque solo se guarda su hash).
 - [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
   prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
   código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"

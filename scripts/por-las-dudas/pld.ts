@@ -491,7 +491,8 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
-<p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small></div>
+<p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small>
+<p id="dondeBoton" class="suave"><b>¿Dónde está el botón “No lo encuentro”?</b> Lo ve solo tu referente, en su enlace personal, después de aceptar. Vos no tenés que apretar nada. Para probarlo, abrí su enlace en otro navegador (o en una ventana privada) y aceptá.</p></div>
 <div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez.</small>
 <label>Cómo te llaman tus referentes</label><input id="cNombre" maxlength="60">
 <div class="dos"><div><label>De noche desde (hora)</label><input id="cDesde" type="number" min="0" max="23"></div><div><label>hasta (hora)</label><input id="cHasta" type="number" min="0" max="23"></div></div>
