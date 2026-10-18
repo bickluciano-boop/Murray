@@ -95,7 +95,6 @@ Regla de partida: **3 de las 4** señales. Con 2 señales: solo el "¿Estás bie
   hasta 4 veces → si el teléfono vuelve a dar señal, "volvió a dar señal" → si la persona responde "Estoy bien", se les cuenta y se corta. El apagado
   en movimiento con batería alta avisa sin esperar. Los enlaces se pueden volver a armar (firma), "Reenviar" manda el mismo enlace.
 - **Falta:** pantalla en la app (que tocar el aviso del teléfono abra "Estoy bien"), tutor que administra a un menor, reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
-  reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
 
 ## Plan
 
