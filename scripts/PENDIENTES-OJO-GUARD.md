@@ -977,6 +977,14 @@ Actualizado: 16/10/2026.
   cumplieron 2 de 4") al referente: es la segunda parte (cron), todavía no existe; para que cada mail al referente lleve su
   enlace hay que cambiar a enlaces que el servidor pueda volver a armar (hoy solo se guarda una huella del enlace). Propuesta
   hecha a Luciano, esperando su sí.
+  **18/10/2026, Luciano dijo SÍ al aviso automático** (y pidió arreglar Twilio: "por ahí no hay mucho que pagar"). Armado:
+  `aplicar-por-las-dudas-cron-panel.ps1` (segunda parte de Por las dudas: cron de 15 min, "¿Estás bien?" → a los ~15 min mail a los
+  referentes con su enlace → cada ~30 min hasta 4 → "volvió a dar señal" / "Estoy bien" corta; apagado en movimiento avisa enseguida;
+  enlaces firmados que el servidor puede rearmar, "Reenviar" manda el mismo enlace, enlace escrito en los mails, coordenadas si no
+  hay calle, "1 hora", aviso del teléfono sin "abrí tu correo"). 103 pruebas y navegador ok; instalador por bloque con huella SHA-256.
+  Sin instalar todavía. Al probarlo con las condiciones de prueba (10 min, 2 de 4) puede avisar seguido: al terminar volver a
+  noche 21 a 6, silencio 90/360, 3 de 4. **Twilio:** pasos dados a Luciano (Upgrade en console.twilio.com, saldo inicial, permisos
+  geográficos de Argentina; SMS a Argentina ≈ USD 0,10 por mensaje según la página de precios de Twilio); falta que lo haga y probar un SMS.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que

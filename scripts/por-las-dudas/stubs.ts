@@ -16,7 +16,7 @@ for (const parte of readFileSync(new URL("./tablas.sql", import.meta.url), "utf8
 sqlite.exec("CREATE TABLE devices (id TEXT PRIMARY KEY, name TEXT, owner_email TEXT, platform TEXT, battery REAL, last_seen_at TEXT, last_location_json TEXT, last_location_at TEXT, push_token TEXT, approval_status TEXT, device_role TEXT)");
 sqlite.exec("CREATE TABLE family_places (id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, name TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, radius INTEGER NOT NULL, created_at TEXT NOT NULL)");
 sqlite.exec("CREATE TABLE location_history (id TEXT PRIMARY KEY, device_id TEXT, latitude REAL, longitude REAL, accuracy REAL, altitude REAL, heading REAL, address TEXT, captured_at TEXT, created_at TEXT)");
-const env: any = { DB, SESSION_SECRET: "x", RESEND_API_KEY: "re_test", MAIL_FROM: "Ojo Guard <a@b.c>", SUPPORT_EMAIL: "s@b.c" };
+const env: any = { DB, SESSION_SECRET: "x", PASSKEY_ORIGIN: "https://panel.test", RESEND_API_KEY: "re_test", MAIL_FROM: "Ojo Guard <a@b.c>", SUPPORT_EMAIL: "s@b.c" };
 const correos: Array<{ to: string; subject: string; html: string }> = [];
 const avisos: Array<{ token: string | null; title: string; body: string }> = [];
 const pings: any[] = [];

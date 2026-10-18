@@ -90,7 +90,11 @@ Regla de partida: **3 de las 4** señales. Con 2 señales: solo el "¿Estás bie
 - **Instalada y publicada el 17/10/2026 (versión 6bb4d53a)**; falta que Luciano la pruebe con un referente real.
 - **Primera prueba (17/10/2026):** la invitación por mail al referente no llegó. Se agregó el enlace personal
   visible para la persona (copiar / WhatsApp) y el aviso claro cuando el mail falla.
-- **Falta:** avisos automáticos del cron (segunda parte), pantalla en la app, que el tutor administre a un menor,
+- **Segunda parte armada (18/10/2026), pendiente de instalar y probar:** `scripts/aplicar-por-las-dudas-cron-panel.ps1`. Con el cron de cada 15 min:
+  condiciones cumplidas → "¿Estás bien?" a la persona → a los ~15 min sin respuesta, mail a los referentes que aceptaron (con su enlace) → cada ~30 min,
+  hasta 4 veces → si el teléfono vuelve a dar señal, "volvió a dar señal" → si la persona responde "Estoy bien", se les cuenta y se corta. El apagado
+  en movimiento con batería alta avisa sin esperar. Los enlaces se pueden volver a armar (firma), "Reenviar" manda el mismo enlace.
+- **Falta:** pantalla en la app (que tocar el aviso del teléfono abra "Estoy bien"), tutor que administra a un menor, reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
   reporte adaptativo, detección de arrebato, SOS que avise a los referentes, SMS.
 
 ## Plan

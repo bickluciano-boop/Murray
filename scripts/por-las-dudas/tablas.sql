@@ -5,3 +5,4 @@ CREATE TABLE IF NOT EXISTS pld_checkins (id TEXT PRIMARY KEY, owner_email TEXT N
 CREATE INDEX IF NOT EXISTS pld_referentes_owner ON pld_referentes (owner_email);
 CREATE INDEX IF NOT EXISTS pld_log_owner ON pld_log (owner_email, created_at);
 CREATE INDEX IF NOT EXISTS pld_checkins_ref ON pld_checkins (referente_id, created_at);
+CREATE TABLE IF NOT EXISTS pld_episodios (owner_email TEXT PRIMARY KEY, started_at TEXT NOT NULL, checkin_at TEXT, seen_at TEXT, alerts INTEGER NOT NULL DEFAULT 0, last_alert_at TEXT, state TEXT NOT NULL);

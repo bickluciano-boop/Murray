@@ -2,11 +2,15 @@
 // "Por las dudas" (NÚCLEO · EN VALIDACIÓN): referentes de emergencia.
 // La persona elige de antemano a quién avisar; en el día a día nadie ve nada. Si pasan cosas raras (las condiciones que ella
 // misma permitió), un referente preocupado puede ver la última señal del teléfono con el botón "No lo encuentro".
-// Tablas: pld_config, pld_referentes, pld_log, pld_checkins (se crean con wrangler d1 execute, ver aplicar-por-las-dudas-panel.ps1).
+// Tablas: pld_config, pld_referentes, pld_log, pld_checkins, pld_episodios (se crean con wrangler d1 execute, ver los aplicar-por-las-dudas-*.ps1).
 // Especificación: scripts/POR-LAS-DUDAS-ESPECIFICACION.md. Primera parte: referentes, "No lo encuentro" y última señal.
-// Todavía no hay avisos automáticos del cron (segunda parte).
+// Segunda parte (pldCron, enganchado en scheduled): si se cumplen las condiciones, se le pregunta a la persona si está bien y, si a los
+// ~15 minutos no respondió, se les avisa a sus referentes (con su enlace); se repite cada ~30 minutos, hasta 4 veces; avisa si el teléfono vuelve.
 // ---------------------------------------------------------------------------
 const PLD_MAX_REFERENTES = 5;
+const PLD_ESPERA_MIN = 14;        // minutos entre el "¿Estás bien?" y el aviso a los referentes (el cron corre cada 15)
+const PLD_ENTRE_AVISOS_MIN = 29;  // minutos entre un aviso a los referentes y el siguiente
+const PLD_MAX_AVISOS = 4;         // avisos a los referentes por episodio
 
 type PldConfig = {
   enabled: boolean;
@@ -54,6 +58,40 @@ function pldSecreto() {
   const bytes = new Uint8Array(18);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Los enlaces personales (del referente y del "Estoy bien") llevan una firma que el servidor puede volver a armar cuando lo necesita
+ * (HMAC con la clave del servidor sobre el tipo, el id y la huella guardada). Así cualquier mail al referente puede llevar su enlace y
+ * reenviarlo no deja sin efecto el anterior. Los enlaces viejos (el secreto al azar de la primera versión) siguen sirviendo.
+ */
+async function pldFirma(env: Env, tipo: string, id: string, huella: string) {
+  const enc = new TextEncoder();
+  const clave = await crypto.subtle.importKey("raw", enc.encode(`pld:${String(env.SESSION_SECRET ?? "")}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const firma = new Uint8Array(await crypto.subtle.sign("HMAC", clave, enc.encode(`${tipo}:${id}:${huella}`)));
+  return Array.from(firma.slice(0, 18), (x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+function pldIgual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+function pldOrigen(env: Env) {
+  const e = env as unknown as Record<string, string | undefined>;
+  return String(e.PASSKEY_ORIGIN || e.PANEL_URL || "https://ojo-guard-ms-api.bickluciano.workers.dev").replace(/\/+$/, "");
+}
+
+/** "18/10, 10:45" en hora de Buenos Aires. */
+function pldFechaHora(iso: string | null) {
+  if (!iso) return "hace un rato";
+  try {
+    return new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
 }
 
 /** Cómo se llama la persona para sus referentes: el nombre que ella puso o, si no, lo que va antes de la @ de su correo. */
@@ -248,20 +286,32 @@ async function pldReferentePorToken(env: Env, token: unknown): Promise<PldRefere
   const [id, secreto] = String(token ?? "").split(".");
   if (!id || !secreto || id.length > 40 || secreto.length > 80) return null;
   const f = await env.DB.prepare("SELECT id,owner_email AS ownerEmail,name,email,token_hash AS tokenHash,status,muted_until AS mutedUntil FROM pld_referentes WHERE id=?").bind(id).first<PldReferente>();
-  if (!f || f.status === "baja" || f.tokenHash !== (await hash(secreto))) return null;
-  return f;
+  if (!f || f.status === "baja") return null;
+  const valido = pldIgual(secreto, await pldFirma(env, "ref", f.id, f.tokenHash)) || pldIgual(f.tokenHash, await hash(secreto));
+  return valido ? f : null;
 }
 
-async function pldInvitar(env: Env, origen: string, duenio: string, cfg: PldConfig, referente: { id: string; name: string; email: string }, secreto: string) {
+/** El enlace personal de un referente, armado con lo que hay guardado (no hace falta guardar el secreto). */
+async function pldEnlaceReferente(env: Env, origen: string, referente: { id: string; tokenHash: string }) {
+  return `${origen}/referente?t=${referente.id}.${await pldFirma(env, "ref", referente.id, referente.tokenHash)}`;
+}
+
+/** El enlace escrito (por si el botón del mail no se ve o se quiere copiar). */
+function pldEnlaceEscrito(enlace: string) {
+  return `<p style="color:#8f8d85;font-size:12px;line-height:1.5;word-break:break-all;margin:0 0 14px">Si el botón no funciona, copiá y pegá este enlace en el navegador:<br><span style="color:#d2d2ce">${escapeHtml(enlace)}</span></p>`;
+}
+
+async function pldInvitar(env: Env, origen: string, duenio: string, cfg: PldConfig, referente: { id: string; name: string; email: string; tokenHash: string }) {
   const quien = pldNombreDe(duenio, cfg);
-  const enlace = `${origen}/referente?t=${referente.id}.${secreto}`;
+  const enlace = await pldEnlaceReferente(env, origen, referente);
   const enviado = await pldCorreo(
     env, referente.email, `${quien} te eligió como referente en Ojo Guard`,
     `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(referente.name)},</p>`
     + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> te eligió como <strong style="color:#fff">referente</strong>: una persona de confianza a la que recurrir <em>por las dudas</em>, si no logra comunicarse con ${escapeHtml(quien)} y algo parece raro.</p>`
-    + `<p style="color:#d2d2ce;line-height:1.55">No ves la ubicación de ${escapeHtml(quien)} en el día a día. Solo si pasan cosas raras (por ejemplo, el teléfono deja de dar señales de noche y lejos de casa), vas a poder ver su <strong style="color:#fff">última señal</strong>.</p>`
+    + `<p style="color:#d2d2ce;line-height:1.55">No ves la ubicación de ${escapeHtml(quien)} en el día a día. Solo si pasan cosas raras (por ejemplo, el teléfono deja de dar señales de noche y lejos de casa), vas a poder ver su <strong style="color:#fff">última señal</strong>. Si eso pasa, te avisamos por mail.</p>`
     + pldBoton(enlace, "Aceptar y guardar mi enlace")
-    + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Guardá este mail: el enlace es personal y es el que vas a usar si alguna vez necesitás el botón <strong>No lo encuentro</strong>.</p>`,
+    + pldEnlaceEscrito(enlace)
+    + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Guardá este mail: el enlace es personal y es el que vas a usar si alguna vez necesitás el botón <strong>No lo encuentro</strong>. Si te llegan dos mails iguales, es el mismo enlace.</p>`,
   );
   return { enviado, enlace };
 }
@@ -330,19 +380,17 @@ async function pldApiDuenio(request: Request, env: Env) {
     const vigentes = await env.DB.prepare("SELECT id,email FROM pld_referentes WHERE owner_email=? AND status<>'baja'").bind(email).all<{ id: string; email: string }>();
     if ((vigentes.results ?? []).length >= PLD_MAX_REFERENTES) return json({ error: "demasiados_referentes" }, 409);
     if ((vigentes.results ?? []).some((r) => normalizeEmail(r.email) === correo)) return json({ error: "referente_repetido" }, 409);
-    const id = `ref${pldSecreto().slice(0, 14)}`, secreto = pldSecreto();
+    const id = `ref${pldSecreto().slice(0, 14)}`, huella = await hash(pldSecreto());
     await env.DB.prepare("INSERT INTO pld_referentes (id,owner_email,name,email,token_hash,status,created_at) VALUES (?,?,?,?,?,?,?)")
-      .bind(id, email, nombre, correo, await hash(secreto), "pendiente", now()).run();
-    const inv = await pldInvitar(env, origen, email, cfg, { id, name: nombre, email: correo }, secreto);
+      .bind(id, email, nombre, correo, huella, "pendiente", now()).run();
+    const inv = await pldInvitar(env, origen, email, cfg, { id, name: nombre, email: correo, tokenHash: huella });
     extra = { invitacion: { nombre, enlace: inv.enlace, enviado: inv.enviado } };
     await pldRegistrar(env, email, id, "referente", `Se sumó a ${nombre} como referente.`);
   } else if (accion === "reenviar") {
     const id = String(cuerpo.id ?? "");
-    const r = await env.DB.prepare("SELECT id,name,email FROM pld_referentes WHERE id=? AND owner_email=? AND status<>'baja'").bind(id, email).first<{ id: string; name: string; email: string }>();
+    const r = await env.DB.prepare("SELECT id,name,email,token_hash AS tokenHash FROM pld_referentes WHERE id=? AND owner_email=? AND status<>'baja'").bind(id, email).first<{ id: string; name: string; email: string; tokenHash: string }>();
     if (!r) return json({ error: "not_found" }, 404);
-    const secreto = pldSecreto();
-    await env.DB.prepare("UPDATE pld_referentes SET token_hash=? WHERE id=?").bind(await hash(secreto), id).run();
-    const inv = await pldInvitar(env, origen, email, cfg, r, secreto);
+    const inv = await pldInvitar(env, origen, email, cfg, r);
     extra = { invitacion: { nombre: r.name, enlace: inv.enlace, enviado: inv.enviado } };
     await pldRegistrar(env, email, id, "referente", `Se reenvió el enlace a ${r.name}.`);
   } else if (accion === "quitar") {
@@ -392,6 +440,36 @@ async function pldApiReferenteAceptar(request: Request, env: Env) {
   return json({ ok: true, status: "aceptado" });
 }
 
+/**
+ * "¿Estás bien?" a la persona: mail con el botón "Estoy bien" (y el enlace escrito) y aviso en el teléfono. `r` es el referente que apretó
+ * "No lo encuentro"; sin `r` lo manda el sistema solo porque se cumplen las condiciones.
+ */
+async function pldPedirEstasBien(env: Env, origen: string, email: string, estado: PldEstado, r: { id: string; name: string } | null) {
+  const id = `chk${pldSecreto().slice(0, 14)}`, huella = await hash(pldSecreto());
+  await env.DB.prepare("INSERT INTO pld_checkins (id,owner_email,referente_id,token_hash,created_at) VALUES (?,?,?,?,?)").bind(id, email, r ? r.id : "auto", huella, now()).run();
+  const enlace = `${origen}/estoy-bien?t=${id}.${await pldFirma(env, "chk", id, huella)}`;
+  const cuanto = estado.minutosSinSenal === null ? "un rato" : pldTiempo(estado.minutosSinSenal);
+  const asunto = r ? `${r.name} quiere saber si estás bien` : "¿Estás bien? Hace rato que no tenemos señales de tu teléfono";
+  const texto = r
+    ? `<strong style="color:#fff">${escapeHtml(r.name)}</strong> no logra comunicarse con vos y apretó <em>No lo encuentro</em>. Si estás bien, avisale con un toque, o escribile o llamalo.`
+    : `Hace <strong style="color:#fff">${escapeHtml(cuanto)}</strong> que no recibimos señales de tu teléfono${estado.apagadoEnMovimiento ? ": dejó de reportarse mientras estaba en movimiento y con la batería alta." : ` y se cumplen ${estado.cumplen} de 4 de las condiciones que permitiste.`} Si estás bien, avisanos con un toque. ${estado.apagadoEnMovimiento ? "Como pasó yendo en vehículo, les avisamos enseguida a tus referentes." : "Si en unos 15 minutos no respondés, les avisamos a tus referentes."}`;
+  await pldCorreo(
+    env, email, asunto,
+    `<p style="font-size:20px;font-weight:700;margin:0 0 12px">¿Estás bien?</p><p style="color:#d2d2ce;line-height:1.55">${texto}</p>${pldBoton(enlace, "Estoy bien")}${pldEnlaceEscrito(enlace)}`,
+  );
+  if (estado.pushToken) {
+    const titulo = r ? `${r.name} quiere saber si estás bien` : "¿Estás bien?";
+    const cuerpo = r
+      ? "Avisale que estás bien: escribile o llamalo. También podés tocar “Estoy bien” en el mail que te mandamos."
+      : "Hace rato que no tenemos señales de tu teléfono. Tocá “Estoy bien” en el mail que te mandamos; si no, en unos 15 minutos les avisamos a tus referentes.";
+    await sendExpoNotice(estado.pushToken, titulo, cuerpo, {}).catch(() => false);
+  }
+  // En Android se pide además una ubicación nueva (en iPhone el aviso silencioso no despierta la app).
+  if (estado.deviceId && estado.pushToken && estado.plataforma !== "ios") {
+    await queueAutoLocateCommand(env, { id: estado.deviceId, ownerEmail: email, pushToken: estado.pushToken }).catch(() => false);
+  }
+}
+
 /** El botón "No lo encuentro". */
 async function pldApiReferenteBuscar(request: Request, env: Env) {
   const cuerpo = await request.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
@@ -407,22 +485,7 @@ async function pldApiReferenteBuscar(request: Request, env: Env) {
 
   // 1) "¿Estás bien?": se le avisa a la persona (mail con botón y aviso en el teléfono). Como mucho una vez cada 10 minutos por referente.
   const reciente = await env.DB.prepare("SELECT id FROM pld_checkins WHERE referente_id=? AND created_at>? LIMIT 1").bind(r.id, pldEnMinutos(-10)).first<{ id: string }>();
-  if (!reciente && cfg.enabled) {
-    const secreto = pldSecreto(), id = `chk${pldSecreto().slice(0, 14)}`;
-    await env.DB.prepare("INSERT INTO pld_checkins (id,owner_email,referente_id,token_hash,created_at) VALUES (?,?,?,?,?)").bind(id, email, r.id, await hash(secreto), now()).run();
-    const enlace = `${origen}/estoy-bien?t=${id}.${secreto}`;
-    await pldCorreo(
-      env, email, `${r.name} quiere saber si estás bien`,
-      `<p style="font-size:20px;font-weight:700;margin:0 0 12px">¿Estás bien?</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(r.name)}</strong> no logra comunicarse con vos y apretó <em>No lo encuentro</em>. Si estás bien, avisale con un toque.</p>${pldBoton(enlace, "Estoy bien")}`,
-    );
-    if (estado.pushToken) {
-      await sendExpoNotice(estado.pushToken, `${r.name} quiere saber si estás bien`, "Abrí tu correo y tocá \"Estoy bien\", o escribile.", {}).catch(() => false);
-    }
-    // En Android se pide además una ubicación nueva (en iPhone el aviso silencioso no despierta la app).
-    if (estado.deviceId && estado.pushToken && estado.plataforma !== "ios") {
-      await queueAutoLocateCommand(env, { id: estado.deviceId, ownerEmail: email, pushToken: estado.pushToken }).catch(() => false);
-    }
-  }
+  if (!reciente && cfg.enabled) await pldPedirEstasBien(env, origen, email, estado, { id: r.id, name: r.name });
 
   // 2) Si la persona ya dijo que está bien hace poco, no se muestra nada.
   const respondio = await env.DB.prepare("SELECT answered_at AS at FROM pld_checkins WHERE owner_email=? AND answered_at IS NOT NULL AND answered_at>? ORDER BY answered_at DESC LIMIT 1").bind(email, pldEnMinutos(-30)).first<{ at: string }>();
@@ -461,16 +524,151 @@ async function pldApiEstoyBien(request: Request, env: Env) {
   const [id, secreto] = String(cuerpo.t ?? "").split(".");
   if (!id || !secreto) return json({ error: "enlace_invalido" }, 404);
   const c = await env.DB.prepare("SELECT id,owner_email AS ownerEmail,referente_id AS referenteId,token_hash AS tokenHash,answered_at AS answeredAt FROM pld_checkins WHERE id=?").bind(id).first<{ id: string; ownerEmail: string; referenteId: string; tokenHash: string; answeredAt: string | null }>();
-  if (!c || c.tokenHash !== (await hash(secreto))) return json({ error: "enlace_invalido" }, 404);
+  if (!c || !(pldIgual(secreto, await pldFirma(env, "chk", c.id, c.tokenHash)) || pldIgual(c.tokenHash, await hash(secreto)))) return json({ error: "enlace_invalido" }, 404);
   if (!c.answeredAt) {
     await env.DB.prepare("UPDATE pld_checkins SET answered_at=? WHERE owner_email=? AND answered_at IS NULL").bind(now(), c.ownerEmail).run();
-    const r = await env.DB.prepare("SELECT name,email FROM pld_referentes WHERE id=?").bind(c.referenteId).first<{ name: string; email: string }>();
     const cfg = await pldLeerConfig(env, c.ownerEmail);
     const quien = pldNombreDe(c.ownerEmail, cfg);
-    await pldRegistrar(env, c.ownerEmail, c.referenteId, "estoy-bien", `La persona respondió "Estoy bien".`);
-    if (r) await pldCorreo(env, r.email, `${quien} dice que está bien`, `<p style="font-size:20px;font-weight:700;margin:0 0 12px">${escapeHtml(quien)} dice que está bien.</p><p style="color:#d2d2ce;line-height:1.55">Respondió al "¿Estás bien?" que se le mandó cuando apretaste <em>No lo encuentro</em>.</p>`);
+    await pldRegistrar(env, c.ownerEmail, c.referenteId === "auto" ? null : c.referenteId, "estoy-bien", `La persona respondió "Estoy bien".`);
+    // Se les avisa al referente que preguntó y, si ya se había avisado a los referentes, a todos (y el episodio queda en "respondió").
+    const avisar = new Map<string, { name: string; email: string }>();
+    const quienPregunto = c.referenteId === "auto" ? null : await env.DB.prepare("SELECT name,email FROM pld_referentes WHERE id=?").bind(c.referenteId).first<{ name: string; email: string }>();
+    if (quienPregunto) avisar.set(quienPregunto.email, quienPregunto);
+    const ep = await pldLeerEpisodio(env, c.ownerEmail);
+    if (ep) {
+      if (ep.alerts > 0) for (const x of await pldReferentesActivos(env, c.ownerEmail)) avisar.set(x.email, x);
+      await env.DB.prepare("UPDATE pld_episodios SET state='respondio' WHERE owner_email=?").bind(c.ownerEmail).run();
+    }
+    for (const x of avisar.values()) {
+      await pldCorreo(env, x.email, `${quien} dice que está bien`, `<p style="font-size:20px;font-weight:700;margin:0 0 12px">${escapeHtml(quien)} dice que está bien.</p><p style="color:#d2d2ce;line-height:1.55">${ep && ep.alerts > 0 ? "Respondió después del aviso de que hacía rato no daba señales. No hace falta hacer nada." : "Respondió al \"¿Estás bien?\" que se le mandó cuando apretaste <em>No lo encuentro</em>."}</p>`);
+    }
   }
   return json({ ok: true });
+}
+
+// ---------------------------------------------------------------------------
+// Aviso automático (corre con el cron de cada 15 minutos).
+// Un "episodio" empieza cuando se cumplen las condiciones: se le pregunta a la persona si está bien y, si a los ~15 minutos no respondió,
+// se les avisa a los referentes (con su enlace). Se repite cada ~30 minutos, hasta 4 veces. Si el teléfono vuelve a dar señal, se les avisa
+// y el episodio se cierra. Si la persona responde "Estoy bien", no se avisa más hasta que el teléfono vuelva a dar señal.
+// "Apagado en movimiento con batería alta" no espera: avisa en la primera corrida.
+// ---------------------------------------------------------------------------
+type PldEpisodio = { ownerEmail: string; startedAt: string; checkinAt: string | null; seenAt: string | null; alerts: number; lastAlertAt: string | null; state: string };
+
+async function pldLeerEpisodio(env: Env, email: string) {
+  return env.DB.prepare("SELECT owner_email AS ownerEmail,started_at AS startedAt,checkin_at AS checkinAt,seen_at AS seenAt,alerts,last_alert_at AS lastAlertAt,state FROM pld_episodios WHERE owner_email=?")
+    .bind(email).first<PldEpisodio>();
+}
+
+/** Los referentes que aceptaron y no silenciaron los avisos. */
+async function pldReferentesActivos(env: Env, email: string) {
+  const lista = await env.DB.prepare("SELECT id,name,email,token_hash AS tokenHash,muted_until AS mutedUntil FROM pld_referentes WHERE owner_email=? AND status='aceptado' ORDER BY created_at ASC")
+    .bind(email).all<{ id: string; name: string; email: string; tokenHash: string; mutedUntil: string | null }>();
+  const ahora = new Date().toISOString();
+  return (lista.results ?? []).filter((x) => !x.mutedUntil || x.mutedUntil <= ahora);
+}
+
+/** Manda el aviso a los referentes. Devuelve a cuántos les salió el mail. */
+async function pldAvisarReferentes(env: Env, origen: string, email: string, quien: string, estado: PldEstado, numero: number) {
+  let enviados = 0;
+  const cuentan = estado.senales.filter((s) => s.cumple).map((s) => s.texto);
+  for (const x of await pldReferentesActivos(env, email)) {
+    const enlace = await pldEnlaceReferente(env, origen, x);
+    const razones = estado.apagadoEnMovimiento
+      ? "Dejó de dar señales yendo en vehículo, con la batería alta."
+      : `Se cumplen ${estado.cumplen} de 4 de las condiciones que ${escapeHtml(quien)} dejó permitidas: ${escapeHtml(cuentan.join(", "))}.`;
+    const ok = await pldCorreo(
+      env, x.email, `${quien} lleva rato sin dar señales`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p>`
+      + `<p style="color:#d2d2ce;line-height:1.55">Hace un rato no tenemos señales del teléfono de <strong style="color:#fff">${escapeHtml(quien)}</strong> (la última fue ${escapeHtml(pldFechaHora(estado.ultimaVez))}). ${razones}</p>`
+      + `<p style="color:#d2d2ce;line-height:1.55">Puede no ser nada: batería agotada o falta de cobertura. Probá comunicarte con ${escapeHtml(quien)} primero. Si no lográs hablar con ${escapeHtml(quien)}, mirá su última señal:</p>`
+      + pldBoton(enlace, "Ver su última señal")
+      + pldEnlaceEscrito(enlace)
+      + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Si es grave, llamá al 911. Si sigue igual, te lo volvemos a avisar (aviso ${numero} de ${PLD_MAX_AVISOS} como máximo).</p>`,
+    );
+    if (ok) {
+      enviados++;
+      await pldRegistrar(env, email, x.id, "aviso", `Se le avisó a ${x.name} que hace rato no hay señales (aviso ${numero}).`);
+    }
+  }
+  return enviados;
+}
+
+async function pldCronPersona(env: Env, email: string) {
+  const cfg = await pldLeerConfig(env, email);
+  if (!cfg.enabled) return;
+  if (cfg.pausedUntil && cfg.pausedUntil > new Date().toISOString()) return;
+  const estado = await pldEvaluar(env, email, cfg, false);
+  const ep = await pldLeerEpisodio(env, email);
+  const ahora = Date.now();
+  const quien = pldNombreDe(email, cfg);
+  const origen = pldOrigen(env);
+
+  // El teléfono dio una señal nueva desde que empezó el episodio: se cierra (y, si ya se había avisado, se les cuenta a los referentes).
+  if (ep && estado.ultimaVez && ep.seenAt && Date.parse(estado.ultimaVez) > Date.parse(ep.seenAt) + 1000) {
+    await env.DB.prepare("DELETE FROM pld_episodios WHERE owner_email=?").bind(email).run();
+    let avisados = 0;
+    if (ep.alerts > 0 && ep.state !== "respondio") {
+      for (const x of await pldReferentesActivos(env, email)) {
+        const ok = await pldCorreo(
+          env, x.email, `${quien} volvió a dar señal`,
+          `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55">El teléfono de <strong style="color:#fff">${escapeHtml(quien)}</strong> volvió a dar señal (${escapeHtml(pldFechaHora(estado.ultimaVez))}). No hace falta hacer nada. Si querés, probá comunicarte.</p>`,
+        );
+        if (ok) avisados++;
+      }
+    }
+    await pldRegistrar(env, email, null, "aviso", avisados > 0 ? "El teléfono volvió a dar señal: se les avisó a tus referentes." : "El teléfono volvió a dar señal.");
+    return;
+  }
+  if (ep && ep.state === "respondio") return;
+  if (!estado.mostrar) return; // si hay un episodio abierto, queda así: no se avisa de nuevo hasta que se vuelvan a cumplir las condiciones
+
+  let epi = ep;
+  if (!epi) {
+    const respondio = await env.DB.prepare("SELECT answered_at AS at FROM pld_checkins WHERE owner_email=? AND answered_at IS NOT NULL AND answered_at>? LIMIT 1").bind(email, pldEnMinutos(-30)).first<{ at: string }>();
+    if (respondio) return; // dijo que estaba bien hace poco
+    await env.DB.prepare("INSERT OR REPLACE INTO pld_episodios (owner_email,started_at,checkin_at,seen_at,alerts,last_alert_at,state) VALUES (?,?,?,?,0,NULL,'abierto')").bind(email, now(), now(), estado.ultimaVez).run();
+    await pldPedirEstasBien(env, origen, email, estado, null);
+    await pldRegistrar(env, email, null, "aviso", `Se cumplen ${estado.cumplen} de 4 condiciones: se te preguntó si estás bien.`);
+    epi = await pldLeerEpisodio(env, email);
+    if (!epi || !estado.apagadoEnMovimiento) return; // normalmente se espera a la próxima corrida
+  }
+
+  if (epi.alerts >= PLD_MAX_AVISOS) return;
+  const respondida = await env.DB.prepare("SELECT answered_at AS at FROM pld_checkins WHERE owner_email=? AND answered_at IS NOT NULL AND answered_at>=? LIMIT 1").bind(email, epi.startedAt).first<{ at: string }>();
+  if (respondida) {
+    await env.DB.prepare("UPDATE pld_episodios SET state='respondio' WHERE owner_email=?").bind(email).run();
+    return;
+  }
+  const esperaOk = estado.apagadoEnMovimiento || (epi.checkinAt !== null && ahora - Date.parse(epi.checkinAt) >= PLD_ESPERA_MIN * 60_000);
+  const espacioOk = epi.alerts === 0 || (epi.lastAlertAt !== null && ahora - Date.parse(epi.lastAlertAt) >= PLD_ENTRE_AVISOS_MIN * 60_000);
+  if (!esperaOk || !espacioOk) return;
+
+  const numero = epi.alerts + 1;
+  const enviados = await pldAvisarReferentes(env, origen, email, quien, estado, numero);
+  if (enviados === 0) return; // no salió ningún mail: se vuelve a intentar en la próxima corrida
+  await env.DB.prepare("UPDATE pld_episodios SET alerts=?,last_alert_at=? WHERE owner_email=?").bind(numero, now(), email).run();
+  if (numero === 1) {
+    // La persona se entera de a quiénes se les avisó, con su botón "Estoy bien".
+    const chk = await env.DB.prepare("SELECT id,token_hash AS tokenHash FROM pld_checkins WHERE owner_email=? AND answered_at IS NULL ORDER BY created_at DESC LIMIT 1").bind(email).first<{ id: string; tokenHash: string }>();
+    const nombres = (await pldReferentesActivos(env, email)).map((x) => x.name).join(", ");
+    const enlace = chk ? `${origen}/estoy-bien?t=${chk.id}.${await pldFirma(env, "chk", chk.id, chk.tokenHash)}` : "";
+    await pldCorreo(
+      env, email, "Les avisamos a tus referentes",
+      `<p style="font-size:20px;font-weight:700;margin:0 0 12px">Les avisamos a tus referentes</p><p style="color:#d2d2ce;line-height:1.55">Hace rato que no tenemos señales de tu teléfono${estado.apagadoEnMovimiento ? ": dejó de reportarse mientras estaba en movimiento y con la batería alta." : ` y se cumplen ${estado.cumplen} de 4 de las condiciones que permitiste.`} Les avisamos a: <strong style="color:#fff">${escapeHtml(nombres)}</strong>. Si estás bien, avisanos con un toque y les contamos.</p>${enlace ? pldBoton(enlace, "Estoy bien") + pldEnlaceEscrito(enlace) : ""}`,
+    );
+  }
+}
+
+async function pldCron(env: Env) {
+  const personas = await env.DB.prepare("SELECT DISTINCT owner_email AS email FROM pld_referentes WHERE status='aceptado'").all<{ email: string }>();
+  for (const p of personas.results ?? []) {
+    try {
+      await pldCronPersona(env, p.email);
+    } catch (error) {
+      console.error("pld_cron_persona_failed", error);
+    }
+  }
 }
 
 const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}</style>`;
@@ -485,7 +683,7 @@ function pldPaginaDuenio() {
   return pldPagina("Por las dudas · Ojo Guard", `
 <h1>por las dudas</h1>
 <p>Elegí a quién recurrir si algún día no podés comunicarte y algo parece raro. En el día a día nadie ve nada: solo se ve tu <b>última señal</b> si se cumplen las condiciones que vos permitís acá.</p>
-<p class="suave">Esta función está en validación: todavía no la probamos de punta a punta en un teléfono real.</p>
+<p class="suave">Esta función está en validación: ya la probamos de punta a punta con mails reales, pero todavía no en el día a día.</p>
 <div id="aviso"></div>
 <div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes tenés que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entrá, y después volvé a esta página.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entré, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
@@ -494,7 +692,7 @@ function pldPaginaDuenio() {
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
 <p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small>
 <p id="dondeBoton" class="suave"><b>¿Dónde está el botón “No lo encuentro”?</b> Lo ve solo tu referente, en su enlace personal, después de aceptar. Vos no tenés que apretar nada. Para probarlo, abrí su enlace en otro navegador (o en una ventana privada) y aceptá.</p></div>
-<div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez.</small>
+<div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez. Cuando se cumplen, te mandamos un “¿Estás bien?” (mail y aviso en el teléfono) y, si en unos 15 minutos no respondés, les avisamos a tus referentes por mail.</small>
 <label>Cómo te llaman tus referentes</label><input id="cNombre" maxlength="60">
 <div class="dos"><div><label>De noche desde (hora)</label><input id="cDesde" type="number" min="0" max="23"></div><div><label>hasta (hora)</label><input id="cHasta" type="number" min="0" max="23"></div></div>
 <div class="dos"><div><label>Sin señal de noche (min)</label><input id="cSilNoche" type="number" min="10"></div><div><label>Sin señal de día (min)</label><input id="cSilDia" type="number" min="10"></div></div>
@@ -527,7 +725,7 @@ function pintar(d){
     var b=document.createElement("b");b.textContent=x.name;iz.appendChild(b);iz.appendChild(document.createElement("br"));
     var s=document.createElement("small");s.textContent=x.email+" · "+(x.status==="aceptado"?"aceptó":"esperando que acepte");s.className=x.status==="aceptado"?"ok":"suave";iz.appendChild(s);f.appendChild(iz);
     var dr=document.createElement("div");
-    var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){if(ya&&!confirm("Se le manda un enlace nuevo a "+x.name+" y el que tiene ahora deja de servir. ¿Seguro?"))return;accion({accion:"reenviar",id:x.id},"Enlace reenviado.")};dr.appendChild(re);dr.appendChild(document.createTextNode(" "));
+    var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){accion({accion:"reenviar",id:x.id},ya?"Le mandamos su enlace de nuevo (es el mismo: el que ya tiene sigue sirviendo).":"Enlace reenviado.")};dr.appendChild(re);dr.appendChild(document.createTextNode(" "));
     var qu=document.createElement("button");qu.className="sec chico";qu.textContent="Quitar";qu.onclick=function(){if(confirm("¿Quitar a "+x.name+"?"))accion({accion:"quitar",id:x.id},"Referente quitado.")};dr.appendChild(qu);f.appendChild(dr);r.appendChild(f)});
   var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;$("cActivo").checked=!!c.enabled;
   $("casa").textContent=c.homeLat===null?"Todavía no marcaste dónde está tu casa: sin eso, la señal “lejos de casa” no cuenta.":"Casa marcada ("+Number(c.homeLat).toFixed(4)+", "+Number(c.homeLng).toFixed(4)+").";
@@ -578,7 +776,7 @@ function pantalla(e){
     c.appendChild(p(e.quien+" te eligió como referente: una persona de confianza a la que recurrir por las dudas. No ves su ubicación en el día a día; solo si pasan cosas raras vas a poder ver su última señal."));
     var b=document.createElement("button");b.textContent="Aceptar ser referente";b.onclick=function(){b.disabled=true;post("/api/referente/aceptar",{t:t}).then(function(){e.status="aceptado";pantalla(e)}).catch(function(){b.disabled=false;$("aviso").textContent="No se pudo. Probá de nuevo."})};c.appendChild(b);return}
   c.appendChild(p("Si no lográs comunicarte con "+e.quien+" y estás preocupado, apretá el botón. Le mandamos un “¿Estás bien?” y, si pasan cosas raras que "+e.quien+" permitió, te mostramos su última señal."));
-  var l=document.createElement("label");l.style.display="block";l.style.margin="14px 0";var k=document.createElement("input");k.type="checkbox";k.style.width="auto";l.appendChild(k);l.appendChild(document.createTextNode(" Es una emergencia (pasaron más de "+e.emergenciaHoras+" horas sin noticias)"));c.appendChild(l);
+  var l=document.createElement("label");l.style.display="block";l.style.margin="14px 0";var k=document.createElement("input");k.type="checkbox";k.style.width="auto";l.appendChild(k);l.appendChild(document.createTextNode(" Es una emergencia (pasaron más de "+e.emergenciaHoras+(e.emergenciaHoras===1?" hora":" horas")+" sin noticias)"));c.appendChild(l);
   var b2=document.createElement("button");b2.className="grande";b2.textContent="No lo encuentro";c.appendChild(b2);
   var r=document.createElement("div");c.appendChild(r);
   b2.onclick=function(){b2.disabled=true;$("aviso").textContent="Mirando…";post("/api/referente/buscar",{t:t,emergencia:k.checked}).then(function(d){$("aviso").textContent="";b2.disabled=false;limpiar(r);resultado(r,d)}).catch(function(){b2.disabled=false;$("aviso").textContent="No se pudo. Probá de nuevo."})};
@@ -587,7 +785,7 @@ function resultado(r,d){
   var t=document.createElement("div");t.className="tarjeta";
   if(!d.mostrar){t.appendChild(p(d.mensaje,d.estaBien?"ok":""));r.appendChild(t);return}
   var h=document.createElement("h2");h.textContent="Última señal de "+d.quien;t.appendChild(h);
-  t.appendChild(p((d.ubicacion.address||"Sin dirección")+(d.ubicacion.en?" · "+fecha(d.ubicacion.en):"")));
+  t.appendChild(p((d.ubicacion.address||("Coordenadas "+Number(d.ubicacion.lat).toFixed(5)+", "+Number(d.ubicacion.lng).toFixed(5)))+(d.ubicacion.en?" · "+fecha(d.ubicacion.en):"")));
   if(d.bateria!==null)t.appendChild(p("Batería: "+Math.round(d.bateria)+" %"));
   var s=document.createElement("div");d.senales.forEach(function(x){var e=document.createElement("span");e.className="pill"+(x.cumple?" si":"");e.textContent=x.texto;s.appendChild(e)});t.appendChild(s);
   if(d.apagadoEnMovimiento)t.appendChild(p("Dejó de dar señales yendo en vehículo, con batería alta."));
