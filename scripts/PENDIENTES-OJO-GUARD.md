@@ -988,6 +988,16 @@ Actualizado: 16/10/2026.
   **Aviso automático instalado y publicado por Luciano el 18/10/2026** (versión 3f36abcd; código reconocido por la huella, tabla
   `pld_episodios` creada, hook en `scheduled`). Falta probarlo con el teléfono apagado (cron :00/:15/:30/:45) y después volver a las
   condiciones reales (noche 21 a 6, silencio 90/360, 3 de 4).
+  **18/10/2026 12:45:** el aviso automático abrió el episodio a la hora esperada (mail "¿Estás bien? Hace rato que no tenemos señales de tu
+  teléfono"); un "Estoy bien" tocado a las 11:47 había cortado el primer intento (correcto). Aprendido: después de reiniciar un teléfono la
+  app no manda señales hasta que se abre una vez (revisar en la próxima build). El mail "Mi teléfono dejó de responder" (12:15) es la
+  vigilancia de silencio que ya existía, independiente. Falta ver el aviso a PAPA (cron de las 13:00), "No lo encuentro" con ese enlace,
+  y el final "volvió a dar señal".
+  **Pedido de Luciano (18/10/2026):** su papá tiene problemas y quiere poder cuidarlo "como a un niño" o como persona mayor: ya está su
+  teléfono instalado con su propio usuario. Hoy el titular puede sonar/ubicar/foto y audio/en vivo sobre un familiar ADULTO (con aviso
+  a la persona) y, si el rol es Menor, también los otros adultos de la familia. Falta (pendiente): que el tutor administre el "Por las
+  dudas" de la persona cuidada (hoy cada cuenta administra el suyo en /por-las-dudas), y revisar el tema legal/de consentimiento con un
+  abogado cuando sea una persona mayor con problemas.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
