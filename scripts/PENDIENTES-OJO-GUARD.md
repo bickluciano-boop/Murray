@@ -968,6 +968,15 @@ Actualizado: 16/10/2026.
   "Reenviar" a las 10:44:36 (por eso llegaron DOS mails iguales a las 10:44: no es un error del servidor, son dos envíos;
   el segundo deja sin efecto el enlace del primero) y aceptó a las 10:48:59. Idea: en el mail de un reenvío decir "si te
   llegaron dos mails, usá solo el último". Sigue pendiente ver la última señal y probar "Estoy bien".
+  **18/10/2026 11:02: PROBADO OK con PAPA (su otro mail):** con el teléfono apagado y "2 de 4", el referente vio "Última señal de
+  Lu" (10:45, batería 75 %, mapa). Los mails "quiere saber si estás bien" y "consultó tu última señal" llegaron al Gmail del DUEÑO
+  (no al del referente). Cosas para pulir: (1) la última señal sale "Sin dirección" (mostrar coordenadas), (2) "pasaron más de 1
+  horas" (plural), (3) el aviso del teléfono dice "Abrí tu correo..." y muchos chicos no miran el mail: cambiar el texto ya, y en
+  la próxima build de la app que tocar el aviso abra una pantalla con "Estoy bien" (no depender del mail), (4) el mail de
+  invitación debe mostrar también el enlace escrito debajo del botón, (5) Luciano preguntó por un aviso AUTOMÁTICO ("se
+  cumplieron 2 de 4") al referente: es la segunda parte (cron), todavía no existe; para que cada mail al referente lleve su
+  enlace hay que cambiar a enlaces que el servidor pueda volver a armar (hoy solo se guarda una huella del enlace). Propuesta
+  hecha a Luciano, esperando su sí.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
