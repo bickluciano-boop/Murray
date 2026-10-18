@@ -998,6 +998,11 @@ Actualizado: 16/10/2026.
   a la persona) y, si el rol es Menor, también los otros adultos de la familia. Falta (pendiente): que el tutor administre el "Por las
   dudas" de la persona cuidada (hoy cada cuenta administra el suyo en /por-las-dudas), y revisar el tema legal/de consentimiento con un
   abogado cuando sea una persona mayor con problemas.
+  **18/10/2026, teléfono Android del papá de Luciano:** al ingresar la clave de administrador la app muestra "Configurá un acceso seguro. Para abrir
+  Modo Seguro, primero configurá huella, rostro o PIN de bloqueo en este teléfono." porque el teléfono no tiene ningún bloqueo de pantalla (no hay
+  PIN para escribir). Luciano eligió **B: no abrir esa pantalla en ese teléfono** y administrarlo desde su panel/teléfono. Para una próxima build:
+  opción de permitir la configuración sin bloqueo en un teléfono marcado como "de una persona cuidada" (hoy es una protección), y que un
+  teléfono de una persona mayor no registre intentos de clave incorrecta con foto si ella toca la pantalla sin querer.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
