@@ -962,6 +962,12 @@ Actualizado: 16/10/2026.
   y que desde la app el dueño le pueda mandar el enlace con un toque.
   **Aplicado y publicado por Luciano el 17/10/2026** (versión 16aff6c9). Sigue: la prueba de la última señal con
   silencio (sin usar todavía "Mandar enlace de nuevo", porque deja sin efecto el enlace que Mariana ya guardó).
+  **18/10/2026 por la mañana:** la prueba de la última señal con Mariana NO se completó (a las 20:26 del 17/10 la tarjeta
+  decía "2 de 4" con el teléfono sin señal 22 min, pero el Registro no muestra ningún "No lo encuentro" de ella después
+  de las 20:02). Luciano quitó a "mama" (10:43) y la probó solo con "PAPA" = su otro mail (hotmail): se sumó 10:44:25,
+  "Reenviar" a las 10:44:36 (por eso llegaron DOS mails iguales a las 10:44: no es un error del servidor, son dos envíos;
+  el segundo deja sin efecto el enlace del primero) y aceptó a las 10:48:59. Idea: en el mail de un reenvío decir "si te
+  llegaron dos mails, usá solo el último". Sigue pendiente ver la última señal y probar "Estoy bien".
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
