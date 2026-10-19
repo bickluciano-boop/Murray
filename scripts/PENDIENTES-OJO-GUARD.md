@@ -1019,7 +1019,11 @@ Actualizado: 16/10/2026.
   **Instalado y publicado por Luciano el 19/10/2026** (version 6d0ce488). Falta probarlo: SOS de 3 s con el telefono de Luciano (llega a PAPA = su Outlook) y cancelar.
   **Aclaración de Luciano (19/10/2026): el SOS NO cambia de nombre.** "Guardián" reemplaza solo a "Por las dudas" (la función de referentes). Parche de
   textos pendiente: título y encabezado "Guardián", pie de los mails "ojo guard · guardián", dirección corta `/guardian` (la de `/por-las-dudas` sigue),
-  sin tocar nombres internos (tablas, funciones, rutas de la API). Falta que elija cómo llamar a las personas: "guardianes" (recomendado) o "referentes".
+  sin tocar nombres internos (tablas, funciones, rutas de la API).
+  **Aclaración posterior de Luciano (19/10/2026), que reemplaza lo anterior:** las personas se siguen llamando **referentes** (una sola lista para todo);
+  **SOS** es el botón manual (avisa a familia y referentes); **"Guardián"** es el servicio de acompañarte en el camino (cuenta regresiva hasta llegar,
+  avisa a los referentes); la función actual que avisa sola ("Por las dudas") necesita otro nombre: propuesta **"SOS automático"** (esperando su sí;
+  alternativas "Aviso automático", "Si dejo de responder"). Cuando confirme: parche de textos (título, encabezado, pie de los mails, dirección corta).
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
