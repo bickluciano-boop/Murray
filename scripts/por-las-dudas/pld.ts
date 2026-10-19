@@ -660,6 +660,71 @@ async function pldCronPersona(env: Env, email: string) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// SOS: cuando la persona aprieta el botón de ayuda (el de la app o un disparador del sistema), también se les avisa a sus referentes.
+// Lo llaman nativeFamilySos (al pedir y al cancelar) desde src/index.ts. Es una acción de la propia persona, así que no espera ni pregunta,
+// va con la ubicación del SOS y no depende de la pausa "Esta noche, afuera" (sí de que Por las dudas esté encendido).
+// ---------------------------------------------------------------------------
+async function pldTieneGuardianes(env: Env, email: string) {
+  const cfg = await pldLeerConfig(env, email);
+  if (!cfg.enabled) return false;
+  return (await pldReferentesActivos(env, email)).length > 0;
+}
+
+async function pldAvisarSos(env: Env, email: string, ubicacion: Record<string, unknown> | null) {
+  const cfg = await pldLeerConfig(env, email);
+  if (!cfg.enabled) return 0;
+  const referentes = await pldReferentesActivos(env, email);
+  if (!referentes.length) return 0;
+  const quien = pldNombreDe(email, cfg);
+  const origen = pldOrigen(env);
+  const lat = Number(ubicacion?.latitude), lng = Number(ubicacion?.longitude);
+  const hayMapa = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  const direccion = ubicacion?.address ? String(ubicacion.address) : "";
+  let enviados = 0;
+  for (const x of referentes) {
+    const enlace = await pldEnlaceReferente(env, origen, x);
+    const ok = await pldCorreo(
+      env, x.email, `SOS: ${quien} pidió ayuda`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p>`
+      + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> acaba de apretar el botón de ayuda (SOS) en Ojo Guard.</p>`
+      + (direccion ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación: ${escapeHtml(direccion)}</p>` : "")
+      + (hayMapa ? pldBoton(`https://www.google.com/maps?q=${lat},${lng}`, "Abrir en el mapa") : "")
+      + `<p style="color:#d2d2ce;line-height:1.55">Intentá comunicarte con ${escapeHtml(quien)} ahora. Si no lográs hablar y es grave, llamá al 911 y mostrales esta ubicación.</p>`
+      + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">También podés ver su última señal desde tu enlace personal:</p>`
+      + pldBoton(enlace, "Ver su última señal") + pldEnlaceEscrito(enlace),
+    );
+    if (ok) {
+      enviados++;
+      await pldRegistrar(env, email, x.id, "sos", `Se le avisó a ${x.name} del SOS.`);
+    }
+  }
+  return enviados;
+}
+
+/** La persona canceló su SOS: se les cuenta a los referentes a los que se les había avisado. */
+async function pldAvisarSosCancelado(env: Env, email: string, desde: string) {
+  const avisados = await env.DB.prepare("SELECT DISTINCT referente_id AS id FROM pld_log WHERE owner_email=? AND kind='sos' AND created_at>=? AND referente_id IS NOT NULL")
+    .bind(email, desde).all<{ id: string }>();
+  if (!(avisados.results ?? []).length) return 0;
+  const cfg = await pldLeerConfig(env, email);
+  const quien = pldNombreDe(email, cfg);
+  let enviados = 0;
+  for (const a of avisados.results ?? []) {
+    const x = await env.DB.prepare("SELECT name,email FROM pld_referentes WHERE id=? AND status='aceptado'").bind(a.id).first<{ name: string; email: string }>();
+    if (!x) continue;
+    const ok = await pldCorreo(
+      env, x.email, `${quien} canceló el SOS: está bien`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> canceló el SOS: avisó que está bien. No hace falta hacer nada.</p>`,
+    );
+    if (ok) {
+      enviados++;
+      await pldRegistrar(env, email, a.id, "sos-fin", `${x.name} supo que se canceló el SOS.`);
+    }
+  }
+  return enviados;
+}
+
 async function pldCron(env: Env) {
   const personas = await env.DB.prepare("SELECT DISTINCT owner_email AS email FROM pld_referentes WHERE status='aceptado'").all<{ email: string }>();
   for (const p of personas.results ?? []) {
@@ -690,7 +755,7 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
-<p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar.</small>
+<p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar. Si apretás el SOS, también se les avisa a ellos.</small>
 <p id="dondeBoton" class="suave"><b>¿Dónde está el botón “No lo encuentro”?</b> Lo ve solo tu referente, en su enlace personal, después de aceptar. Vos no tenés que apretar nada. Para probarlo, abrí su enlace en otro navegador (o en una ventana privada) y aceptá.</p></div>
 <div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez. Cuando se cumplen, te mandamos un “¿Estás bien?” (mail y aviso en el teléfono) y, si en unos 15 minutos no respondés, les avisamos a tus referentes por mail.</small>
 <label>Cómo te llaman tus referentes</label><input id="cNombre" maxlength="60">

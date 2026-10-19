@@ -370,5 +370,55 @@ console.log("== Pulidos");
   ok(pldTiempo(1) === "1 minuto" && pldTiempo(5) === "5 minutos" && pldTiempo(60) === "1 hora" && pldTiempo(150) === "3 horas", "textos de tiempo");
 }
 
+console.log("== SOS: tambien se les avisa a los referentes");
+{
+  const t = await preparar();
+  const ubic = { latitude: -34.6, longitude: -58.4, address: "Av. Siempre Viva 742" };
+  ok((await pldTieneGuardianes(env, DUENIO)) === true, "con referentes que aceptaron, el SOS tiene a quien avisar aunque no haya familia");
+  let n = correos.length;
+  const e1 = await pldAvisarSos(env, DUENIO, ubic);
+  let nuevos = mailsDesde(n);
+  ok(e1 === 2 && nuevos.length === 2 && nuevos.every((c) => /SOS/.test(c.subject)) && nuevos.map((c) => c.to).sort().join() === "mama@correo.com,papa@correo.com", "al apretar el SOS les llega un mail a los 2 referentes que aceptaron (no al pendiente)");
+  ok(/google\.com\/maps\?q=-34\.6,-58\.4/.test(nuevos[0].html) && /Av\. Siempre Viva 742/.test(nuevos[0].html) && /911/.test(nuevos[0].html), "con el mapa, la direccion y el aviso de llamar al 911");
+  ok(token(nuevos.find((c) => c.to === "mama@correo.com")!.html) === t.mama, "y con su enlace personal para ver la ultima senal");
+  ok(sqlite.prepare("SELECT COUNT(*) AS n FROM pld_log WHERE kind='sos'").get().n === 2, "queda en el registro");
+  n = correos.length;
+  const c1 = await pldAvisarSosCancelado(env, DUENIO, hace(2));
+  nuevos = mailsDesde(n);
+  ok(c1 === 2 && nuevos.every((c) => /cancel\u00f3 el SOS/.test(c.subject)), "si la persona cancela, se les cuenta a los 2 que habian recibido el aviso");
+  n = correos.length;
+  ok((await pldAvisarSosCancelado(env, DUENIO, now())) === 0 && correos.length === n, "una cancelacion sin aviso previo no manda nada");
+  // sin ubicacion
+  n = correos.length;
+  await pldAvisarSos(env, DUENIO, null);
+  nuevos = mailsDesde(n);
+  ok(nuevos.length === 2 && !/google\.com\/maps/.test(nuevos[0].html), "sin ubicacion igual avisa (sin el mapa)");
+  // la pausa no lo frena
+  await api({ accion: "pausa", horas: 8 });
+  n = correos.length;
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 2 && correos.length === n + 2, "la pausa 'Esta noche, afuera' no frena un SOS");
+  await api({ accion: "pausa", horas: 0 });
+  // un referente silenciado no recibe
+  sqlite.prepare("UPDATE pld_referentes SET muted_until=? WHERE id=?").run(pldEnMinutos(600), t.papa.split(".")[0]);
+  n = correos.length;
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 1 && mailsDesde(n)[0].to === "mama@correo.com", "el que silencio los avisos no lo recibe");
+  sqlite.exec("UPDATE pld_referentes SET muted_until=NULL");
+  // si los mails fallan no se cuenta
+  setCorreoOk(false);
+  n = correos.length;
+  const antesLog = sqlite.prepare("SELECT COUNT(*) AS n FROM pld_log WHERE kind='sos'").get().n;
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 0 && sqlite.prepare("SELECT COUNT(*) AS n FROM pld_log WHERE kind='sos'").get().n === antesLog, "si los mails fallan no se registra como avisado");
+  setCorreoOk(true);
+  // apagado: no avisa y no cuenta como destinatario
+  await api({ accion: "config", config: { enabled: false } });
+  n = correos.length;
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 0 && correos.length === n && (await pldTieneGuardianes(env, DUENIO)) === false, "con Por las dudas apagado no avisa ni cuenta como destinatario");
+  await api({ accion: "config", config: { enabled: true } });
+  // nadie acepto
+  sqlite.exec("UPDATE pld_referentes SET status='pendiente'");
+  ok((await pldTieneGuardianes(env, DUENIO)) === false && (await pldAvisarSos(env, DUENIO, ubic)) === 0, "si ningun referente acepto no hay a quien avisar");
+  ok(/tambi\u00e9n se les avisa a ellos/.test(await (pldPaginaDuenio() as any).text()), "la pagina de la persona cuenta que el SOS tambien les avisa");
+}
+
 console.log(`\n${total - fallos}/${total} pruebas ok`);
 if (fallos) process.exit(1);
