@@ -1009,6 +1009,9 @@ Actualizado: 16/10/2026.
   **Aclaración de Luciano (19/10/2026): da por buena la prueba de Por las dudas** ("eso está ok"); lo que deja para otro día es el teléfono de su
   papá (hoy le instaló la app pero tuvo que irse y su papá no sabe entrar a su Gmail). Nota honesta: nunca se vio en pantalla el mail del cron a
   PAPA ("Lu lleva rato sin dar señales") ni el final "volvió a dar señal"; están cubiertos por las pruebas con base simulada.
+  **Decisiones de Luciano (19/10/2026):** (1) **hacer que el SOS también avise a los referentes** (solo servidor); (2) no le gusta el nombre
+  "Por las dudas": quiere uno más preciso, propone **"Guardián"** (a confirmar; las personas serían "guardianes"); (3) idea nueva: **"Camino seguro"**
+  (cuenta regresiva hasta llegar a un destino con aviso a los guardianes), ver `scripts/GUARDIAN-CAMINO-SEGURO-IDEA.md`.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
