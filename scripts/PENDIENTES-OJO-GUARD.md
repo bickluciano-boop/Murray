@@ -1003,6 +1003,16 @@ Actualizado: 16/10/2026.
   PIN para escribir). Luciano eligió **B: no abrir esa pantalla en ese teléfono** y administrarlo desde su panel/teléfono. Para una próxima build:
   opción de permitir la configuración sin bloqueo en un teléfono marcado como "de una persona cuidada" (hoy es una protección), y que un
   teléfono de una persona mayor no registre intentos de clave incorrecta con foto si ella toca la pantalla sin querer.
+  **19/10/2026, Luciano deja el resto "para otro día". Para retomar, en este orden:**
+  (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
+  Android de prueba, para que no mande avisos de más a PAPA (su Outlook). (2) Repetir la prueba del aviso a PAPA sin tocar "Estoy bien": no se
+  vio el mail "Lu lleva rato sin dar señales" del cron de las 13:00 del 18/10 (el Android se prendió o se cortó antes; se pidió mirar
+  `pld_episodios` y `pld_log`). Después los dos finales, uno por vez: "Estoy bien" o "volvió a dar señal". (3) Papá: su Android pide un bloqueo
+  de pantalla para abrir Modo Seguro; se propuso poner el correo de Luciano en "Cambiar correo" (el código llega a Luciano, el teléfono queda como
+  equipo pendiente y se autoriza en Dispositivos), guiándolo por teléfono; la cuenta `mariobick14@gmail.com` quedó sin uso. Se dejó la pregunta de si
+  armarle a Luciano un mensaje de WhatsApp con los pasos. (4) Twilio: cargar saldo y probar un SMS. (5) Apple Critical Alerts: el 21/10/2026
+  preguntar y, si no hay respuesta, mandar el texto de `TEXTO-APPLE-ALERTAS-CRITICAS.md`. (6) Próxima build de la app: pantalla "Estoy bien" al
+  tocar el aviso, la app que despierta después de reiniciar el teléfono, configuración sin bloqueo para una persona cuidada, y el título del iPhone.
   Falta probar: (1) que se muestre la última señal (bajando
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
