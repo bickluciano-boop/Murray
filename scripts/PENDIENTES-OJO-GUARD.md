@@ -985,6 +985,9 @@ Actualizado: 16/10/2026.
   Sin instalar todavía. Al probarlo con las condiciones de prueba (10 min, 2 de 4) puede avisar seguido: al terminar volver a
   noche 21 a 6, silencio 90/360, 3 de 4. **Twilio:** pasos dados a Luciano (Upgrade en console.twilio.com, saldo inicial, permisos
   geográficos de Argentina; SMS a Argentina ≈ USD 0,10 por mensaje según la página de precios de Twilio); falta que lo haga y probar un SMS.
+  **19/10/2026:** Luciano mandó su Business Profile a Twilio (mail del "Consumer Trust Team": revisión en unas 24 horas, pueden contactarlo por
+  mail, teléfono o videollamada; no hace falta hacer nada hasta entonces). Cuando lo aprueben: comprobar saldo y probar un SMS desde el panel.
+  No pegar nunca el Auth Token.
   **Aviso automático instalado y publicado por Luciano el 18/10/2026** (versión 3f36abcd; código reconocido por la huella, tabla
   `pld_episodios` creada, hook en `scheduled`). Falta probarlo con el teléfono apagado (cron :00/:15/:30/:45) y después volver a las
   condiciones reales (noche 21 a 6, silencio 90/360, 3 de 4).
