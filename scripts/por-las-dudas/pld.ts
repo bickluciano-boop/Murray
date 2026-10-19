@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// "Por las dudas" (NÚCLEO · EN VALIDACIÓN): referentes de emergencia.
+// "Modo Cautela" (antes "Por las dudas"; NÚCLEO · EN VALIDACIÓN): referentes de emergencia.
 // La persona elige de antemano a quién avisar; en el día a día nadie ve nada. Si pasan cosas raras (las condiciones que ella
 // misma permitió), un referente preocupado puede ver la última señal del teléfono con el botón "No lo encuentro".
 // Tablas: pld_config, pld_referentes, pld_log, pld_checkins, pld_episodios (se crean con wrangler d1 execute, ver los aplicar-por-las-dudas-*.ps1).
@@ -205,7 +205,7 @@ async function pldEvaluar(env: Env, email: string, cfg: PldConfig, emergencia: b
     deviceId: d.id,
     ubicacion: hayUbicacion ? { lat, lng, address: loc?.address ? String(loc.address) : null, en: d.locAt ?? ultima } : null,
   };
-  if (!cfg.enabled) return { ...estado, motivo: "Esta persona tiene \"Por las dudas\" apagado." };
+  if (!cfg.enabled) return { ...estado, motivo: "Esta persona tiene apagado el Modo Cautela." };
   if (cfg.pausedUntil && cfg.pausedUntil > new Date().toISOString()) return { ...estado, motivo: "Esta persona pausó los avisos por unas horas." };
   if (!hayUbicacion) return { ...estado, motivo: "Todavía no hay ninguna ubicación de este teléfono." };
 
@@ -256,7 +256,7 @@ async function pldEvaluar(env: Env, email: string, cfg: PldConfig, emergencia: b
 
 async function pldCorreo(env: Env, para: string, asunto: string, cuerpo: string) {
   if (!env.RESEND_API_KEY) return false;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#0c0d0f;color:#f6f6f2;padding:28px;border-radius:20px">${cuerpo}<p style="color:#8f8d85;font-size:12px;margin:26px 0 0">ojo guard &middot; por las dudas</p></div>`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#0c0d0f;color:#f6f6f2;padding:28px;border-radius:20px">${cuerpo}<p style="color:#8f8d85;font-size:12px;margin:26px 0 0">ojo guard &middot; modo cautela</p></div>`;
   try {
     const respuesta = await fetchCorreo("https://api.resend.com/emails", {
       method: "POST",
@@ -663,7 +663,7 @@ async function pldCronPersona(env: Env, email: string) {
 // ---------------------------------------------------------------------------
 // SOS: cuando la persona aprieta el botón de ayuda (el de la app o un disparador del sistema), también se les avisa a sus referentes.
 // Lo llaman nativeFamilySos (al pedir y al cancelar) desde src/index.ts. Es una acción de la propia persona, así que no espera ni pregunta,
-// va con la ubicación del SOS y no depende de la pausa "Esta noche, afuera" (sí de que Por las dudas esté encendido).
+// va con la ubicación del SOS y no depende de la pausa "Esta noche, afuera" (sí de que el Modo Cautela esté encendido).
 // ---------------------------------------------------------------------------
 async function pldTieneGuardianes(env: Env, email: string) {
   const cfg = await pldLeerConfig(env, email);
@@ -743,29 +743,33 @@ function pldPagina(titulo: string, cuerpo: string) {
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
 }
 
-/** Página del dueño: "Por las dudas". */
+/** Página del dueño (/guardian y /por-las-dudas): tus referentes y los modos. */
 function pldPaginaDuenio() {
-  return pldPagina("Por las dudas · Ojo Guard", `
-<h1>por las dudas</h1>
-<p>Elegí a quién recurrir si algún día no podés comunicarte y algo parece raro. En el día a día nadie ve nada: solo se ve tu <b>última señal</b> si se cumplen las condiciones que vos permitís acá.</p>
+  return pldPagina("Tu protección · Ojo Guard", `
+<h1>Tu protección</h1>
+<p>Elegí una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los modos de más abajo.</p>
 <p class="suave">Esta función está en validación: ya la probamos de punta a punta con mails reales, pero todavía no en el día a día.</p>
 <div id="aviso"></div>
 <div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes tenés que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entrá, y después volvé a esta página.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entré, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
-<div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
 <p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar. Si apretás el SOS, también se les avisa a ellos.</small>
 <p id="dondeBoton" class="suave"><b>¿Dónde está el botón “No lo encuentro”?</b> Lo ve solo tu referente, en su enlace personal, después de aceptar. Vos no tenés que apretar nada. Para probarlo, abrí su enlace en otro navegador (o en una ventana privada) y aceptá.</p></div>
+<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Cautela</h2>
+<p class="suave" style="margin:0 0 6px">Por las dudas: si dejo de responder, mis referentes se enteran. Funciona de fondo y solo ven tu <b>última señal</b> si se cumplen las condiciones que vos permitís acá.</p>
+<div class="tarjeta"><h2>Cómo estás hoy</h2><div id="hoy" class="suave">Cargando…</div></div>
 <div class="tarjeta"><h2>Condiciones</h2><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez. Cuando se cumplen, te mandamos un “¿Estás bien?” (mail y aviso en el teléfono) y, si en unos 15 minutos no respondés, les avisamos a tus referentes por mail.</small>
 <label>Cómo te llaman tus referentes</label><input id="cNombre" maxlength="60">
 <div class="dos"><div><label>De noche desde (hora)</label><input id="cDesde" type="number" min="0" max="23"></div><div><label>hasta (hora)</label><input id="cHasta" type="number" min="0" max="23"></div></div>
 <div class="dos"><div><label>Sin señal de noche (min)</label><input id="cSilNoche" type="number" min="10"></div><div><label>Sin señal de día (min)</label><input id="cSilDia" type="number" min="10"></div></div>
 <div class="dos"><div><label>Lejos de casa (km)</label><input id="cKm" type="number" min="0.5" step="0.5"></div><div><label>Batería baja (%)</label><input id="cBat" type="number" min="1" max="50"></div></div>
 <div class="dos"><div><label>Señales necesarias (de 4)</label><select id="cMin"><option>2</option><option>3</option><option>4</option></select></div><div><label>Emergencia tras (horas)</label><input id="cEmer" type="number" min="1" max="48"></div></div>
-<label><input id="cActivo" type="checkbox" style="width:auto"> Por las dudas está encendido</label>
+<label><input id="cActivo" type="checkbox" style="width:auto"> Modo Cautela encendido</label>
 <p><button id="cGuardar">Guardar condiciones</button> <button class="sec" id="cCasa">Mi casa es donde está mi teléfono ahora</button></p><div id="casa" class="suave"></div></div>
 <div class="tarjeta"><h2>Esta noche, afuera</h2><small class="suave">Si dormís en otro lado, pausá los avisos por unas horas.</small><p><button class="sec" data-h="8">Pausar 8 horas</button> <button class="sec" data-h="0">Quitar pausa</button></p><div id="pausa" class="suave"></div></div>
+<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Guardián <span class="pill">Próximamente</span></h2>
+<div class="tarjeta"><p>Te acompaña en el camino. Cuando volvés a casa o vas a un lugar donde no te sentís tranquilo, elegís a dónde vas y cómo (auto, transporte o caminando) y empieza una cuenta regresiva con 2 minutos de más. Si no llegás ni la apagás, les avisa a tus referentes. Al llegar te pregunta: ¿llegaste bien?</p></div>
 <div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando…</div></div>
 </div>
 <script>

@@ -420,5 +420,24 @@ console.log("== SOS: tambien se les avisa a los referentes");
   ok(/tambi\u00e9n se les avisa a ellos/.test(await (pldPaginaDuenio() as any).text()), "la pagina de la persona cuenta que el SOS tambien les avisa");
 }
 
+console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
+{
+  const tp: string = await (pldPaginaDuenio() as any).text();
+  ok(/Tu protecci\u00f3n/.test(tp) && /Modo Cautela/.test(tp) && /Modo Guardi\u00e1n/.test(tp) && /Pr\u00f3ximamente/.test(tp), "la pagina se llama Tu proteccion y muestra Modo Cautela y Modo Guardian (proximamente)");
+  const pos = (x: string) => tp.indexOf(x);
+  ok(pos("Tus referentes") > 0 && pos("Tus referentes") < pos(">Modo Cautela<") && pos(">Modo Cautela<") < pos("C\u00f3mo est\u00e1s hoy") && pos("C\u00f3mo est\u00e1s hoy") < pos("Condiciones") && pos("Condiciones") < pos("Esta noche, afuera") && pos("Esta noche, afuera") < pos("Modo Guardi\u00e1n <span") && pos("Modo Guardi\u00e1n <span") < pos("<h2>Registro</h2>"), "el orden: referentes, Modo Cautela (como estas hoy, condiciones, pausa), Modo Guardian, registro");
+  ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Modo Cautela encendido/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
+  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cActivo", "cGuardar", "cCasa", "casa", "pausa", "registro"];
+  ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
+  const n0 = correos.length;
+  await pldCorreo(env, "a@b.c", "x", "<p>y</p>");
+  ok(/modo cautela/.test(correos[n0].html) && !/por las dudas/.test(correos[n0].html), "el pie de los mails dice modo cautela");
+  await api({ accion: "config", config: { enabled: false } });
+  dispositivo({ seen: 150, bat: 8, lat: -34.52, lng: -58.4 });
+  const ev = await pldEvaluar(env, DUENIO, await pldLeerConfig(env, DUENIO), false);
+  ok(/Modo Cautela/.test(ev.motivo), "si esta apagado el mensaje habla del Modo Cautela");
+  await api({ accion: "config", config: { enabled: true } });
+}
+
 console.log(`\n${total - fallos}/${total} pruebas ok`);
 if (fallos) process.exit(1);

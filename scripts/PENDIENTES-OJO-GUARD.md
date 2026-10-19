@@ -1039,6 +1039,10 @@ Actualizado: 16/10/2026.
   avisa a los referentes) y **Modo Cautela = lo que hoy es "Por las dudas"** (de fondo; si dejás de responder avisa; "cautela" = precaución, "por las
   dudas"). Referentes compartidos; SOS aparte. Plan: renombrar en páginas y mails "Por las dudas" → "Modo Cautela" (subtítulo "Por las dudas: si dejo de
   responder, mis referentes se enteran"), página `/guardian` (referentes arriba + tarjetas "Modo Cautela" activo y "Modo Guardián" próximamente), botón OG en el panel.
+  **Armado el 19/10/2026 (sin instalar):** `aplicar-guardian-modo-cautela-panel.ps1` (123 pruebas y navegador ok): la página pasa a llamarse **"Tu protección"** (abre en
+  `/guardian` y en `/por-las-dudas`), con tus referentes arriba, el **Modo Cautela** (cómo estás hoy, condiciones, pausa), la tarjeta **"Modo Guardián · Próximamente"** y
+  el registro; el pie de los mails dice "ojo guard · modo cautela". OG = iniciales de Ojo Guard (confirmado por Luciano). **Falta el botón OG dentro del panel**:
+  necesito que corra el comando de lectura de la barra superior (buscar "Mis dispositivos|Cerrar sesi|topbar|ogm-capas" en `src`).
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
