@@ -1054,6 +1054,10 @@ Actualizado: 16/10/2026.
   pausa hasta tal hora o apagado; el registro anota todo. Extra por seguridad: si al pausar o apagar ya se les había avisado a los referentes, el aviso se cierra y se les cuenta
   por mail, y al terminar la pausa empieza de cero con el "¿Estás bien?" a la persona. **Pregunta abierta (sí/no):** hoy, con el Modo Cautela APAGADO, el SOS tampoco avisa a los
   referentes (con la pausa sí avisa). ¿Querés que el SOS avise a los referentes aunque el Modo Cautela esté apagado? Mi recomendación: sí.
+  **OG en el celular, ya sin superponerse (fotos de Luciano, 19/10/2026; instalado `aplicar-og-arreglo-panel.ps1`, versión 6daba84e).** Pedidos nuevos: OG **debajo del logo, en la misma fila que
+  Modo noche / Cerrar acceso, y más importante**; menú negro **más ancho** para que no quede una palabra sola abajo. Armado, sin instalar: `aplicar-og-importante-panel.ps1` (respaldo `.bak-og3`, solo panel,
+  dos archivos): OG dorado macizo con sombra (abierto se invierte), a la izquierda de la segunda fila; menú de todo el ancho en el celular (hasta 380 px en compu); texto de Modo Cautela acortado
+  ("Si dejo de responder, mis referentes se enteran."). Ojo: en el panel real la regla `.ghost` pisaba los colores del OG (se veía gris, no dorado); por eso el estilo nuevo es más específico y usa `!important`.
   **Tu protección más corta (Luciano dijo "sí" el 19/10/2026): armado, sin instalar** (`aplicar-tu-proteccion-plegable-panel.ps1`, respaldo `.bak-pldplegable`, solo servidor; 152 pruebas y navegador ok).
   Orden nuevo de `/guardian`: Tus referentes → Modo Cautela con "Pausar o apagar" a la vista → "Cómo estás hoy" (con "1 de 4 señales" al lado), "Condiciones" y "Registro" plegados
   (botón "Abrir") → Modo Guardián en una sola línea ("Próximamente"). Mide ~2240 px en el celular (antes ~3490). Trae todo lo de `aplicar-pausar-apagar-panel.ps1` y acepta que ese ya esté o no aplicado
