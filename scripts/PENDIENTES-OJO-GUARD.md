@@ -1012,6 +1012,10 @@ Actualizado: 16/10/2026.
   **Decisiones de Luciano (19/10/2026):** (1) **hacer que el SOS también avise a los referentes** (solo servidor); (2) no le gusta el nombre
   "Por las dudas": quiere uno más preciso, propone **"Guardián"** (a confirmar; las personas serían "guardianes"); (3) idea nueva: **"Camino seguro"**
   (cuenta regresiva hasta llegar a un destino con aviso a los guardianes), ver `scripts/GUARDIAN-CAMINO-SEGURO-IDEA.md`.
+  **SOS -> referentes: armado el 19/10/2026** (`aplicar-por-las-dudas-sos-panel.ps1`, sin build; 117 pruebas): al apretar el SOS, mail a los referentes
+  que aceptaron con la ubicacion, el mapa, el aviso del 911 y su enlace; si se cancela, se les cuenta; una persona sin familia pero con referentes ya puede
+  mandar el SOS; no depende de la pausa; si de que Por las dudas este encendido. Engancha tres lineas dentro de `nativeFamilySos` (anclas leidas del codigo
+  real que pego Luciano). Sin instalar todavia. Falta decidir el nombre ("Guardian"); cuando se confirme es un parche de textos.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
