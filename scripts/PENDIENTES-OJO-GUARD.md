@@ -1043,6 +1043,7 @@ Actualizado: 16/10/2026.
   `/guardian` y en `/por-las-dudas`), con tus referentes arriba, el **Modo Cautela** (cómo estás hoy, condiciones, pausa), la tarjeta **"Modo Guardián · Próximamente"** y
   el registro; el pie de los mails dice "ojo guard · modo cautela". OG = iniciales de Ojo Guard (confirmado por Luciano). **Falta el botón OG dentro del panel**:
   necesito que corra el comando de lectura de la barra superior (buscar "Mis dispositivos|Cerrar sesi|topbar|ogm-capas" en `src`).
+  **Instalado y publicado por Luciano el 19/10/2026** (versión 793617a0): la página ya es "Tu protección" y abre en `/guardian`. Falta que mande una captura y el comando de la barra superior.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
