@@ -341,6 +341,31 @@ async function pldPanorama(env: Env, email: string) {
   };
 }
 
+function pldHorasTexto(horas: number) {
+  return horas === 1 ? "1 hora" : `${Math.round(horas * 10) / 10} horas`;
+}
+
+/** Si la persona pausa o apaga el Modo Cautela, se cierra el episodio abierto (al volver empieza de cero, con un "¿Estás bien?").
+ *  Si ya se les había avisado a los referentes, se les cuenta, para que no se queden esperando. */
+async function pldCerrarEpisodio(env: Env, email: string, cfg: PldConfig, que: string) {
+  const ep = await pldLeerEpisodio(env, email);
+  if (!ep) return;
+  await env.DB.prepare("DELETE FROM pld_episodios WHERE owner_email=?").bind(email).run();
+  if (ep.alerts === 0 || ep.state === "respondio") return;
+  const quien = pldNombreDe(email, cfg);
+  let avisados = 0;
+  for (const x of await pldReferentesActivos(env, email)) {
+    const ok = await pldCorreo(
+      env, x.email, `${quien} entró a su cuenta de Ojo Guard`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p>`
+      + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> entró a su cuenta de Ojo Guard y ${que}. Por eso, por el momento, no te vamos a seguir avisando.</p>`
+      + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Si todavía te preocupa, intentá comunicarte con ${escapeHtml(quien)}. Si es grave, llamá al 911.</p>`,
+    );
+    if (ok) avisados++;
+  }
+  if (avisados > 0) await pldRegistrar(env, email, null, "aviso", `Se les avisó a tus referentes que ${que}: dejan de recibir avisos por ahora.`);
+}
+
 /** API del dueño (con sesión): ver y cambiar sus referentes y condiciones. */
 async function pldApiDuenio(request: Request, env: Env) {
   const sesion = await readSessionInfo(request, env.SESSION_SECRET);
@@ -371,7 +396,9 @@ async function pldApiDuenio(request: Request, env: Env) {
       emergencyHours: Math.round(pldNumero(c.emergencyHours, 1, 48, cfg.emergencyHours)),
     };
     await pldGuardarConfig(env, email, nuevo);
-    await pldRegistrar(env, email, null, "config", "La persona cambió sus condiciones.");
+    const cambioEncendido = nuevo.enabled !== cfg.enabled;
+    await pldRegistrar(env, email, null, "config", cambioEncendido ? (nuevo.enabled ? "La persona encendió el Modo Cautela." : "La persona apagó el Modo Cautela.") : "La persona cambió sus condiciones.");
+    if (cambioEncendido && !nuevo.enabled) await pldCerrarEpisodio(env, email, cfg, "apagó el Modo Cautela");
   } else if (accion === "agregar") {
     const nombre = String(cuerpo.name ?? "").trim().slice(0, 60);
     const correo = normalizeEmail(String(cuerpo.email ?? ""));
@@ -412,7 +439,8 @@ async function pldApiDuenio(request: Request, env: Env) {
   } else if (accion === "pausa") {
     const horas = pldNumero(cuerpo.horas, 0, 72, 0);
     await pldGuardarConfig(env, email, { ...cfg, pausedUntil: horas > 0 ? pldEnMinutos(Math.round(horas * 60)) : null });
-    await pldRegistrar(env, email, null, "config", horas > 0 ? `Pausa de ${horas} horas ("esta noche, afuera").` : "Se quitó la pausa.");
+    await pldRegistrar(env, email, null, "config", horas > 0 ? `Pausa de ${pldHorasTexto(horas)} (pausa de avisos).` : "Se quitó la pausa.");
+    if (horas > 0) await pldCerrarEpisodio(env, email, cfg, `pausó los avisos por ${pldHorasTexto(horas)}`);
   } else {
     return json({ error: "accion_desconocida" }, 400);
   }
@@ -663,7 +691,7 @@ async function pldCronPersona(env: Env, email: string) {
 // ---------------------------------------------------------------------------
 // SOS: cuando la persona aprieta el botón de ayuda (el de la app o un disparador del sistema), también se les avisa a sus referentes.
 // Lo llaman nativeFamilySos (al pedir y al cancelar) desde src/index.ts. Es una acción de la propia persona, así que no espera ni pregunta,
-// va con la ubicación del SOS y no depende de la pausa "Esta noche, afuera" (sí de que el Modo Cautela esté encendido).
+// va con la ubicación del SOS y no depende de la pausa de avisos (sí de que el Modo Cautela esté encendido).
 // ---------------------------------------------------------------------------
 async function pldTieneGuardianes(env: Env, email: string) {
   const cfg = await pldLeerConfig(env, email);
@@ -765,9 +793,14 @@ function pldPaginaDuenio() {
 <div class="dos"><div><label>Sin señal de noche (min)</label><input id="cSilNoche" type="number" min="10"></div><div><label>Sin señal de día (min)</label><input id="cSilDia" type="number" min="10"></div></div>
 <div class="dos"><div><label>Lejos de casa (km)</label><input id="cKm" type="number" min="0.5" step="0.5"></div><div><label>Batería baja (%)</label><input id="cBat" type="number" min="1" max="50"></div></div>
 <div class="dos"><div><label>Señales necesarias (de 4)</label><select id="cMin"><option>2</option><option>3</option><option>4</option></select></div><div><label>Emergencia tras (horas)</label><input id="cEmer" type="number" min="1" max="48"></div></div>
-<label><input id="cActivo" type="checkbox" style="width:auto"> Modo Cautela encendido</label>
 <p><button id="cGuardar">Guardar condiciones</button> <button class="sec" id="cCasa">Mi casa es donde está mi teléfono ahora</button></p><div id="casa" class="suave"></div></div>
-<div class="tarjeta"><h2>Esta noche, afuera</h2><small class="suave">Si dormís en otro lado, pausá los avisos por unas horas.</small><p><button class="sec" data-h="8">Pausar 8 horas</button> <button class="sec" data-h="0">Quitar pausa</button></p><div id="pausa" class="suave"></div></div>
+<div class="tarjeta"><h2>Pausar o apagar</h2><div id="estadoModo" class="suave"></div>
+<p><b>Pausar los avisos</b> por un rato, por ejemplo si dormís en otro lado. Cuando termina el tiempo, el Modo Cautela se prende solo. El SOS sigue avisando a tus referentes.</p>
+<p><button class="sec" data-h="8">Pausar 8 horas</button> <button class="sec" data-h="12">Pausar 12 horas</button> <button class="sec" data-h="24">Pausar 24 horas</button></p>
+<div class="dos"><div><label>Otro tiempo (horas, de 1 a 72)</label><input id="pHoras" type="number" min="1" max="72" placeholder="Ej.: 36"></div><div><label>&nbsp;</label><button class="sec" id="pOtro">Pausar ese tiempo</button></div></div>
+<p><button class="sec" data-h="0">Quitar pausa</button></p><div id="pausa" class="suave"></div>
+<p style="margin-top:18px"><b>Apagar el Modo Cautela</b> hasta que vos lo vuelvas a prender. Mientras está apagado no se manda ningún aviso automático a tus referentes, tampoco el del SOS.</p>
+<p><button id="cEncender">Apagar Modo Cautela</button></p></div>
 <h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Guardián <span class="pill">Próximamente</span></h2>
 <div class="tarjeta"><p>Te acompaña en el camino. Cuando volvés a casa o vas a un lugar donde no te sentís tranquilo, elegís a dónde vas y cómo (auto, transporte o caminando) y empieza una cuenta regresiva con 2 minutos de más. Si no llegás ni la apagás, les avisa a tus referentes. Al llegar te pregunta: ¿llegaste bien?</p></div>
 <div class="tarjeta"><h2>Registro</h2><div id="registro" class="suave">Cargando…</div></div>
@@ -775,6 +808,7 @@ function pldPaginaDuenio() {
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
+var encendido=true;
 function aviso(t){$("aviso").textContent=t||""}
 function api(cuerpo){return fetch("/api/remote/por-las-dudas",{method:cuerpo?"POST":"GET",headers:{"content-type":"application/json"},body:cuerpo?JSON.stringify(cuerpo):undefined,credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(r.status===401){var er=new Error("Entrá primero al panel de Ojo Guard MS con tu cuenta y volvé a abrir esta página.");er.sinSesion=true;throw er}if(!r.ok){throw new Error(({invalid_referente:"Revisá el nombre y el correo.",referente_es_vos:"El referente no puede ser vos.",demasiados_referentes:"Ya tenés 5 referentes.",referente_repetido:"Ese correo ya es referente.",sin_ubicacion:"Todavía no hay una ubicación de tu teléfono."})[d.error]||"No se pudo. Probá de nuevo.")}return d})})}
 function fecha(s){if(!s)return"";try{return new Date(s).toLocaleString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return s}}
@@ -796,9 +830,14 @@ function pintar(d){
     var dr=document.createElement("div");
     var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){accion({accion:"reenviar",id:x.id},ya?"Le mandamos su enlace de nuevo (es el mismo: el que ya tiene sigue sirviendo).":"Enlace reenviado.")};dr.appendChild(re);dr.appendChild(document.createTextNode(" "));
     var qu=document.createElement("button");qu.className="sec chico";qu.textContent="Quitar";qu.onclick=function(){if(confirm("¿Quitar a "+x.name+"?"))accion({accion:"quitar",id:x.id},"Referente quitado.")};dr.appendChild(qu);f.appendChild(dr);r.appendChild(f)});
-  var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;$("cActivo").checked=!!c.enabled;
+  var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;encendido=!!c.enabled;
   $("casa").textContent=c.homeLat===null?"Todavía no marcaste dónde está tu casa: sin eso, la señal “lejos de casa” no cuenta.":"Casa marcada ("+Number(c.homeLat).toFixed(4)+", "+Number(c.homeLng).toFixed(4)+").";
-  $("pausa").textContent=c.pausedUntil&&c.pausedUntil>new Date().toISOString()?"En pausa hasta "+fecha(c.pausedUntil)+".":"Sin pausa.";
+  var enPausa=!!(c.pausedUntil&&c.pausedUntil>new Date().toISOString());
+  $("pausa").textContent=enPausa?"En pausa hasta "+fecha(c.pausedUntil):"Sin pausa.";
+  var em=$("estadoModo");em.className=!c.enabled?"mal":(enPausa?"suave":"ok");
+  em.textContent=!c.enabled?"Ahora: apagado. No se manda ningún aviso automático.":(enPausa?"Ahora: encendido, pero en pausa hasta "+fecha(c.pausedUntil):"Ahora: encendido.");
+  $("cEncender").textContent=c.enabled?"Apagar Modo Cautela":"Encender Modo Cautela";
+  $("cEncender").className=c.enabled?"sec":"";
   var g=$("registro");limpiar(g);if(!d.registro.length){texto(g,"Todavía no hay nada.")}
   d.registro.forEach(function(x){var f=document.createElement("div");f.className="fila";var t=document.createElement("span");t.textContent=x.detail;var w=document.createElement("small");w.textContent=fecha(x.createdAt);w.className="suave";f.appendChild(t);f.appendChild(w);g.appendChild(f)});
 }
@@ -818,9 +857,11 @@ function mostrarInvitacion(i){
 }
 function accion(cuerpo,ok){aviso("");return api(cuerpo).then(function(d){pintar(d);mostrarInvitacion(d.invitacion);if(d.invitacion&&!d.invitacion.enviado)aviso("No pudimos mandar el mail. Usá el enlace de abajo.");else if(ok)aviso(ok)}).catch(function(e){aviso(e.message)})}
 $("rAgregar").onclick=function(){var cc=$("rCorreo").value.trim();if(cc&&!confirm("Le vamos a mandar el mail a esta dirección: ["+cc+"]. Fijate letra por letra: si está mal escrito, le llega a otra persona. ¿Está bien escrito?"))return;accion({accion:"agregar",name:$("rNombre").value,email:$("rCorreo").value},"Listo: le mandamos el mail a tu referente.").then(function(){$("rNombre").value="";$("rCorreo").value=""})};
-$("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value,enabled:$("cActivo").checked}},"Condiciones guardadas.")};
+$("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value}},"Condiciones guardadas.")};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
-Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por 8 horas.")}});
+Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});
+$("pOtro").onclick=function(){var h=Number($("pHoras").value);if(!(h>=1&&h<=72)){aviso("Poné un número de horas entre 1 y 72.");return}accion({accion:"pausa",horas:h},"Pausa puesta por "+h+(h===1?" hora.":" horas."))};
+$("cEncender").onclick=function(){if(encendido&&!confirm("¿Apagar el Modo Cautela? Mientras esté apagado no se manda ningún aviso automático a tus referentes, tampoco el del SOS. Si es por un rato, mejor usá la pausa."))return;accion({accion:"config",config:{enabled:!encendido}},encendido?"Modo Cautela apagado.":"Modo Cautela encendido.")};
 api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d)}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});
 })();
 </script>`);

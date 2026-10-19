@@ -1047,6 +1047,15 @@ Actualizado: 16/10/2026.
   **Botón OG armado (19/10/2026, sin instalar):** `aplicar-og-panel.ps1` (barra superior en `src\panel-index.html` + estilos en `src\panel-explanations.css`): solo se ve con la sesión
   abierta; con el mouse encima dice "Modo Guardián · Modo Cautela"; al tocarlo abre un menú con los dos modos y "Abrir Tu protección" (→ `/guardian`); en el celular el menú queda pegado al
   borde derecho. Probado en una maqueta en el navegador (celular y compu). **Instalado y publicado por Luciano el 19/10/2026** (versión 5aa32542); en el panel real (foto de Android, 19/10/2026) el OG se superponía con el nombre "ojo guard" y "Modo noche" / "Cerrar acceso" no entraban. **Arreglo armado (sin instalar):** `aplicar-og-arreglo-panel.ps1` (respaldo `.bak-og2`, un solo cambio en `src\panel-explanations.css`): hasta 560 px la barra pasa a dos filas (arriba el nombre; abajo, a la derecha, OG · Modo noche · Cerrar acceso) y el menú del OG se abre debajo, adentro de la pantalla. Probado en maqueta a 360 / 390 / 1100 px sin superposiciones; falta una foto del panel real tras Ctrl+F5. Luego: que el ícono muestre el estado (gris / dorado / ámbar con aro de cuenta regresiva) cuando exista el Modo Guardián.
+  **Pausar o apagar (pedido de Luciano, 19/10/2026): armado, sin instalar** (`aplicar-pausar-apagar-panel.ps1`, respaldo `.bak-pldpausa`, solo servidor, sin build; 149 pruebas y navegador ok).
+  Lo que pidió: en la tarjeta "Esta noche, afuera" (solo "Pausar 8 horas" y "Quitar pausa") quiere también "Pausar 12 horas", poder dar otro tiempo, y una opción para
+  que la función quede desactivada. Hecho: la tarjeta pasa a llamarse **"Pausar o apagar"** (8 / 12 / 24 horas, "Otro tiempo" de 1 a 72 horas, "Quitar pausa", y dice hasta cuándo);
+  un botón **"Apagar / Encender Modo Cautela"** (pregunta antes de apagar) reemplaza el casillero que estaba dentro de Condiciones; arriba de la tarjeta dice si está encendido, en
+  pausa hasta tal hora o apagado; el registro anota todo. Extra por seguridad: si al pausar o apagar ya se les había avisado a los referentes, el aviso se cierra y se les cuenta
+  por mail, y al terminar la pausa empieza de cero con el "¿Estás bien?" a la persona. **Pregunta abierta (sí/no):** hoy, con el Modo Cautela APAGADO, el SOS tampoco avisa a los
+  referentes (con la pausa sí avisa). ¿Querés que el SOS avise a los referentes aunque el Modo Cautela esté apagado? Mi recomendación: sí.
+  **Sin contestar de Luciano (mensajes del 19/10/2026, dictados):** "Los de abajo los sacaría" (¿qué tarjetas?) y "en vez de vale, es vale" (¿qué palabra?); si cada modo tendría
+  sus propios referentes ("elegir uno o más").
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el

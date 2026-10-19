@@ -327,7 +327,7 @@ console.log("== Aviso automatico: casos en que NO avisa");
   dispositivo({ seen: 150, bat: 80, lat: -34.6, lng: -58.4 });
   await api({ accion: "pausa", horas: 8 });
   await pldCron(env);
-  ok(correos.length === n && episodio() === undefined, "con la pausa 'Esta noche, afuera' no se hace nada");
+  ok(correos.length === n && episodio() === undefined, "con la pausa de avisos no se hace nada");
   await api({ accion: "pausa", horas: 0 });
   await api({ accion: "config", config: { enabled: false } });
   await pldCron(env);
@@ -396,7 +396,7 @@ console.log("== SOS: tambien se les avisa a los referentes");
   // la pausa no lo frena
   await api({ accion: "pausa", horas: 8 });
   n = correos.length;
-  ok((await pldAvisarSos(env, DUENIO, ubic)) === 2 && correos.length === n + 2, "la pausa 'Esta noche, afuera' no frena un SOS");
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 2 && correos.length === n + 2, "la pausa de avisos no frena un SOS");
   await api({ accion: "pausa", horas: 0 });
   // un referente silenciado no recibe
   sqlite.prepare("UPDATE pld_referentes SET muted_until=? WHERE id=?").run(pldEnMinutos(600), t.papa.split(".")[0]);
@@ -420,15 +420,96 @@ console.log("== SOS: tambien se les avisa a los referentes");
   ok(/tambi\u00e9n se les avisa a ellos/.test(await (pldPaginaDuenio() as any).text()), "la pagina de la persona cuenta que el SOS tambien les avisa");
 }
 
+console.log("== Pausar o apagar el Modo Cautela");
+{
+  await preparar();
+  dispositivo({ seen: 150, bat: 8, lat: -34.52, lng: -58.4 });
+  for (const h of [8, 12, 24, 36]) {
+    const rp: any = await (await api({ accion: "pausa", horas: h })).json();
+    ok(Math.abs((Date.parse(rp.config.pausedUntil) - Date.now()) / 3_600_000 - h) < 0.05, `pausa de ${h} horas`);
+  }
+  let rp: any = await (await api({ accion: "pausa", horas: 500 })).json();
+  ok(Math.abs((Date.parse(rp.config.pausedUntil) - Date.now()) / 3_600_000 - 72) < 0.05, "la pausa no pasa de 72 horas");
+  rp = await (await api({ accion: "pausa", horas: 1 })).json();
+  ok(rp.registro.some((x: any) => x.detail === "Pausa de 1 hora (pausa de avisos)."), "en el registro, una hora va en singular");
+  ok(rp.registro.some((x: any) => /Pausa de 72 horas/.test(x.detail)), "en el registro queda cuanto duro la pausa");
+  rp = await (await api({ accion: "pausa", horas: 0 })).json();
+  ok(rp.config.pausedUntil === null && rp.registro.some((x: any) => x.detail === "Se quit\u00f3 la pausa."), "quitar la pausa");
+
+  // apagar y encender
+  rp = await (await api({ accion: "config", config: { enabled: false } })).json();
+  ok(rp.config.enabled === false && rp.registro.some((x: any) => x.detail === "La persona apag\u00f3 el Modo Cautela."), "apagar queda en el registro");
+  rp = await (await api({ accion: "config", config: { enabled: true } })).json();
+  ok(rp.config.enabled === true && rp.registro.some((x: any) => x.detail === "La persona encendi\u00f3 el Modo Cautela."), "encender queda en el registro");
+  rp = await (await api({ accion: "config", config: { farKm: 4 } })).json();
+  ok(rp.config.enabled === true && rp.config.farKm === 4 && rp.registro[0].detail === "La persona cambi\u00f3 sus condiciones.", "guardar condiciones no toca el encendido");
+}
+
+console.log("== Pausar o apagar con un aviso en marcha");
+{
+  async function conAvisoEnMarcha() {
+    await preparar();
+    dispositivo({ seen: 150, bat: 8, lat: -34.52, lng: -58.4 });
+    await pldCron(env);
+    sqlite.prepare("UPDATE pld_episodios SET checkin_at=? WHERE owner_email=?").run(hace(20), DUENIO);
+    await pldCron(env);
+    ok(episodio() && episodio().alerts === 1, "(preparacion) ya se les aviso a los referentes");
+  }
+  await conAvisoEnMarcha();
+  let n = correos.length;
+  await api({ accion: "pausa", horas: 8 });
+  let avs = mailsDesde(n).filter((c) => /entr\u00f3 a su cuenta/.test(c.subject));
+  ok(episodio() === undefined && avs.length === 2 && avs.every((c) => /paus\u00f3 los avisos por 8 horas/.test(c.html)), "al pausar, se cierra el aviso y se les cuenta a los referentes");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Se les avis\u00f3 a tus referentes que paus\u00f3 los avisos por 8 horas/.test(x.detail)), "y queda en el registro");
+  n = correos.length;
+  await pldCron(env);
+  ok(correos.length === n, "mientras dura la pausa no se manda nada");
+  await api({ accion: "pausa", horas: 0 });
+  n = correos.length;
+  await pldCron(env);
+  const tras = mailsDesde(n);
+  ok(episodio() && episodio().alerts === 0 && tras.length === 1 && tras[0].to === DUENIO && /Est\u00e1s bien/.test(tras[0].subject), "al terminar la pausa, primero se le pregunta a la persona y no se avisa enseguida a los referentes");
+
+  await conAvisoEnMarcha();
+  n = correos.length;
+  await api({ accion: "config", config: { enabled: false } });
+  avs = mailsDesde(n).filter((c) => /entr\u00f3 a su cuenta/.test(c.subject));
+  ok(episodio() === undefined && avs.length === 2 && avs.every((c) => /apag\u00f3 el Modo Cautela/.test(c.html)), "al apagar, se cierra el aviso y se les cuenta a los referentes");
+  n = correos.length;
+  await pldCron(env);
+  ok(correos.length === n && episodio() === undefined, "apagado, el cron no hace nada");
+  await api({ accion: "config", config: { enabled: true } });
+  await pldCron(env);
+  ok(episodio() && episodio().alerts === 0, "al encenderlo de nuevo empieza de cero");
+
+  // si todavia no se les habia avisado a los referentes, no se les manda nada
+  await preparar();
+  dispositivo({ seen: 150, bat: 8, lat: -34.52, lng: -58.4 });
+  await pldCron(env);
+  ok(episodio() && episodio().alerts === 0, "(preparacion) solo se le pregunto a la persona");
+  n = correos.length;
+  await api({ accion: "pausa", horas: 12 });
+  ok(episodio() === undefined && correos.length === n, "si a los referentes todavia no se les avis\u00f3, no se les manda nada");
+
+  // si la persona ya habia dicho que estaba bien, tampoco
+  await conAvisoEnMarcha();
+  sqlite.prepare("UPDATE pld_episodios SET state='respondio' WHERE owner_email=?").run(DUENIO);
+  n = correos.length;
+  await api({ accion: "pausa", horas: 12 });
+  ok(episodio() === undefined && correos.length === n, "si ya dijo 'Estoy bien', tampoco se les manda nada");
+}
+
 console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
 {
   const tp: string = await (pldPaginaDuenio() as any).text();
   ok(/Tu protecci\u00f3n/.test(tp) && /Modo Cautela/.test(tp) && /Modo Guardi\u00e1n/.test(tp) && /Pr\u00f3ximamente/.test(tp), "la pagina se llama Tu proteccion y muestra Modo Cautela y Modo Guardian (proximamente)");
   const pos = (x: string) => tp.indexOf(x);
-  ok(pos("Tus referentes") > 0 && pos("Tus referentes") < pos(">Modo Cautela<") && pos(">Modo Cautela<") < pos("C\u00f3mo est\u00e1s hoy") && pos("C\u00f3mo est\u00e1s hoy") < pos("Condiciones") && pos("Condiciones") < pos("Esta noche, afuera") && pos("Esta noche, afuera") < pos("Modo Guardi\u00e1n <span") && pos("Modo Guardi\u00e1n <span") < pos("<h2>Registro</h2>"), "el orden: referentes, Modo Cautela (como estas hoy, condiciones, pausa), Modo Guardian, registro");
-  ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Modo Cautela encendido/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
-  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cActivo", "cGuardar", "cCasa", "casa", "pausa", "registro"];
+  ok(pos("Tus referentes") > 0 && pos("Tus referentes") < pos(">Modo Cautela<") && pos(">Modo Cautela<") < pos("C\u00f3mo est\u00e1s hoy") && pos("C\u00f3mo est\u00e1s hoy") < pos("Condiciones") && pos("Condiciones") < pos("Pausar o apagar") && pos("Pausar o apagar") < pos("Modo Guardi\u00e1n <span") && pos("Modo Guardi\u00e1n <span") < pos("<h2>Registro</h2>"), "el orden: referentes, Modo Cautela (como estas hoy, condiciones, pausa), Modo Guardian, registro");
+  ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Encender Modo Cautela|Apagar Modo Cautela/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
+  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
+  ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && /Pausar 12 horas/.test(tp) && /Pausar 24 horas/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar 8, 12 y 24 horas, otro tiempo y quitar la pausa");
+  ok(!tp.includes('id="cActivo"') && !/enabled:\$\("cActivo"\)/.test(tp), "el casillero viejo de 'encendido' se reemplazo por el boton de apagar / encender");
   const n0 = correos.length;
   await pldCorreo(env, "a@b.c", "x", "<p>y</p>");
   ok(/modo cautela/.test(correos[n0].html) && !/por las dudas/.test(correos[n0].html), "el pie de los mails dice modo cautela");
