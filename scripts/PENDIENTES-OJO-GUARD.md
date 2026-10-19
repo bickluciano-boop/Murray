@@ -1033,6 +1033,11 @@ Actualizado: 16/10/2026.
   dueño; las casillas @ojoguard.app sí se derivan a su Gmail), ir a Billing, actualizar la tarjeta (la anterior fue rechazada), recargar y dejar un
   método de pago de respaldo. Los números siguen cobrando cargos mientras tanto. Después, comprobar Argentina en los permisos geográficos y probar un
   SMS. "Por las dudas" usa mail y aviso en el teléfono, no necesita SMS.
+  **19/10/2026 (13:35):** Luciano no puede entrar a la consola (la recuperación de contraseña de bickluciano@gmail.com no manda mail, ni a Recibidos ni
+  a Spam; mirado también Gmail y la casilla IONOS). `help@twilio.com` ya no sirve (rebota: deprecado desde 05/2023; fue un error mío mandarlo ahí).
+  Escribió contestando el ticket de siempre (Onboarding & Compliance, #29118167, trusthub-verify@twilio.zendesk.com) pidiendo recuperar el acceso
+  y reactivar la cuenta. Esperar 1 a 3 días hábiles; reintentar "Forgot password" una vez pasada una hora; si no hay respuesta, "Any update?" o
+  pedido nuevo en support.twilio.com → Contact Support.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
