@@ -985,9 +985,9 @@ Actualizado: 16/10/2026.
   Sin instalar todavía. Al probarlo con las condiciones de prueba (10 min, 2 de 4) puede avisar seguido: al terminar volver a
   noche 21 a 6, silencio 90/360, 3 de 4. **Twilio:** pasos dados a Luciano (Upgrade en console.twilio.com, saldo inicial, permisos
   geográficos de Argentina; SMS a Argentina ≈ USD 0,10 por mensaje según la página de precios de Twilio); falta que lo haga y probar un SMS.
-  **19/10/2026:** Luciano mandó su Business Profile a Twilio (mail del "Consumer Trust Team": revisión en unas 24 horas, pueden contactarlo por
-  mail, teléfono o videollamada; no hace falta hacer nada hasta entonces). Cuando lo aprueben: comprobar saldo y probar un SMS desde el panel.
-  No pegar nunca el Auth Token.
+  **19/10/2026, CORRECCIÓN (leído en el Gmail de Luciano, con su permiso):** el mail "Thank you for taking the first step…" que pegó era el de
+  confirmación de envío del 15/09/2026, no uno nuevo; el **Business Profile ya estaba APROBADO el 16/09/2026** (bundle BU3e73…), no hay revisión en
+  curso. El problema real es otro: ver la entrada de Twilio más abajo. No pegar nunca el Auth Token ni datos de tarjeta.
   **Aviso automático instalado y publicado por Luciano el 18/10/2026** (versión 3f36abcd; código reconocido por la huella, tabla
   `pld_episodios` creada, hook en `scheduled`). Falta probarlo con el teléfono apagado (cron :00/:15/:30/:45) y después volver a las
   condiciones reales (noche 21 a 6, silencio 90/360, 3 de 4).
@@ -1024,15 +1024,15 @@ Actualizado: 16/10/2026.
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
   ya dijo que está bien.
-- [ ] **Twilio (SMS) no manda: se terminó el crédito gratis de la cuenta de
-  prueba** (Luciano, 17/10/2026: "ya sabíamos por qué era"). No es un error del
-  código. Mientras no se cargue saldo no salen los SMS de "Avisos de seguridad"
-  (consola, Cuenta) ni el SMS del SOS; el mail y el aviso en el teléfono siguen
-  funcionando. Para volver a usarlo: en console.twilio.com pasar la cuenta de
-  prueba a una cuenta paga (cargar saldo y medio de pago); cada mensaje se paga
-  y hay que tener habilitada Argentina en los permisos geográficos. Decisión de
-  Luciano si vale la pena. "Por las dudas" usa mail y aviso en el teléfono, no
-  necesita SMS.
+- [ ] **Twilio (SMS) no manda: la cuenta está SUSPENDIDA por saldo bajo** (corrige lo que se creía el 17/10: "se terminó el crédito gratis").
+  Según los mails del 24 y 25/09/2026 (en el Gmail de Luciano): cuenta "My First Twilio Account" (SID AC006275…), dueño **bickluciano@gmail.com**;
+  la **recarga automática falló** (pago rechazado: USD 10,06 el 24/09 y USD 20,50 el 25/09), el saldo quedó en -USD 0,50 y el 25/09 Twilio la
+  suspendió ("Action Required: Your Twilio account is suspended (Low Balance)"). Mientras esté suspendida no salen los SMS de "Avisos de seguridad"
+  ni el del SOS; el mail y el aviso en el teléfono siguen. Para reactivarla: entrar a twilio.com/login con "Continue with Google"
+  (bickluciano@gmail.com; así entró el 07/09) o "Forgot password" con ESE correo (con luciano.bick@ojoguard.app no manda nada: no es el del
+  dueño; las casillas @ojoguard.app sí se derivan a su Gmail), ir a Billing, actualizar la tarjeta (la anterior fue rechazada), recargar y dejar un
+  método de pago de respaldo. Los números siguen cobrando cargos mientras tanto. Después, comprobar Argentina en los permisos geográficos y probar un
+  SMS. "Por las dudas" usa mail y aviso en el teléfono, no necesita SMS.
 - [ ] **Alertas críticas de Apple.** **Enviado el 09/10/2026 a las 17:3x.
   Request ID: 7R4MM73U2Y.** Esperar el mail de Apple (puede tardar semanas);
   **17/10/2026: no hay ningún mail de Apple sobre esto** (en iCloud solo están
