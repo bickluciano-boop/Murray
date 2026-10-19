@@ -1024,6 +1024,12 @@ Actualizado: 16/10/2026.
   **SOS** es el botón manual (avisa a familia y referentes); **"Guardián"** es el servicio de acompañarte en el camino (cuenta regresiva hasta llegar,
   avisa a los referentes); la función actual que avisa sola ("Por las dudas") necesita otro nombre: propuesta **"SOS automático"** (esperando su sí;
   alternativas "Aviso automático", "Si dejo de responder"). Cuando confirme: parche de textos (título, encabezado, pie de los mails, dirección corta).
+  **Estructura final propuesta por Luciano (19/10/2026), que reemplaza lo anterior:** **Guardián** es el servicio, con UNA lista de referentes y dos funciones que
+  se prenden o apagan (una, las dos o ninguna): **"Por las dudas"** (avisa sola si la persona deja de responder; se conserva el nombre, con subtítulo) y la de
+  acompañar el camino (nombre propuesto: **"Acompañame"**; alternativas "Camino seguro", "Llegada segura"). El SOS queda aparte (siempre a mano) y avisa a
+  familia y referentes. Plan: (1) dejar Por las dudas en uso real unos días; (2) página `/guardian` (referentes arriba, dos tarjetas con interruptor,
+  "Acompañame" como "Próximamente"); (3) versión web de Acompañame (cuenta regresiva en el servidor, cron de 1 minuto, "Llegué" y "Extender"); (4) build de
+  la app (Estoy bien desde el aviso, seguimiento y llegada automática, app que se despierta tras reiniciar). Esperando su sí al paso 2 y al nombre.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
