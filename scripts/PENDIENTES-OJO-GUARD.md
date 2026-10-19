@@ -1035,6 +1035,10 @@ Actualizado: 16/10/2026.
   regresiva). Mismos referentes para los dos y para el SOS. Mi opinión: los nombres van siempre visibles bajo el ícono (en el celular no hay mouse), el ícono
   muestra el estado (gris / dorado / ámbar con aro de cuenta regresiva), y evitar el doble uso de "Guardián" (servicio y modo). Falta su confirmación de
   qué es cada modo y un comando de lectura para ver la barra superior del panel (para el botón OG que abra `/guardian`).
+  **Corrección de Luciano (19/10/2026), esta es la versión vigente:** **Modo Guardián = acompañarte en el camino** (lo activás vos; cuenta regresiva;
+  avisa a los referentes) y **Modo Cautela = lo que hoy es "Por las dudas"** (de fondo; si dejás de responder avisa; "cautela" = precaución, "por las
+  dudas"). Referentes compartidos; SOS aparte. Plan: renombrar en páginas y mails "Por las dudas" → "Modo Cautela" (subtítulo "Por las dudas: si dejo de
+  responder, mis referentes se enteran"), página `/guardian` (referentes arriba + tarjetas "Modo Cautela" activo y "Modo Guardián" próximamente), botón OG en el panel.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el

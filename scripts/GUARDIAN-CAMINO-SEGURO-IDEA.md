@@ -3,8 +3,8 @@
 Estado: **IDEA** (Luciano, 19/10/2026; la vio en otra app). Nada construido.
 
 **Nombres (aclarados por Luciano el 19/10/2026):** **Referentes** = las personas que elige (una sola lista para todo); **SOS** = el botón manual, que avisa a la familia
-y a los referentes; **Guardián** = este servicio, acompañarte en el camino; la función actual que avisa sola (hoy "Por las dudas") está por renombrarse
-(propuesta: "SOS automático"). Los avisos de Guardián van a los **mismos referentes**.
+y a los referentes; **Modo Guardián** = este servicio, acompañarte en el camino (lo activa la persona); **Modo Cautela** = la función que avisa sola, que hoy se llama "Por las dudas"
+("cautela" = precaución, "por las dudas"). Entrada: el ícono **OG**. Los avisos de Guardián van a los **mismos referentes**.
 
 ## Qué es
 
