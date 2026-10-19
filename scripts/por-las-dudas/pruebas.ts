@@ -420,6 +420,21 @@ console.log("== SOS: tambien se les avisa a los referentes");
   ok(/tambi\u00e9n se les avisa a ellos/.test(await (pldPaginaDuenio() as any).text()), "la pagina de la persona cuenta que el SOS tambien les avisa");
 }
 
+console.log("== Estado de tu telefono (panorama)");
+{
+  await preparar();
+  dispositivo({ seen: 2, bat: 80, lat: -34.6, lng: -58.4 });
+  let pn: any = await (await api()).json();
+  ok(pn.hoy.hayDatos === true && pn.hoy.mostrar === false && pn.hoy.cumplen <= 1, "con el telefono normal: todo tranquilo (mostrar = false)");
+  dispositivo({ seen: 150, bat: 8, lat: -34.52, lng: -58.4 });
+  pn = await (await api()).json();
+  ok(pn.hoy.mostrar === true && pn.hoy.cumplen >= 2, "con el telefono sin senal y con poca bateria: con senales de alerta (mostrar = true)");
+  await api({ accion: "config", config: { enabled: false } });
+  pn = await (await api()).json();
+  ok(pn.hoy.mostrar === true, "el estado del telefono se ve aunque el Modo Cautela este apagado");
+  await api({ accion: "config", config: { enabled: true } });
+}
+
 console.log("== Pausar o apagar el Modo Cautela");
 {
   await preparar();
@@ -504,14 +519,17 @@ console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
   const tp: string = await (pldPaginaDuenio() as any).text();
   ok(/Tu protecci\u00f3n/.test(tp) && /Modo Cautela/.test(tp) && /Modo Guardi\u00e1n/.test(tp) && /Pr\u00f3ximamente/.test(tp), "la pagina se llama Tu proteccion y muestra Modo Cautela y Modo Guardian (proximamente)");
   const pos = (x: string) => tp.indexOf(x);
-  ok(pos("Tus referentes") > 0 && pos("Tus referentes") < pos(">Modo Cautela<") && pos(">Modo Cautela<") < pos("Pausar o apagar") && pos("Pausar o apagar") < pos("C\u00f3mo est\u00e1s hoy") && pos("C\u00f3mo est\u00e1s hoy") < pos("<h2>Condiciones</h2>") && pos("<h2>Condiciones</h2>") < pos("Modo Guardi\u00e1n <span") && pos("Modo Guardi\u00e1n <span") < pos("<h2>Registro</h2>"), "el orden: referentes, Modo Cautela (pausar o apagar, como estas hoy, condiciones), Modo Guardian, registro");
+  ok(pos("Tus referentes") > 0 && pos("Tus referentes") < pos(">Modo Cautela<") && pos(">Modo Cautela<") < pos("Pausar o apagar") && pos("Pausar o apagar") < pos("Estado de tu tel\u00e9fono") && pos("Estado de tu tel\u00e9fono") < pos("<h2>Condiciones</h2>") && pos("<h2>Condiciones</h2>") < pos("Modo Guardi\u00e1n <span") && pos("Modo Guardi\u00e1n <span") < pos("<h2>Registro</h2>"), "el orden: referentes, Modo Cautela (pausar o apagar, estado del telefono, condiciones), Modo Guardian, registro");
   ok(['detHoy', 'detCondiciones', 'detRegistro'].every((i) => new RegExp('<details class="tarjeta" id="' + i + '"').test(tp)) && !/<details[^>]*\sopen/.test(tp), "como estas hoy, condiciones y registro estan plegados");
   ok(/id="detCondiciones">.*?id="cGuardar".*?<\/details>/s.test(tp) && /id="detRegistro">.*?id="registro".*?<\/details>/s.test(tp) && /id="detHoy">.*?id="hoy".*?<\/details>/s.test(tp), "los campos estan dentro de su tarjeta plegable");
   ok(!/<div class="tarjeta"><p>Te acompa\u00f1a en el camino\./.test(tp) && /Modo Guardi\u00e1n <span class="pill">Pr\u00f3ximamente<\/span><\/h2>\s*<p class="suave"[^>]*>Te acompa\u00f1a en el camino de vuelta/.test(tp), "Modo Guardian es una sola linea");
   ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Encender Modo Cautela|Apagar Modo Cautela/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
   const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
-  ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && /Pausar 12 horas/.test(tp) && /Pausar 24 horas/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar 8, 12 y 24 horas, otro tiempo y quitar la pausa");
+  ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && />12 horas<\/button>/.test(tp) && />24 horas<\/button>/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar por 8, 12 y 24 horas, otro tiempo y quitar la pausa");
+  ok(!/C\u00f3mo est\u00e1s hoy/.test(tp) && /Estado de tu tel\u00e9fono/.test(tp), "la tarjeta ya no se llama 'Como estas hoy' (parecia una pregunta de animo): se llama 'Estado de tu telefono'");
+  ok(/\.botones\{display:flex;flex-wrap:wrap;gap:10px/.test(tp) && /<div class="botones tres"[^>]*><button class="sec" data-h="8">/.test(tp) && /<div class="botones"><button id="cGuardar">/.test(tp) && /dr\.className="botones"/.test(tp), "los botones tienen espacio entre si (pausas, guardar condiciones y los de cada referente)");
+  ok(/Todo tranquilo/.test(tp) && /Con se\u00f1ales de alerta/.test(tp) && /no ver\u00edan nada ahora/.test(tp), "el estado del telefono se explica en palabras simples");
   ok(!tp.includes('id="cActivo"') && !/enabled:\$\("cActivo"\)/.test(tp), "el casillero viejo de 'encendido' se reemplazo por el boton de apagar / encender");
   const n0 = correos.length;
   await pldCorreo(env, "a@b.c", "x", "<p>y</p>");

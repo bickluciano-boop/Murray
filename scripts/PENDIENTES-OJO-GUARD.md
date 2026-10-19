@@ -1058,6 +1058,11 @@ Actualizado: 16/10/2026.
   Modo noche / Cerrar acceso, y más importante**; menú negro **más ancho** para que no quede una palabra sola abajo. Armado, sin instalar: `aplicar-og-importante-panel.ps1` (respaldo `.bak-og3`, solo panel,
   dos archivos): OG dorado macizo con sombra (abierto se invierte), a la izquierda de la segunda fila; menú de todo el ancho en el celular (hasta 380 px en compu); texto de Modo Cautela acortado
   ("Si dejo de responder, mis referentes se enteran."). Ojo: en el panel real la regla `.ghost` pisaba los colores del OG (se veía gris, no dorado); por eso el estilo nuevo es más específico y usa `!important`.
+  **Tu protección: botones con aire y "Estado de tu teléfono" (fotos de Luciano del celular, 19/10/2026).** Instalada la versión corta (plegable); en las fotos se vio que el Modo Cautela quedó **APAGADO**
+  ("Ahora: apagado") por las pruebas: hay que **encenderlo** (con apagado, tampoco avisa el SOS a los referentes). Críticas: "los botones muy juntos" (pausas y "Mandar enlace de nuevo" / "Quitar") y
+  "Cómo estás hoy parece que se pregunta el ánimo; poco claro, mucha info, poco amigable". Armado, sin instalar: `aplicar-tu-proteccion-claro-panel.ps1` (respaldo `.bak-pldclaro`, solo servidor, 158 pruebas y navegador a
+  360 y 390 px ok): todos los botones con espacio (`.botones`, gap 10 px), pausas como "Pausar por: 8 horas | 12 horas | 24 horas" en una fila, y la tarjeta pasa a "Estado de tu teléfono" con "Todo tranquilo" /
+  "Con señales de alerta" + una frase simple ("tus referentes no verían nada ahora" / "podrían ver tu última señal"). Acepta que estén aplicadas las tres versiones anteriores. Nuevo campo `hoy.mostrar` en la API del dueño.
   **Tu protección más corta (Luciano dijo "sí" el 19/10/2026): armado, sin instalar** (`aplicar-tu-proteccion-plegable-panel.ps1`, respaldo `.bak-pldplegable`, solo servidor; 152 pruebas y navegador ok).
   Orden nuevo de `/guardian`: Tus referentes → Modo Cautela con "Pausar o apagar" a la vista → "Cómo estás hoy" (con "1 de 4 señales" al lado), "Condiciones" y "Registro" plegados
   (botón "Abrir") → Modo Guardián en una sola línea ("Próximamente"). Mide ~2240 px en el celular (antes ~3490). Trae todo lo de `aplicar-pausar-apagar-panel.ps1` y acepta que ese ya esté o no aplicado
