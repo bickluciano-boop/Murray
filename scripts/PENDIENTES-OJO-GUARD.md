@@ -1003,7 +1003,11 @@ Actualizado: 16/10/2026.
   PIN para escribir). Luciano eligió **B: no abrir esa pantalla en ese teléfono** y administrarlo desde su panel/teléfono. Para una próxima build:
   opción de permitir la configuración sin bloqueo en un teléfono marcado como "de una persona cuidada" (hoy es una protección), y que un
   teléfono de una persona mayor no registre intentos de clave incorrecta con foto si ella toca la pantalla sin querer.
-  **19/10/2026, Luciano deja el resto "para otro día". Para retomar, en este orden:**
+  **Aclaración de Luciano (19/10/2026): da por buena la prueba de Por las dudas** ("eso está ok"); lo que deja para otro día es el teléfono de su
+  papá (hoy le instaló la app pero tuvo que irse y su papá no sabe entrar a su Gmail). Nota honesta: nunca se vio en pantalla el mail del cron a
+  PAPA ("Lu lleva rato sin dar señales") ni el final "volvió a dar señal"; están cubiertos por las pruebas con base simulada.
+  **Para retomar:** (el punto 2 de abajo queda como opcional)
+  Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
   Android de prueba, para que no mande avisos de más a PAPA (su Outlook). (2) Repetir la prueba del aviso a PAPA sin tocar "Estoy bien": no se
   vio el mail "Lu lleva rato sin dar señales" del cron de las 13:00 del 18/10 (el Android se prendió o se cortó antes; se pidió mirar
