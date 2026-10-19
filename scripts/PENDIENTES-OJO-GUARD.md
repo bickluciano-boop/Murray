@@ -1044,6 +1044,9 @@ Actualizado: 16/10/2026.
   el registro; el pie de los mails dice "ojo guard · modo cautela". OG = iniciales de Ojo Guard (confirmado por Luciano). **Falta el botón OG dentro del panel**:
   necesito que corra el comando de lectura de la barra superior (buscar "Mis dispositivos|Cerrar sesi|topbar|ogm-capas" en `src`).
   **Instalado y publicado por Luciano el 19/10/2026** (versión 793617a0): la página ya es "Tu protección" y abre en `/guardian`. Falta que mande una captura y el comando de la barra superior.
+  **Botón OG armado (19/10/2026, sin instalar):** `aplicar-og-panel.ps1` (barra superior en `src\panel-index.html` + estilos en `src\panel-explanations.css`): solo se ve con la sesión
+  abierta; con el mouse encima dice "Modo Guardián · Modo Cautela"; al tocarlo abre un menú con los dos modos y "Abrir Tu protección" (→ `/guardian`); en el celular el menú queda pegado al
+  borde derecho. Probado en una maqueta en el navegador (celular y compu). Luego: que el ícono muestre el estado (gris / dorado / ámbar con aro de cuenta regresiva) cuando exista el Modo Guardián.
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
