@@ -1054,6 +1054,10 @@ Actualizado: 16/10/2026.
   pausa hasta tal hora o apagado; el registro anota todo. Extra por seguridad: si al pausar o apagar ya se les había avisado a los referentes, el aviso se cierra y se les cuenta
   por mail, y al terminar la pausa empieza de cero con el "¿Estás bien?" a la persona. **Pregunta abierta (sí/no):** hoy, con el Modo Cautela APAGADO, el SOS tampoco avisa a los
   referentes (con la pausa sí avisa). ¿Querés que el SOS avise a los referentes aunque el Modo Cautela esté apagado? Mi recomendación: sí.
+  **Tu protección más corta (Luciano dijo "sí" el 19/10/2026): armado, sin instalar** (`aplicar-tu-proteccion-plegable-panel.ps1`, respaldo `.bak-pldplegable`, solo servidor; 152 pruebas y navegador ok).
+  Orden nuevo de `/guardian`: Tus referentes → Modo Cautela con "Pausar o apagar" a la vista → "Cómo estás hoy" (con "1 de 4 señales" al lado), "Condiciones" y "Registro" plegados
+  (botón "Abrir") → Modo Guardián en una sola línea ("Próximamente"). Mide ~2240 px en el celular (antes ~3490). Trae todo lo de `aplicar-pausar-apagar-panel.ps1` y acepta que ese ya esté o no aplicado
+  (comprueba la huella de cualquiera de las dos versiones anteriores). `e2e.js` quedó arreglado (el paso "sin sesión" estaba viejo) y `e2e.js` / `e2e-pausa.js` abren "Condiciones" antes de usarla.
   **Sin contestar de Luciano (mensajes del 19/10/2026, dictados):** "Los de abajo los sacaría" (¿qué tarjetas?) y "en vez de vale, es vale" (¿qué palabra?); si cada modo tendría
   sus propios referentes ("elegir uno o más").
   **Para retomar:** (el punto 2 de abajo queda como opcional)

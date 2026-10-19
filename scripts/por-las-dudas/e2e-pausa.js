@@ -39,6 +39,7 @@ const B = 'http://localhost:8799';
   await pag.click('#cEncender');
   await pag.waitForFunction(() => document.getElementById('estadoModo').textContent.includes('encendido'));
   console.log('encendido otra vez:', await estado(), '| boton:', await pag.textContent('#cEncender'), '| sin pregunta al encender:', dialogos.length === nd);
+  await pag.click('#detCondiciones summary');
   await pag.click('#cGuardar');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('guardadas'));
   console.log('guardar condiciones mantiene:', await estado());

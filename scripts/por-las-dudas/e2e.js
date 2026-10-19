@@ -18,6 +18,7 @@ const B = 'http://localhost:8799';
   await pag.waitForFunction(() => document.getElementById('referentes').textContent.includes('Mamá'));
   console.log('referentes:', (await pag.textContent('#referentes')).slice(0, 120).replace(/\s+/g, ' '));
   console.log('aviso:', await pag.textContent('#aviso'));
+  await pag.click('#detCondiciones summary');
   await pag.fill('#cNombre', 'Lucas');
   await pag.click('#cCasa');
   await pag.waitForFunction(() => document.getElementById('casa').textContent.includes('Casa marcada'));
@@ -52,8 +53,8 @@ const B = 'http://localhost:8799';
   // --- sin sesion en la pagina del dueno
   await fetch(B + '/__sesion', { method: 'POST', body: 'null' });
   await pag.reload();
-  await pag.waitForFunction(() => document.getElementById('aviso').textContent.length > 0);
-  console.log('sin sesion:', await pag.textContent('#aviso'));
+  await pag.waitForFunction(() => document.getElementById('sinSesion').style.display === 'block');
+  console.log('sin sesion:', (await pag.textContent('#sinSesion')).replace(/\s+/g, ' ').slice(0, 90), '| contenido oculto:', await pag.evaluate(() => document.getElementById('contenido').style.display === 'none'));
   console.log('ERRORES DE PAGINA:', errores.length ? errores : 'ninguno');
   await nav.close();
 })().catch((e) => { console.log('FALLO E2E:', e.message); process.exit(1); });
