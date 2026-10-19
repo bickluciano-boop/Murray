@@ -1030,6 +1030,11 @@ Actualizado: 16/10/2026.
   familia y referentes. Plan: (1) dejar Por las dudas en uso real unos días; (2) página `/guardian` (referentes arriba, dos tarjetas con interruptor,
   "Acompañame" como "Próximamente"); (3) versión web de Acompañame (cuenta regresiva en el servidor, cron de 1 minuto, "Llegué" y "Extender"); (4) build de
   la app (Estoy bien desde el aviso, seguimiento y llegada automática, app que se despierta tras reiniciar). Esperando su sí al paso 2 y al nombre.
+  **Idea de Luciano (19/10/2026), a confirmar:** un ícono **"OG"** como entrada a "Mi Guardián"; al tocarlo/pasar el mouse muestra abajo los dos modos:
+  **"Modo Guardián"** (el que vigila siempre: lo que hoy es "Por las dudas") y **"Modo Cautela"** (el que se activa para un camino o situación; cuenta
+  regresiva). Mismos referentes para los dos y para el SOS. Mi opinión: los nombres van siempre visibles bajo el ícono (en el celular no hay mouse), el ícono
+  muestra el estado (gris / dorado / ámbar con aro de cuenta regresiva), y evitar el doble uso de "Guardián" (servicio y modo). Falta su confirmación de
+  qué es cada modo y un comando de lectura para ver la barra superior del panel (para el botón OG que abra `/guardian`).
   **Para retomar:** (el punto 2 de abajo queda como opcional)
   Lista:
   (1) Volver las condiciones de Por las dudas a las reales (noche 21 a 6, silencio 90 y 360, 3 señales, "Guardar condiciones") y prender el
