@@ -1159,6 +1159,17 @@ Actualizado: 16/10/2026.
   `eas.cmd build --platform ios --profile production --auto-submit` la sube
   sola a TestFlight. Falta probarlo.
 
+## Idea de Luciano (20/10/2026): "Buscar" estilo Apple, dispositivos y artículos por defecto
+
+- **Idea:** para no tener que vincular uno por uno muchos dispositivos, un modelo como el de Apple (Buscar / Familia): el permiso es **por persona** (solo se ve a quien autoriza que lo sigan) y, una vez dado,
+  **todos sus dispositivos aparecen por defecto**, y también sus **artículos**.
+- **Hoy (según lo armado hasta ahora):** la persona acepta la invitación de la familia, pero cada teléfono se autoriza por separado en Dispositivos (EQUIPO PENDIENTE → Autorizar, como el del papá), y para
+  Ubicar / Hacer sonar / En vivo sobre un menor se usa **un solo teléfono** de la persona (el principal o el que reportó último).
+- **Propuesta, etapa 1 (sin hardware):** al aceptar, todos los equipos **autorizados** de esa persona se ven solos en el mapa y en Ubicar / Sonar, y los que sume después también; la persona puede apagar el uso
+  compartido de un equipo y la familia lo ve (sin modo oculto). Se mantiene la autorización de cada equipo nuevo (evita sumar un teléfono espía solo con el mail); se puede facilitar con un código o QR desde un equipo ya autorizado.
+- **Etapa 2, artículos:** lo de Apple (AirTag) depende de su red de iPhones y no se puede copiar. Opciones reales: GPS baratos para auto / mochila / mascota que se leen por API, y el "Modo cercanía" con Bluetooth
+  (ya anotado en Antirrobo). Falta confirmar con Luciano qué entiende por "artículos" (¿llaves, mochila, auto?). Va para una build posterior.
+
 ## Antirrobo (app)
 
 - [ ] **Probar en la calle el "Modo cercanía"** (Configuración → Modo cercanía:
