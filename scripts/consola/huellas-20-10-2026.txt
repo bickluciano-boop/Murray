@@ -1,0 +1,11 @@
+# Huellas SHA-256 (con saltos de linea normalizados) de los diez archivos de la consola, foto del 20/10/2026 14:05 (inventario de Luciano). Formato: nombre | bytes | sha256
+emergency.css | 520 | e3eab1da47d587475c38cde2fe0f1d37788e7c3eb4c99d8e0008a6e3ff64df78
+mobile-fixes.css | 2204 | a002363d7cf0107a1862673926553623db054bfcb05e322325209d6ffb908721
+panel-app.txt | 101712 | 3e290574f46ccec0249219ed53e966e8ca2148bdf4ad335715f4af3bc693416d
+panel-explanations.css | 28736 | a26ddfb00d7fd63f7e3f1d2bf6257f32b3a19fe3e2d45646aa2e825add95f689
+panel-history.css | 11072 | 49267ed43c6acfc39eed447cc0147ed103edd20e838172e16de6fab4ecbab5a7
+panel-index.html | 35837 | b2d6abd6595e033dbc1bd57b4f28c7564633f850753009bc7f40375d14c51c8b
+panel-mapa.css | 26712 | 2cdd37c2b6ca9593701a2fbb87766d8f60e1fa8af8808af43f51d2b3f9762474
+panel-mapa.txt | 118713 | 33e0dc80dd76fe1250dfc2f69248a951909b9d4afa02d00480d45471085cd53f
+panel-styles.css | 11375 | 56f2892e752af4f8edfa3502de9e0967bd355c8bd011c778f5b1d25abea83add
+theme-light.css | 8552 | e3162065758601d379520e919cb8c38bd166561a795a181d102e102e12c2924a
