@@ -2,7 +2,7 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const B = 'http://localhost:8799';
 (async () => {
   const nav = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
-  const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'es-AR' });
+  const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'es-AR', geolocation: { latitude: -34.505, longitude: -58.4 }, permissions: ['geolocation'] }); // el navegador del telefono sabe donde esta la persona
   // los enlaces que arma el servidor de prueba apuntan a https://panel.test: se llevan al servidor local
   await ctx.route('https://panel.test/**', async (route) => {
     const req = route.request();
@@ -79,7 +79,9 @@ const B = 'http://localhost:8799';
   console.log('sin clave: minutos editables:', !(await pag.$eval('#gdMin', (e) => e.readOnly)));
   // con la clave de Google Rutas: el tiempo sale de los mapas y no se puede cambiar
   await fetch(B + '/__clave', { method: 'POST', body: '1' });
-  await pag.selectOption('#gdModo', 'transporte');
+  console.log('Como vas: botones:', await pag.$$eval('#gdModo button.modo', (b) => b.map((x) => x.textContent.trim() + (x.getAttribute('aria-checked') === 'true' ? ' (marcado)' : ''))), '| iconos:', await pag.$$eval('#gdModo svg', (l) => l.length));
+  await pag.screenshot({ path: 'e2e_guardian_modos.png', fullPage: true });
+  await pag.click('#gdModo button[data-modo="transporte"]');
   await pag.waitForFunction(() => document.getElementById('gdAyudaMin').textContent.includes('calculado con mapas'));
   console.log('con clave:', await pag.inputValue('#gdMin'), 'min |', await pag.textContent('#gdAyudaMin'), '| solo lectura:', await pag.$eval('#gdMin', (e) => e.readOnly));
   await pag.screenshot({ path: 'e2e_guardian_mapas.png', fullPage: true });
@@ -99,7 +101,8 @@ const B = 'http://localhost:8799';
   console.log('eligio:', await pag.inputValue('#gdTexto'), '|', await pag.inputValue('#gdMin'), 'min |', await pag.textContent('#gdAyudaMin'));
   await pag.selectOption('#gdLugar', 'pl1');
   await fetch(B + '/__clave', { method: 'POST', body: '0' });
-  await pag.selectOption('#gdModo', 'caminando');
+  await pag.click('#gdModo button[data-modo="caminando"]');
+  console.log('marcado ahora:', await pag.$eval('#gdModo button[aria-checked="true"]', (b) => b.textContent.trim()));
   await pag.waitForFunction(() => document.getElementById('gdAyudaMin').textContent.includes('estimado'));
   console.log('caminando:', await pag.inputValue('#gdMin'), 'min');
   await pag.click('#gdEmpezar');

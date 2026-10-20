@@ -43,7 +43,17 @@ const servidor = createServer(async (req, res) => {
     else if (ruta === "POST /__gd-cron") { await gdCron(env); r = json({ ok: true }); }
     else if (ruta === "POST /__gd-minutos") { sqlite.prepare("UPDATE gd_viajes SET deadline_at=? WHERE estado IN ('en_camino','aviso','alerta')").run(new Date(Date.now() + Number(cuerpo) * 60_000).toISOString()); r = json({ ok: true }); }
     else if (ruta === "POST /__ruta") { rutaSegundos = Number(cuerpo); r = json({ ok: true }); }
-    else if (ruta === "POST /__gd-ubicacion") { const u = JSON.parse(cuerpo || "{}"); sqlite.prepare("UPDATE devices SET last_location_json=?,last_location_at=?,last_seen_at=? WHERE id='dev1'").run(JSON.stringify({ latitude: u.lat, longitude: u.lng, address: "Calle de prueba" }), hace2(0), hace2(0)); r = json({ ok: true }); }
+    else if (ruta === "POST /__gd-ubicacion") { const u = JSON.parse(cuerpo || "{}"); sqlite.prepare("UPDATE devices SET last_location_json=?,last_location_at=?,last_seen_at=? WHERE id='dev1'").run(JSON.stringify({ latitude: u.lat, longitude: u.lng, address: "Calle de prueba" }), hace2(u.haceMin ?? 0), hace2(u.haceMin ?? 0)); r = json({ ok: true }); }
+    else if (ruta === "POST /__gd-pausa") { // hace que la pausa de "Voy a frenar un rato" haya terminado hace un rato (sin esperar 15 minutos)
+      const u = JSON.parse(cuerpo || "{}");
+      const f: any = sqlite.prepare("SELECT * FROM gd_progreso WHERE pausa_hasta IS NOT NULL").get();
+      if (f) {
+        const duracion = Date.parse(f.pausa_hasta) - Date.parse(f.pausa_ini), hasta = Date.now() - (u.venceHaceMin ?? 0.2) * 60_000;
+        sqlite.prepare("UPDATE gd_progreso SET pausa_hasta=?,pausa_ini=? WHERE viaje_id=?").run(new Date(hasta).toISOString(), new Date(hasta - duracion).toISOString(), f.viaje_id);
+        sqlite.prepare("UPDATE gd_viajes SET deadline_at=? WHERE id=?").run(new Date(hasta + Number(f.resta_ms)).toISOString(), f.viaje_id);
+      }
+      r = json({ ok: true, enPausa: !!f });
+    }
     else if (ruta === "POST /__gd-progreso") { const u = JSON.parse(cuerpo || "{}"); sqlite.prepare("UPDATE gd_progreso SET ref_at=?,recalc_at=?").run(hace2(u.refMinAtras ?? 6), hace2(u.recalcMinAtras ?? 6)); r = json({ ok: true, filas: sqlite.prepare("SELECT * FROM gd_progreso").all() }); }
     else if (ruta === "GET /__correos") r = json(correos);
     else if (ruta === "POST /__correo-falla") { setCorreoOk(cuerpo !== "1"); r = json({ ok: true }); }

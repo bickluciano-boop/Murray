@@ -1126,11 +1126,11 @@ console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar 
     sqlite.prepare(`UPDATE gd_progreso SET ${ks.map((k) => k + "=?").join(",")} WHERE viaje_id=?`).run(...ks.map((k) => campos[k] as any), id);
   };
   const fetchReal = globalThis.fetch;
-  const llamadas: any[] = [];
+  const llamadas: any[] = [], llamadasLugares: any[] = [];
   let seg = 1200, estadoRuta = 200;
   globalThis.fetch = (async (url: any, init: any) => {
     if (String(url).includes("routes.googleapis.com")) { llamadas.push(JSON.parse(init.body)); return estadoRuta === 200 ? new Response(JSON.stringify({ routes: [{ duration: seg + "s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.57, longitude: -58.4 } } }] }] }), { status: 200 }) : new Response("{}", { status: estadoRuta }); }
-    if (String(url).includes("places.googleapis.com")) return new Response(JSON.stringify({ suggestions: [{ placePrediction: { placeId: "ChIJcambio00001", text: { text: "Kansas, Av. del Libertador" }, structuredFormat: { mainText: { text: "Kansas" }, secondaryText: { text: "Av. del Libertador, CABA" } } } }] }), { status: 200 });
+    if (String(url).includes("places.googleapis.com")) { llamadasLugares.push(JSON.parse(init.body)); return new Response(JSON.stringify({ suggestions: [{ placePrediction: { placeId: "ChIJcambio00001", text: { text: "Kansas, Av. del Libertador" }, structuredFormat: { mainText: { text: "Kansas" }, secondaryText: { text: "Av. del Libertador, CABA" } } } }] }), { status: 200 }); }
     return fetchReal(url, init);
   }) as any;
   (env as any).GOOGLE_ROUTES_KEY = "clave-de-prueba";
@@ -1251,17 +1251,68 @@ console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar 
   ok(llamadas.length === 0, "con 0 minutos de tope el recalculo esta apagado y no se consulta nada");
   await gd({ accion: "config", config: { restablecer: true } });
 
-  console.log("-- voy a frenar un rato");
+  console.log("-- voy a frenar un rato: el reloj queda en pausa");
   fijar({ estado: "en_camino", deadline_at: min(5) });
+  poner({ paradas: 0, pausa_ini: null, pausa_hasta: null, resta_ms: null, parada_min: 0 });
   let n = correos.length;
   ok((await gd({ t: TOKEN, accion: "parada", minutos: 20 })).status === 400, "solo se puede frenar 15, 30 o 60 minutos");
   const antesP = Date.parse(viaje().deadline_at);
   let rp: any = await (await gd({ t: TOKEN, accion: "parada", minutos: 30 })).json();
-  ok(rp.ok && Math.abs(Date.parse(viaje().deadline_at) - (antesP + 30 * 60_000)) < 1000 && rp.viaje.paradas === 1 && rp.viaje.extensiones === 0 && mailsDesde(n).length === 0, "frenar 30 minutos corre el limite, no cuenta como pedido de mas tiempo y no les avisa a los referentes");
-  ok((await (await api()).json() as any).registro.some((x: any) => /Vas a frenar un rato: 30 minutos más/.test(x.detail)), "queda en el registro");
+  ok(rp.ok && rp.viaje.paradas === 1 && rp.viaje.extensiones === 0 && mailsDesde(n).length === 0, "frenar 30 minutos no cuenta como pedido de mas tiempo y no les avisa a los referentes");
+  ok(rp.viaje.pausa && Math.abs(Date.parse(rp.viaje.pausa.hasta) - (Date.now() + 30 * 60_000)) < 2000 && Math.abs(rp.viaje.pausa.restaMs - 5 * 60_000) < 2000, "queda en pausa 30 minutos y se guarda lo que le faltaba (5 minutos): el reloj de la pantalla no baja");
+  ok(Math.abs(Date.parse(viaje().deadline_at) - (antesP + 30 * 60_000)) < 2000, "el limite queda en el fin de la pausa mas lo que le faltaba, para que nada salte mientras esta frenado");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Vas a frenar un rato: el reloj queda en pausa 30 minutos \(hasta las \d\d:\d\d\) con 5 minutos para llegar a/.test(x.detail)), "queda en el registro");
+
+  console.log("-- durante la pausa el reloj no corre");
+  const limiteReal = viaje().deadline_at;
+  fijar({ deadline_at: min(1) }); // inconsistente a proposito: mientras dura la pausa manda la pausa
+  n = correos.length; avisos.length = 0; llamadas.length = 0;
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(viaje().estado === "en_camino" && mailsDesde(n).length === 0 && avisos.length === 0 && llamadas.length === 0, "mientras esta frenado no se le pregunta '¿Seguis en camino?', no se avisa a los referentes ni se recalcula por transito");
+  fijar({ deadline_at: limiteReal });
+  const estadoP: any = await (await gd({ t: TOKEN, accion: "estado" })).json();
+  ok(estadoP.viaje.pausa && estadoP.viaje.puedeParar === true && estadoP.viaje.puedeCambiar === true, "mientras esta frenado puede frenar mas, cambiar el destino o tocar Llegue");
+
+  console.log("-- Ya sigo: el reloj retoma lo que le faltaba");
+  fijar({ deadline_at: min(35) });
+  poner({ pausa_ini: hace(10), pausa_hasta: min(20), resta_ms: 5 * 60_000, paradas: 1, parada_min: 0 }); // pasaron 10 de los 30 minutos
+  const rs2: any = await (await gd({ t: TOKEN, accion: "seguir" })).json();
+  ok(rs2.ok && rs2.viaje.pausa === null && Math.abs(Date.parse(viaje().deadline_at) - Date.now() - 5 * 60_000) < 2000, "'Ya sigo' retoma el reloj con los 5 minutos que le faltaban, no con el limite de la pausa entera");
+  ok(progreso().parada_min === 10 && progreso().pausa_hasta === null && progreso().resta_ms === null && progreso().ref_lat === null, "queda anotado que estuvo frenado 10 minutos, se borra la pausa y se vuelve a tomar la muestra de ubicacion");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Seguís en camino a .*: el reloj sigue con 5 minutos/.test(x.detail)), "'Ya sigo' queda en el registro");
+  const rs3 = await gd({ t: TOKEN, accion: "seguir" });
+  ok(rs3.status === 409 && (await rs3.json() as any).error === "sin_pausa", "si no estaba frenado, 'Ya sigo' no hace nada");
+
+  console.log("-- se termina la pausa sola");
+  fijar({ deadline_at: min(19.5) });
+  poner({ pausa_ini: hace(30.5), pausa_hasta: hace(0.5), resta_ms: 20 * 60_000, parada_min: 0 }); // la pausa de 30 minutos termino hace medio minuto
+  n = correos.length; avisos.length = 0;
+  await gdCron(env);
+  ok(progreso().pausa_hasta === null && progreso().parada_min === 30 && Math.abs(Date.parse(viaje().deadline_at) - Date.now() - 19.5 * 60_000) < 2000, "al terminar la pausa el reloj sigue solo (el limite ya estaba bien) y se anotan los 30 minutos frenado");
+  ok(mailsDesde(n).length === 1 && /Terminó tu parada/.test(mailsDesde(n)[0].subject) && mailsDesde(n)[0].to === DUENIO && avisos.length === 1 && /Terminó tu parada/.test(avisos[0].title), "y se le avisa a la persona (mail y telefono) que termino su parada, sin avisarles a los referentes");
+  fijar({ estado: "en_camino", deadline_at: min(1.5), aviso_at: null });
+  poner({ pausa_ini: hace(30.5), pausa_hasta: hace(0.5), resta_ms: 2 * 60_000, parada_min: 0 });
+  n = correos.length;
+  await gdCron(env);
+  ok(viaje().estado === "aviso" && mailsDesde(n).length === 1 && /¿Seguís en camino\?/.test(mailsDesde(n)[0].subject), "si al terminar la pausa ya le quedan solo 1 o 2 minutos, se le pregunta si sigue en camino en vez de mandar el aviso de fin de pausa");
+
+  console.log("-- frenar mas tiempo, pedir mas tiempo y llegar frenado");
+  fijar({ estado: "en_camino", aviso_at: null, deadline_at: min(5) });
+  poner({ paradas: 0, pausa_ini: null, pausa_hasta: null, resta_ms: null, parada_min: 0 });
   await gd({ t: TOKEN, accion: "parada", minutos: 15 });
+  const hasta1 = Date.parse(progreso().pausa_hasta);
+  const rpm: any = await (await gd({ t: TOKEN, accion: "parada", minutos: 30 })).json();
+  ok(rpm.ok && Math.abs(Date.parse(progreso().pausa_hasta) - (hasta1 + 30 * 60_000)) < 1000 && progreso().paradas === 2 && Math.abs(progreso().resta_ms - 5 * 60_000) < 2000, "frenar de nuevo con el reloj en pausa alarga la pausa (45 minutos en total), no toca lo que le faltaba y cuenta como otra parada");
+  const rpe: any = await (await gd({ t: TOKEN, accion: "extender", minutos: 10 })).json();
+  ok(rpe.ok && Math.abs(progreso().resta_ms - 15 * 60_000) < 2000, "pedir mas tiempo mientras esta frenado se suma a lo que le falta para llegar");
   const rp3 = await gd({ t: TOKEN, accion: "parada", minutos: 15 });
   ok(rp3.status === 409 && (await rp3.json() as any).error === "demasiadas_paradas" && (await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.puedeParar === false, "como maximo 2 paradas por camino");
+  poner({ pausa_ini: hace(7) });
+  const rll: any = await (await gd({ t: TOKEN, accion: "llegue" })).json();
+  ok(rll.ok && viaje().estado === "llego" && progreso().parada_min === 7 && rll.viaje.fin.paradaMin === 7 && rll.viaje.fin.despuesMin < 0 && rll.viaje.fin.extraMin >= 0, "si toca Llegue frenado se cuenta lo que duro la pausa (7 minutos) y el resumen dice 'de parada' aparte; llego antes del limite");
+  fijar({ estado: "en_camino", ended_at: null, motivo_fin: null, deadline_at: min(5) });
+  poner({ pausa_ini: null, pausa_hasta: null, resta_ms: null, parada_min: 0 });
   fijar({ estado: "alerta", alertas: 1, last_alert_at: now() });
   ok((await gd({ t: TOKEN, accion: "parada", minutos: 15 })).status === 409, "despues de avisarles a los referentes ya no se frena: se toca Llegue");
   fijar({ estado: "en_camino", alertas: 0, last_alert_at: null, deadline_at: min(5) });
@@ -1272,7 +1323,21 @@ console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar 
   fijar({ estado: "en_camino" });
   const rp0 = await gd({ t: TOKEN, accion: "parada", minutos: 15 });
   ok(rp0.status === 409 && (await rp0.json() as any).error === "sin_extensiones" && (await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.puedeParar === false, "si en la configuracion no se puede pedir mas tiempo, tampoco se puede frenar");
+  sqlite.exec("UPDATE gd_viajes SET estado='cancelado'"); // la configuracion no se cambia con un camino en marcha
   await gd({ accion: "config", config: { restablecer: true } });
+  fijar({ estado: "en_camino", ended_at: null, motivo_fin: null, deadline_at: min(5) });
+
+  console.log("-- la tabla de progreso de una instalacion anterior (sin las columnas de la pausa) se completa sola");
+  sqlite.exec("DROP TABLE gd_progreso; CREATE TABLE gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, updated_at TEXT)");
+  gdTablaLista = false;
+  fijar({ estado: "en_camino", deadline_at: min(5) });
+  const rviejo: any = await (await gd({ t: TOKEN, accion: "parada", minutos: 15 })).json();
+  const columnas = (sqlite.prepare("PRAGMA table_info(gd_progreso)").all() as any[]).map((c) => c.name);
+  ok(rviejo.ok && rviejo.viaje.pausa && ["pausa_ini", "pausa_hasta", "resta_ms", "parada_min"].every((c) => columnas.includes(c)), "con la tabla de una instalacion anterior, al usarla se le agregan solas las columnas de la pausa y todo anda");
+  gdTablaLista = false;
+  await gd({ t: TOKEN, accion: "estado" });
+  ok(((sqlite.prepare("PRAGMA table_info(gd_progreso)").all() as any[]).filter((c) => c.name === "pausa_hasta")).length === 1, "y si ya las tiene no las vuelve a agregar");
+  poner({ paradas: 0, pausa_ini: null, pausa_hasta: null, resta_ms: null, parada_min: 0 });
 
   console.log("-- cambiar de destino");
   const progAntes = { paradas: 0 };
@@ -1305,6 +1370,59 @@ console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar 
   const rc5 = await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1" });
   ok(rc5.status === 409 && (await rc5.json() as any).error === "ya_se_aviso", "despues de avisarles a los referentes no se cambia el destino: se toca Llegue");
 
+  console.log("-- cambiar de destino: siempre desde donde esta la persona");
+  fijar({ estado: "en_camino", alertas: 0, last_alert_at: null, ended_at: null, motivo_fin: null });
+  lejos(); // el telefono aviso hace 1 minuto desde (-34.6, -58.4)
+  llamadas.length = 0; seg = 600;
+  let ro: any = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", origen: { lat: -34.5, lng: -58.5, precision: 25 } })).json();
+  ok(ro.ok && ro.origen.fuente === "navegador" && llamadas[0].origin.location.latLng.latitude === -34.5 && llamadas[0].origin.location.latLng.longitude === -58.5, "usa la ubicacion que manda el navegador de la persona en ese momento (como Google Maps o Waze), no la guardada, y lo dice");
+  llamadas.length = 0;
+  ro = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1" })).json();
+  ok(ro.ok && ro.origen.fuente === "telefono" && ro.origen.haceMin <= 2 && llamadas[0].origin.location.latLng.latitude === -34.6, "si el navegador no la da, usa la del telefono, pero solo porque es de hace 1 minuto");
+  llamadas.length = 0;
+  ro = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", origen: { lat: 40, lng: 10, precision: 30000 } })).json();
+  ok(ro.ok && ro.origen.fuente === "telefono" && llamadas[0].origin.location.latLng.latitude === -34.6, "una ubicacion del navegador muy imprecisa (por ejemplo la de una computadora) no se usa: vale la del telefono");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Calculado desde la última ubicación de tu teléfono \(hace \d+ min\)\./.test(x.detail)) && (await (await api()).json() as any).registro.some((x: any) => /Calculado desde donde estabas\./.test(x.detail)), "el registro cuenta desde donde se calculo");
+  dispositivo({ seen: 120, bat: 80, lat: -34.6, lng: -58.4 }); // el telefono no avisa hace 2 horas
+  llamadas.length = 0;
+  const rv = await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1" });
+  const rvj: any = await rv.json();
+  ok(rv.status === 400 && rvj.error === "faltan_minutos" && rvj.fallo === "ubicacion_vieja" && llamadas.length === 0, "si la ultima ubicacion del telefono es vieja (2 horas) no se calcula desde ahi: se pide la ubicacion o los minutos");
+  const rv2: any = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", minutos: 25 })).json();
+  ok(rv2.ok && rv2.origen === null && rv2.minutos === 25 && viaje().estimado_min >= 25, "con los minutos que pone la persona se puede cambiar igual");
+  const est: any = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto" })).json();
+  ok(est.ok && est.minutos === null && est.fallo === "ubicacion_vieja" && /hace 2 horas/.test(est.detalle), "al estimar con una ubicacion vieja dice por que no puede y de hace cuanto es la ultima");
+  const est2: any = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto", origen: { lat: -34.58, lng: -58.41, precision: 15 } })).json();
+  ok(est2.ok && est2.minutos === 10 && est2.km === 3 && est2.origen.fuente === "navegador", "y con la ubicacion del navegador estima desde ahi (y dice los km para que se pueda juzgar si el tiempo tiene sentido)");
+  llamadasLugares.length = 0;
+  await gd({ t: TOKEN, accion: "buscar", texto: "kansas" });
+  ok(llamadasLugares.length === 1 && llamadasLugares[0].locationBias && !llamadasLugares[0].origin, "si la ubicacion del telefono es vieja, las sugerencias solo se ordenan por cerca de ahi, sin decir a cuantos km quedan");
+  llamadasLugares.length = 0;
+  await gd({ t: TOKEN, accion: "buscar", texto: "kansas", origen: { lat: -34.58, lng: -58.41, precision: 15 } });
+  ok(llamadasLugares.length === 1 && llamadasLugares[0].origin.latitude === -34.58, "con la ubicacion del navegador, si dice a cuantos km quedan");
+  lejos();
+
+  console.log("-- cambiar como voy: auto, transporte o caminando");
+  fijar({ estado: "en_camino", ended_at: null, motivo_fin: null, destino: "Casa", dest_lat: -34.57, dest_lng: -58.4, modo: "auto" });
+  llamadas.length = 0; seg = 1800;
+  let rm: any = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", modo: "caminando" })).json();
+  ok(rm.ok && rm.modo === "caminando" && rm.minutos === 30 && rm.km === 3 && viaje().modo === "caminando" && rm.viaje.modoTexto === "caminando" && llamadas[0].travelMode === "WALK", "al cambiar el destino se puede elegir como va: se guarda y el calculo se hace a pie");
+  llamadas.length = 0;
+  rm = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", modo: "transporte" })).json();
+  ok(rm.ok && viaje().modo === "transporte" && llamadas[0].travelMode === "TRANSIT", "en transporte publico el calculo es de transporte");
+  llamadas.length = 0;
+  rm = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1" })).json();
+  ok(rm.ok && rm.modo === "transporte" && llamadas[0].travelMode === "TRANSIT", "si no elige otro, sigue con el que traia");
+  ok((await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1", modo: "monopatin" })).status === 400, "un modo que no existe no sirve");
+  llamadas.length = 0; seg = 900;
+  rm = await (await gd({ t: TOKEN, accion: "cambiar", mismo: true, modo: "auto" })).json();
+  ok(rm.ok && viaje().destino === "Casa" && viaje().modo === "auto" && llamadas[0].travelMode === "DRIVE" && llamadas[0].routingPreference === "TRAFFIC_AWARE" && llamadas[0].destination.location.latLng.latitude === -34.57, "se puede seguir yendo al mismo lugar y cambiar solo como va: se recalcula hacia el mismo destino exacto, ahora en auto y con el transito de ahora");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Cambiaste cómo vas a Casa: ahora en auto: 15 min \(calculado con mapas y el tránsito de ahora, 3 km\)/.test(x.detail)), "queda en el registro con los minutos y los km");
+  ok((await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.destinoExacto === true, "la pantalla sabe que el destino es exacto (para ofrecer seguir yendo al mismo lugar)");
+  fijar({ dest_lat: null, dest_lng: null });
+  ok((await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.destinoExacto === false && (await gd({ t: TOKEN, accion: "cambiar", mismo: true })).status === 400, "si no se conoce el destino exacto no se puede 'seguir yendo al mismo lugar'");
+  fijar({ dest_lat: -34.57, dest_lng: -58.4 });
+
   console.log("-- buscar y lugares con el enlace del camino");
   fijar({ estado: "en_camino", alertas: 0, last_alert_at: null });
   const bt: any = await (await gd({ t: TOKEN, accion: "buscar", texto: "kansas" })).json();
@@ -1323,6 +1441,11 @@ console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar 
   ok(/V\.puedeParar/.test(pc2) && /Ya frenaste "\+V\.paradasMax/.test(pc2) && /V\.puedeCambiar/.test(pc2) && /V\.paradasMax/.test(pc2) && /demasiadas_paradas/.test(pc2) && /destino_muy_lejos/.test(pc2), "los botones aparecen segun lo que permite el servidor (cantidad de paradas, camino activo)");
   ok(/V\.ajusteAutoMin>0/.test(pc2) && /Sumamos "\+V\.ajusteAutoMin\+" minutos por tr\u00e1nsito/.test(pc2) && /f\.autoMin>0/.test(pc2) && /por tr\u00e1nsito/.test(pc2), "la pagina avisa cuando se sumaron minutos por transito y lo cuenta en el resumen final");
   ok(!/innerHTML/.test(pc2), "la pagina del camino no arma nada con innerHTML (los lugares y las sugerencias se agregan como texto)");
+  ok(["bSeguir", "pausaTxt"].every((i) => pc2.includes('id="' + i + '"')) && />Ya sigo<\/button>/.test(pc2) && /function enPausa\(\)/.test(pc2) && /EN PAUSA · termina a las/.test(pc2) && /\$\("reloj"\)\.textContent=reloj\(V\.pausa\.restaMs\)/.test(pc2) && /accion:"seguir"/.test(pc2) && /Frenar más tiempo/.test(pc2) && /pausaVencida/.test(pc2), "la pantalla del camino muestra EN PAUSA con el reloj quieto (lo que le faltaba), hasta cuando dura la pausa, 'Ya sigo' y 'Frenar mas tiempo'; cuando termina la pausa vuelve a preguntar solo");
+  ok(/De parada|de parada/.test(pc2) && /f\.paradaMin>0/.test(pc2), "el resumen final cuenta los minutos de parada aparte");
+  ok(/id="cmModos"/.test(pc2) && ["auto", "transporte", "caminando"].every((m) => pc2.includes('data-modo="' + m + '"')) && (pc2.match(/<svg viewBox="0 0 24 24"/g) ?? []).length === 3 && /Cómo vas/.test(pc2) && /c\.modo=modosValor\("cmModos"\)|modo:modosValor\("cmModos"\)/.test(pc2) && /"__mismo"/.test(pc2) && /Seguir yendo a /.test(pc2) && /c\.mismo=true/.test(pc2), "'Cambiar destino' tiene los tres modos con icono (auto, transporte, caminando) y la opcion 'Seguir yendo a <el lugar>' para cambiar solo como va");
+  ok(["bProbar", "sonidoAviso"].every((i) => pc2.includes('id="' + i + '"')) && />Probar sonido<\/button>/.test(pc2) && /g\.gain\.value=largo\?0\.6:0\.5/.test(pc2) && /function vibrar\(/.test(pc2) && /navigator\.audioSession/.test(pc2) && /Bluetooth/.test(pc2) && /!sonidoListo\(\)/.test(pc2) && /Tocá la pantalla para que suenen los pitidos/.test(pc2), "la pantalla del camino deja probar el sonido (tres pips, y explica que si hay auriculares, parlante o auto por Bluetooth suena ahi, que hay que subir el volumen y apagar el silencio del iPhone), suena mas fuerte, vibra aunque el navegador no deje sonar y avisa en el ultimo minuto si el sonido no esta habilitado");
+  ok(/enableHighAccuracy:true/.test(pc2) && /function ubicar\(/.test(pc2) && /Buscando tu ubicación/.test(pc2) && /ubicacion_vieja/.test(pc2) && /desde donde estás ahora/.test(pc2) && !/timeout:4000/.test(pc2), "la pantalla del camino pide la ubicacion actual (con mas tiempo y precision), dice que la esta buscando y cuenta desde donde se calculo; si no se sabe donde esta pide la ubicacion o los minutos");
 
   globalThis.fetch = fetchReal;
   delete (env as any).GOOGLE_ROUTES_KEY;
@@ -1360,6 +1483,9 @@ console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
   ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /id="cEncender" role="switch" aria-checked="true" aria-label="Modo Cautela"/.test(tp) && /Por las dudas: si dejo de responder/.test(tp) && /function alternarCautela/.test(tp) && /\$\("swCautelaInicio"\)\.onclick=alternarCautela/.test(tp), "el Modo Cautela se prende y se apaga con un interruptor, tanto en el inicio como en su pantalla");
   const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe", "gdSeccion", "guardianCard", "gdCarga", "gdActivo", "gdAbrir", "gdForm", "gdLugar", "gdOtro", "gdTexto", "gdModo", "gdMin", "gdEmpezar", "gdSinRef", "swCautelaInicio", "tCautela", "tGuardian", "tConfig", "avisoRef", "cfRef", "cNombreGuardar", "cReset", "gMargen", "gAviso", "gExt", "gAuto", "gEntre", "gMaxAv", "gGuardar", "gReset", "aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz", "gdPie"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
+  ok(/<div class="modos" id="gdModo" role="radiogroup"/.test(vGuar) && ["auto", "transporte", "caminando"].every((m) => vGuar.includes('data-modo="' + m + '"')) && !/<select id="gdModo"/.test(tp) && (vGuar.match(/<svg viewBox="0 0 24 24"/g) ?? []).length === 3 && /function modosValor\(/.test(tp) && /modo:modosValor\("gdModo"\)/.test(tp), "'Empezar camino' elige como va con tres botones con icono (auto, transporte, caminando) en lugar de un desplegable");
+  ok(/function gdUbicar\(/.test(tp) && /enableHighAccuracy:true/.test(tp) && /gdUbicar\(\)\.then\(function\(o\)\{if\(mi!==GDSEQ\)return null/.test(tp) && /Buscando tu ubicación/.test(tp) && /ubicacion_vieja/.test(tp) && /desde donde estás ahora/.test(tp) && !/timeout:4000/.test(tp), "al calcular y al empezar el camino se pide la ubicacion actual (tambien para el tiempo que se muestra antes de empezar) y se cuenta desde donde se calculo");
+  ok(/d\.viaje\.pausa\?" \(en pausa\)":""/.test(tp), "si el camino esta en pausa, Tu proteccion lo dice");
   ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && />12 horas<\/button>/.test(tp) && />24 horas<\/button>/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar por 8, 12 y 24 horas, otro tiempo y quitar la pausa");
   ok(!/C\u00f3mo est\u00e1s hoy/.test(tp) && /Estado de tu tel\u00e9fono/.test(tp), "la tarjeta ya no se llama 'Como estas hoy' (parecia una pregunta de animo): se llama 'Estado de tu telefono'");
   ok(/\.botones\{display:flex;flex-wrap:wrap;gap:10px/.test(tp) && /<div class="botones tres"[^>]*><button class="sec" data-h="8">/.test(tp) && /<div class="botones"><button id="cGuardar">/.test(tp) && /dr\.className="botones"/.test(tp), "los botones tienen espacio entre si (pausas, guardar condiciones y los de cada referente)");

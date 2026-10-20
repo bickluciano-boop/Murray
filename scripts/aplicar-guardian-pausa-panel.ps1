@@ -1,18 +1,20 @@
-﻿# aplicar-guardian-recalculo-panel.ps1 - Modo Guardian: el tiempo se acomoda solo si hay transito, "Voy a frenar un rato" y "Cambiar destino".
-# Luciano (20/10/2026): "si la persona cambia el recorrido, recalcula el tiempo o deja el que puse fijo? El problema es cuando se le extiende el tiempo por el recorrido y no porque freno."
-# Como lo resuelve (se acordo con el: "si, armalo"):
-#  - Mientras vas en camino, el panel mira de a ratos (cada unos 4 minutos, con la ubicacion reciente del telefono) si TE VENIS ACERCANDO al destino. Solo cuando faltan 20 minutos o menos para el limite
-#    y te venis acercando, le pregunta a Google Mapas cuanto te falta con el transito de ahora; si te va a llevar mas que el tiempo que queda, SUMA ESA DIFERENCIA al limite (hasta un tope que se cambia en
-#    Configuracion > Modo Guardian: 60 minutos recomendados; 0 = no sumar nada). Si el telefono esta quieto (frenaste) o se aleja, NO se suma nada y sigue el aviso de siempre.
-#  - Boton "Voy a frenar un rato" en la pantalla del camino (15 minutos, 30 minutos o 1 hora, hasta 2 veces): suma ese tiempo al limite y NO les avisa a tus referentes.
-#  - Boton "Cambiar destino" en la pantalla del camino: elegis un lugar guardado u otro lugar (buscando por nombre o direccion), se recalcula el tiempo desde donde estas y el limite arranca de nuevo.
-#  - La pantalla del camino dice "Sumamos N minutos por transito" y el resumen final cuenta cuantos minutos fueron por transito. Todo queda en el Registro.
-#  - Configuracion > Modo Guardian suma el campo "Sumar tiempo si hay mas transito, hasta (min)" (con valores recomendados). Cada persona tiene el suyo.
-#  - No cambia nada mas: lo que ya andaba (margen, preguntar si seguis en camino, mas tiempo, avisos a referentes, Configuracion por categorias, Accesibilidad) sigue igual.
-#  - Las tablas nuevas (gd_progreso y la columna de gd_config) las crea solo el panel la primera vez que se usan: no hay que tocar la base.
-#  - Incluye todo lo de los parches anteriores de Guardian, lugares y Configuracion. Este los reemplaza: se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciocho versiones). No toca nada mas del panel.
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldrecalculo. Al final publica el panel solo.
+﻿# aplicar-guardian-pausa-panel.ps1 - Modo Guardian: "Voy a frenar un rato" es una pausa de verdad, el tiempo se calcula siempre desde donde estas, los modos de ir tienen iconos y el sonido se puede probar.
+# Luciano (20/10/2026): "si pongo voy a frenar un rato, no tendria que dejar de restar el reloj? poner en pausa?"; "cambiar destino, te toma de la geolocalizacion de donde estas? es importante que actualice y sea
+# desde donde estas, como hace Google Maps o Waze"; "como sabe si estoy caminando, auto o transporte? tendrian que estar los iconos de cada uno y poder marcarlos"; "no se escucho el pip pip pip de los 15 segundos".
+# Que cambia (todo en la pantalla del camino y en Tu proteccion; el resto sigue igual):
+#  - Voy a frenar un rato (15, 30 o 60 minutos, hasta 2 veces): el reloj queda QUIETO con lo que te faltaba para llegar y dice EN PAUSA hasta que hora. Con "Ya sigo" retomas con lo que te quedaba; si no tocas nada, la
+#    pausa termina sola, el reloj sigue y te avisamos ("Termino tu parada"). Durante la pausa no se pregunta ni se avisa nada, ni a vos ni a tus referentes. Se puede alargar ("Frenar mas tiempo", cuenta como otra parada).
+#    El resumen de Llegue cuenta los minutos de parada aparte, y Tu proteccion dice si el camino esta en pausa.
+#  - Cambiar destino calcula SIEMPRE desde donde estas: la ubicacion del navegador de tu telefono en ese momento (se pide con mas tiempo y precision); si no la da, la del telefono solo si es de los ultimos 10 minutos.
+#    Nunca desde un lugar guardado ni desde una ubicacion vieja: si no sabe donde estas, te pide que permitas la ubicacion o que pongas los minutos. Dice desde donde calculo, cuantos minutos y cuantos km.
+#    Lo mismo vale al calcular y al empezar un camino, y para ordenar las sugerencias de lugares (si la ubicacion es vieja, no dice a cuantos km queda cada una).
+#  - Como vas: tres botones con icono (auto, transporte, caminando) en Empezar camino y en Cambiar destino, que se pueden marcar. En Cambiar destino tambien hay "Seguir yendo a <el lugar>" para cambiar solo como vas.
+#  - Sonido de los ultimos 15 segundos: mas fuerte, vibra aunque el navegador no deje sonar, boton "Probar sonido" (tres pips y explica que si hay auriculares, parlante o auto por Bluetooth suena ahi, el volumen de contenido
+#    y el silencio del iPhone) y un aviso en el ultimo minuto si el navegador todavia no habilito el sonido.
+#  - Las columnas nuevas de la tabla gd_progreso las agrega solo el panel la primera vez que se usa: no hay que tocar la base.
+#  - Incluye todo lo de los parches anteriores de Guardian, lugares, Configuracion y recalculo por transito. Este los reemplaza: se puede correr encima de cualquiera de ellos.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las diecinueve versiones). No toca nada mas del panel.
+# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldpausa. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -38,12 +40,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'id="bFrenar"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'id="bSeguir"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76")
+$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -57,9 +59,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldrecalculo")) { Mal "Ya existe src\index.ts.bak-pldrecalculo. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldrecalculo")
-Ok "Respaldo creado: src\index.ts.bak-pldrecalculo"
+if (Test-Path ($indice + ".bak-pldpausa")) { Mal "Ya existe src\index.ts.bak-pldpausa. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldpausa")
+Ok "Respaldo creado: src\index.ts.bak-pldpausa"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -888,6 +890,8 @@ const GD_AJUSTE_DESDE_MIN = 20;
 const GD_AJUSTE_AVANCE_M = 100;
 const GD_AJUSTE_MIN_ATRASO = 2;
 const GD_UBICACION_RECIENTE_MIN = 10;
+const GD_PAUSA_RESTA_MINIMA_MS = 60_000; // al seguir despues de una pausa siempre queda al menos un minuto
+const GD_PRECISION_MAX_M = 5000; // una ubicacion del navegador mas imprecisa que esto (por ejemplo la de una computadora por su conexion) no sirve para calcular el camino
 const GD_MODOS: Record<string, string> = { auto: "en auto", transporte: "en transporte p\u00fablico", caminando: "caminando" };
 
 /** Lo que cada persona puede cambiar del Modo Guardi\u00e1n (Configuraci\u00f3n). Los valores recomendados son las constantes de arriba; cada cambio queda en gd_config. */
@@ -896,12 +900,23 @@ const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_
 const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180] };
 let gdTablaLista = false;
 
-/** La tabla se crea sola la primera vez que se usa (no hace falta tocar la base de datos al instalar). */
+/** Agrega a una tabla de una instalacion anterior las columnas que le faltan (mira cuales tiene y solo agrega las que no estan). */
+async function gdAgregarColumnas(env: Env, tabla: string, columnas: string[]) {
+  let tiene = new Set<string>();
+  try { tiene = new Set((((await env.DB.prepare(`PRAGMA table_info(${tabla})`).all<{ name: string }>()).results) ?? []).map((c) => String(c.name))); } catch { /* si no se puede mirar, se prueba con cada una */ }
+  for (const definicion of columnas) {
+    if (tiene.has(definicion.split(" ")[0])) continue;
+    try { await env.DB.prepare(`ALTER TABLE ${tabla} ADD COLUMN ${definicion}`).run(); } catch { /* ya estaba */ }
+  }
+}
+
+/** Las tablas se crean solas la primera vez que se usan, y si vienen de una instalacion anterior se les agregan las columnas nuevas (no hace falta tocar la base de datos al instalar). */
 async function gdAsegurarTabla(env: Env) {
   if (gdTablaLista) return;
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, updated_at TEXT)").run();
-  try { await env.DB.prepare("ALTER TABLE gd_config ADD COLUMN auto_max_min INTEGER").run(); } catch { /* ya estaba: la tabla se creo con esa columna */ }
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, updated_at TEXT)").run();
+  await gdAgregarColumnas(env, "gd_config", ["auto_max_min INTEGER"]);
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, pausa_ini TEXT, pausa_hasta TEXT, resta_ms INTEGER, parada_min INTEGER NOT NULL DEFAULT 0, updated_at TEXT)").run();
+  await gdAgregarColumnas(env, "gd_progreso", ["pausa_ini TEXT", "pausa_hasta TEXT", "resta_ms INTEGER", "parada_min INTEGER NOT NULL DEFAULT 0"]);
   gdTablaLista = true;
 }
 
@@ -926,17 +941,19 @@ async function gdGuardarConfig(env: Env, email: string, c: GdConfig) {
     .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, now()).run();
 }
 
-/** Lo que se sabe de un camino mientras dura: la ultima muestra de ubicacion (para ver si se acerca), cuando se recalculo, cuantos minutos se sumaron solos por transito y cuantas paradas hizo. */
-type GdProgreso = { refLat: number | null; refLng: number | null; refAt: string | null; recalcAt: string | null; autoMin: number; paradas: number };
-const GD_PROGRESO_VACIO: GdProgreso = { refLat: null, refLng: null, refAt: null, recalcAt: null, autoMin: 0, paradas: 0 };
+/** Lo que se sabe de un camino mientras dura: la ultima muestra de ubicacion (para ver si se acerca), cuando se recalculo, cuantos minutos se sumaron solos por transito, cuantas paradas hizo y,
+ *  si esta frenado, la pausa (desde cuando, hasta cuando y cuanto le quedaba para llegar, que es lo que el reloj retoma) y cuantos minutos estuvo frenado en total. */
+type GdProgreso = { refLat: number | null; refLng: number | null; refAt: string | null; recalcAt: string | null; autoMin: number; paradas: number; pausaIni: string | null; pausaHasta: string | null; restaMs: number | null; paradaMin: number };
+const GD_PROGRESO_VACIO: GdProgreso = { refLat: null, refLng: null, refAt: null, recalcAt: null, autoMin: 0, paradas: 0, pausaIni: null, pausaHasta: null, restaMs: null, paradaMin: 0 };
 
 async function gdLeerProgreso(env: Env, id: string): Promise<GdProgreso> {
   try {
     await gdAsegurarTabla(env);
-    const f = await env.DB.prepare("SELECT ref_lat AS refLat,ref_lng AS refLng,ref_at AS refAt,recalc_at AS recalcAt,auto_min AS autoMin,paradas FROM gd_progreso WHERE viaje_id=?").bind(id).first<Record<string, unknown>>();
+    const f = await env.DB.prepare("SELECT ref_lat AS refLat,ref_lng AS refLng,ref_at AS refAt,recalc_at AS recalcAt,auto_min AS autoMin,paradas,pausa_ini AS pausaIni,pausa_hasta AS pausaHasta,resta_ms AS restaMs,parada_min AS paradaMin FROM gd_progreso WHERE viaje_id=?").bind(id).first<Record<string, unknown>>();
     if (!f) return { ...GD_PROGRESO_VACIO };
     const num = (x: unknown) => (x === null || x === undefined ? null : Number.isFinite(Number(x)) ? Number(x) : null);
-    return { refLat: num(f.refLat), refLng: num(f.refLng), refAt: f.refAt ? String(f.refAt) : null, recalcAt: f.recalcAt ? String(f.recalcAt) : null, autoMin: Math.max(0, Math.round(Number(f.autoMin) || 0)), paradas: Math.max(0, Math.round(Number(f.paradas) || 0)) };
+    return { refLat: num(f.refLat), refLng: num(f.refLng), refAt: f.refAt ? String(f.refAt) : null, recalcAt: f.recalcAt ? String(f.recalcAt) : null, autoMin: Math.max(0, Math.round(Number(f.autoMin) || 0)), paradas: Math.max(0, Math.round(Number(f.paradas) || 0)),
+      pausaIni: f.pausaIni ? String(f.pausaIni) : null, pausaHasta: f.pausaHasta ? String(f.pausaHasta) : null, restaMs: num(f.restaMs), paradaMin: Math.max(0, Math.round(Number(f.paradaMin) || 0)) };
   } catch {
     return { ...GD_PROGRESO_VACIO };
   }
@@ -944,8 +961,25 @@ async function gdLeerProgreso(env: Env, id: string): Promise<GdProgreso> {
 
 async function gdGuardarProgreso(env: Env, id: string, p: GdProgreso) {
   await gdAsegurarTabla(env);
-  await env.DB.prepare("INSERT INTO gd_progreso (viaje_id,ref_lat,ref_lng,ref_at,recalc_at,auto_min,paradas,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(viaje_id) DO UPDATE SET ref_lat=excluded.ref_lat,ref_lng=excluded.ref_lng,ref_at=excluded.ref_at,recalc_at=excluded.recalc_at,auto_min=excluded.auto_min,paradas=excluded.paradas,updated_at=excluded.updated_at")
-    .bind(id, p.refLat, p.refLng, p.refAt, p.recalcAt, p.autoMin, p.paradas, now()).run();
+  await env.DB.prepare("INSERT INTO gd_progreso (viaje_id,ref_lat,ref_lng,ref_at,recalc_at,auto_min,paradas,pausa_ini,pausa_hasta,resta_ms,parada_min,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(viaje_id) DO UPDATE SET ref_lat=excluded.ref_lat,ref_lng=excluded.ref_lng,ref_at=excluded.ref_at,recalc_at=excluded.recalc_at,auto_min=excluded.auto_min,paradas=excluded.paradas,pausa_ini=excluded.pausa_ini,pausa_hasta=excluded.pausa_hasta,resta_ms=excluded.resta_ms,parada_min=excluded.parada_min,updated_at=excluded.updated_at")
+    .bind(id, p.refLat, p.refLng, p.refAt, p.recalcAt, p.autoMin, p.paradas, p.pausaIni, p.pausaHasta, p.restaMs, p.paradaMin, now()).run();
+}
+
+/** Cierra la pausa de "Voy a frenar un rato": la persona toco "Ya sigo", se termino el tiempo que habia elegido o llego. Suma lo que duro a lo frenado y, si se corta antes de tiempo, el reloj
+ *  sigue desde lo que le quedaba para llegar (si se termino sola, el limite ya estaba bien puesto: el fin de la pausa mas lo que quedaba). Despues de una pausa se vuelve a tomar la muestra de ubicacion. */
+async function gdCerrarPausa(env: Env, v: GdViaje, p: GdProgreso, ahora: number): Promise<{ viaje: GdViaje; progreso: GdProgreso }> {
+  if (!p.pausaHasta || !p.pausaIni) return { viaje: v, progreso: p };
+  const hasta = Date.parse(p.pausaHasta);
+  const usados = Math.max(0, Math.round((Math.min(ahora, hasta) - Date.parse(p.pausaIni)) / 60_000));
+  let viaje = v;
+  if (ahora < hasta) {
+    const limite = new Date(ahora + Math.max(GD_PAUSA_RESTA_MINIMA_MS, p.restaMs ?? 0)).toISOString();
+    await env.DB.prepare("UPDATE gd_viajes SET deadline_at=?,estado=''en_camino'',aviso_at=NULL WHERE id=?").bind(limite, v.id).run();
+    viaje = { ...v, deadlineAt: limite, estado: "en_camino", avisoAt: null };
+  }
+  const progreso: GdProgreso = { ...p, pausaIni: null, pausaHasta: null, restaMs: null, paradaMin: p.paradaMin + usados, refLat: null, refLng: null, refAt: null };
+  await gdGuardarProgreso(env, v.id, progreso);
+  return { viaje, progreso };
 }
 
 type GdViaje = {
@@ -997,13 +1031,13 @@ function gdHora(iso: string | null) {
 }
 
 /** Cu\u00e1ndo termin\u00f3 el camino respecto del l\u00edmite: minutos antes (negativo) o despu\u00e9s (positivo) de la hora prevista, y cu\u00e1nto dur\u00f3. */
-function gdFin(v: GdViaje, margenMin = GD_MARGEN_MIN, autoMin = 0) {
+function gdFin(v: GdViaje, margenMin = GD_MARGEN_MIN, autoMin = 0, paradaMin = 0) {
   if (!v.endedAt) return null;
   const fin = Date.parse(v.endedAt), limite = Date.parse(v.deadlineAt), inicio = Date.parse(v.startedAt);
   const total = Math.round((limite - inicio) / 60000);
   return {
     hora: gdHora(v.endedAt), limiteHora: gdHora(v.deadlineAt), despuesMin: Math.round((fin - limite) / 60000),
-    duracionMin: Math.max(0, Math.round((fin - inicio) / 60000)), extraMin: Math.max(0, total - v.estimadoMin - margenMin - autoMin), autoMin,
+    duracionMin: Math.max(0, Math.round((fin - inicio) / 60000)), extraMin: Math.max(0, total - v.estimadoMin - margenMin - autoMin - paradaMin), autoMin, paradaMin,
   };
 }
 
@@ -1017,12 +1051,13 @@ async function gdPresentar(env: Env, v: GdViaje) {
   const g = await gdLeerConfig(env, v.ownerEmail);
   const pr = await gdLeerProgreso(env, v.id);
   const activo = v.estado === "en_camino" || v.estado === "aviso";
+  const enPausa = activo && !!pr.pausaHasta && Date.now() < Date.parse(pr.pausaHasta);
   return {
-    fin: gdFin(v, g.margenMin, pr.autoMin),
+    fin: gdFin(v, g.margenMin, pr.autoMin, pr.paradaMin),
     id: v.id, destino: v.destino, modo: v.modo, modoTexto: GD_MODOS[v.modo] ?? v.modo, estado: v.estado, estimadoMin: v.estimadoMin, margenMin: g.margenMin,
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
     puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
-    ajusteAutoMin: pr.autoMin, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo,
+    ajusteAutoMin: pr.autoMin, pausa: enPausa ? { hasta: pr.pausaHasta, restaMs: pr.restaMs ?? 0 } : null, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo, destinoExacto: v.destLat !== null && v.destLng !== null,
     enlace: await gdEnlace(env, v),
   };
 }
@@ -1100,6 +1135,7 @@ async function gdAjustarPorTransito(env: Env, v: GdViaje, g: GdConfig, ub: Await
   const muestraEn = Date.parse(ub.ubicacion.en ?? "");
   if (!Number.isFinite(muestraEn) || ahora - muestraEn > GD_UBICACION_RECIENTE_MIN * 60_000) return null;
   const p = await gdLeerProgreso(env, v.id);
+  if (p.pausaHasta) return null; // frenado: el reloj esta en pausa
   if (p.recalcAt && ahora - Date.parse(p.recalcAt) < GD_AJUSTE_CADA_MIN * 60_000) return null;
   const aqui = { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng };
   const nuevaRef: GdProgreso = { ...p, refLat: aqui.lat, refLng: aqui.lng, refAt: new Date(muestraEn).toISOString(), recalcAt: new Date(ahora).toISOString() };
@@ -1146,6 +1182,14 @@ async function gdAvanzar(env: Env, v: GdViaje) {
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Tu tel\u00e9fono lleg\u00f3 a ${v.destino}: se te pregunt\u00f3 si llegaste bien.`);
   }
   if (v.estado === "en_camino" || v.estado === "aviso") {
+    const pausa = await gdLeerProgreso(env, v.id);
+    if (pausa.pausaHasta) {
+      if (ahora < Date.parse(pausa.pausaHasta)) return; // frenado: el reloj esta en pausa, no se pregunta ni se avisa nada
+      await gdCerrarPausa(env, v, pausa, ahora); // se termino la pausa: el reloj sigue con lo que le quedaba
+      const quedan = Math.max(0, (Date.parse(v.deadlineAt) - ahora) / 60000);
+      await pldRegistrar(env, v.ownerEmail, null, "guardian", `Termin\u00f3 tu parada: el reloj sigue, te quedan ${Math.max(1, Math.ceil(quedan))} minutos para llegar a ${v.destino} (hasta las ${gdHora(v.deadlineAt)}).`);
+      if (quedan > g.avisoMin) await gdAvisarPersona(env, v, "Termin\u00f3 tu parada", "Termin\u00f3 tu parada", `El reloj sigue: te quedan <strong style="color:#fff">${Math.ceil(quedan)} minutos</strong> para llegar a <strong style="color:#fff">${escapeHtml(v.destino)}</strong>. Si ya llegaste, toc\u00e1 <em>Llegu\u00e9</em>. Si todav\u00eda est\u00e1s parado, pod\u00e9s frenar de nuevo.`, "Abrir mi camino");
+    }
     const ajustado = await gdAjustarPorTransito(env, v, g, ub, ahora).catch((error) => { console.error("gd_ajuste_failed", error); return null; });
     if (ajustado) return; // el limite se corrio: lo demas se evalua el proximo minuto
   }
@@ -1269,14 +1313,14 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
 
 /** Sugerencias mientras la persona escribe (Google Places, nuevo): direcciones y tambi\u00e9n nombres de lugares (restaurantes, locales, plazas...), cerca de donde est\u00e1, con el barrio, la ciudad
  *  y a cu\u00e1ntos km queda, para elegir el correcto. */
-async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
+async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null, conDistancia = true) {
   const k = gdClave(env);
   const clave = k.clave;
   type Sugerencia = { placeId: string; principal: string; secundario: string; km: number | null };
   if (!clave) return { sugerencias: [] as Sugerencia[], fallo: "sin_clave", detalle: "" };
   const base: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
   const conUbicacion: Record<string, unknown> = origen
-    ? { ...base, locationBias: { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } }, origin: { latitude: origen.lat, longitude: origen.lng } }
+    ? { ...base, locationBias: { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } }, ...(conDistancia ? { origin: { latitude: origen.lat, longitude: origen.lng } } : {}) }
     : base;
   // Si Google rechaza el pedido completo (400), se corta la conexion o no encuentra nada, se prueba con uno mas simple: asi una opcion que Google no acepte no deja a la persona sin sugerencias.
   const intentos: Array<[string, Record<string, unknown>]> = [["A", conUbicacion], ["B", base], ["C", { input: texto }]];
@@ -1334,22 +1378,35 @@ async function gdDestino(env: Env, email: string, cuerpo: Record<string, unknown
   return { destino: texto.slice(0, 80), destLat: null, destLng: null, texto, placeId: null };
 }
 
-/** Cu\u00e1nto tarda: primero Google Mapas (con el tr\u00e1nsito de ahora); si no se puede, la distancia en l\u00ednea recta cuando se sabe el destino. Si falla Google, dice por qu\u00e9. */
-async function gdCalcular(env: Env, email: string, modo: string, d: GdDestino, origenPedido: unknown) {
+/** Desde donde se calcula un camino: la ubicacion que manda el navegador de la persona en ese momento (lo mas actual, como Google Maps o Waze); si no hay, la del telefono pero solo si es de los
+ *  ultimos minutos. Nunca un lugar guardado (como Casa) ni una ubicacion vieja: si no hay una buena, se avisa en vez de calcular desde otro punto. */
+async function gdOrigenActual(env: Env, email: string, pedido: unknown): Promise<{ origen: { lat: number; lng: number }; fuente: "navegador" | "telefono"; haceMin: number } | { fallo: "sin_ubicacion" | "ubicacion_vieja"; haceMin: number | null; vieja: { lat: number; lng: number } | null }> {
+  const o = pedido as { lat?: unknown; lng?: unknown; precision?: unknown } | null;
+  if (o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180 && !(Number(o.precision) > GD_PRECISION_MAX_M)) {
+    return { origen: { lat: Number(o.lat), lng: Number(o.lng) }, fuente: "navegador", haceMin: 0 };
+  }
   const ub = await gdUbicacion(env, email);
-  const o = origenPedido as { lat?: unknown; lng?: unknown } | null;
-  const origen = o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180
-    ? { lat: Number(o.lat), lng: Number(o.lng) }
-    : ub.ubicacion ? { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } : null;
-  if (!origen) return { ruta: null, fallo: "sin_ubicacion", detalle: "" };
+  if (!ub.ubicacion) return { fallo: "sin_ubicacion", haceMin: null, vieja: null };
+  const en = Date.parse(ub.ubicacion.en ?? "");
+  const haceMin = Number.isFinite(en) ? Math.max(0, Math.round((Date.now() - en) / 60_000)) : null;
+  if (haceMin === null || haceMin > GD_UBICACION_RECIENTE_MIN) return { fallo: "ubicacion_vieja", haceMin, vieja: { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } };
+  return { origen: { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng }, fuente: "telefono", haceMin };
+}
+
+/** Cu\u00e1nto tarda: primero Google Mapas (con el tr\u00e1nsito de ahora); si no se puede, la distancia en l\u00ednea recta cuando se sabe el destino. Si falla Google, dice por qu\u00e9.
+ *  `origen` dice de donde se calculo (el navegador de la persona o la ultima ubicacion de su telefono) para que la pantalla lo cuente. */
+async function gdCalcular(env: Env, email: string, modo: string, d: GdDestino, origenPedido: unknown) {
+  const o = await gdOrigenActual(env, email, origenPedido);
+  if ("fallo" in o) return { ruta: null, fallo: o.fallo as string, detalle: o.haceMin === null ? "" : `la \u00faltima ubicaci\u00f3n de tu tel\u00e9fono es de hace ${pldTiempo(o.haceMin)}`, origen: null };
+  const origen = o.origen, desde = { fuente: o.fuente, haceMin: o.haceMin };
   const destino = d.placeId ? { placeId: d.placeId } : d.destLat !== null && d.destLng !== null ? { lat: d.destLat, lng: d.destLng } : { texto: d.texto ?? d.destino };
   const mapas = await gdRutaMapas(env, origen, destino, modo);
-  if (!("fallo" in mapas)) return { ruta: { ...mapas, fuente: "mapas" as const }, fallo: "", detalle: "" };
+  if (!("fallo" in mapas)) return { ruta: { ...mapas, fuente: "mapas" as const }, fallo: "", detalle: "", origen: desde };
   if (d.destLat !== null && d.destLng !== null) {
     const km = pldDistanciaKm(origen.lat, origen.lng, d.destLat, d.destLng);
-    return { ruta: { minutos: gdEstimar(km, modo), km: Math.round(km * 10) / 10, destLat: d.destLat, destLng: d.destLng, fuente: "distancia" as const }, fallo: mapas.fallo === "sin_clave" ? "" : mapas.fallo, detalle: mapas.detalle };
+    return { ruta: { minutos: gdEstimar(km, modo), km: Math.round(km * 10) / 10, destLat: d.destLat, destLng: d.destLng, fuente: "distancia" as const }, fallo: mapas.fallo === "sin_clave" ? "" : mapas.fallo, detalle: mapas.detalle, origen: desde };
   }
-  return { ruta: null, fallo: mapas.fallo, detalle: mapas.detalle };
+  return { ruta: null, fallo: mapas.fallo, detalle: mapas.detalle, origen: desde };
 }
 
 /** Cuantos minutos vale el camino: lo que calcula Google Mapas; si no se pudo, los que puso la persona; y si tampoco, la estimacion por la distancia. */
@@ -1372,10 +1429,10 @@ async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown
   if (!(await pldReferentesActivos(env, email)).length) return { error: "sin_referentes", status: 400 };
   const d = await gdDestino(env, email, cuerpo);
   if ("error" in d) return d;
-  const { ruta } = await gdCalcular(env, email, modo, d, cuerpo.origen);
+  const { ruta, fallo } = await gdCalcular(env, email, modo, d, cuerpo.origen);
   if (ruta && ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return { error: "destino_muy_lejos", status: 400 };
   const elegido = gdElegirMinutos(ruta, cuerpo.minutos);
-  if (!elegido) return { error: "faltan_minutos", status: 400 };
+  if (!elegido) return { error: "faltan_minutos", status: 400, fallo };
   const { minutos, fuente } = elegido;
   const destino = d.destino;
   const destLat = d.destLat ?? ruta?.destLat ?? null, destLng = d.destLng ?? ruta?.destLng ?? null;
@@ -1397,9 +1454,11 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   const g = await gdLeerConfig(env, v.ownerEmail);
   const pr = await gdLeerProgreso(env, v.id);
   if (accion === "llegue" || (accion === "cancelar" && v.estado === "alerta")) {
+    let vf = v, pf = pr;
+    if (pr.pausaHasta && v.estado !== "alerta") ({ viaje: vf, progreso: pf } = await gdCerrarPausa(env, v, pr, Date.now())); // llego frenado: se cuenta lo que duro la pausa y el limite vuelve a lo que quedaba
     const fin = now();
     await env.DB.prepare("UPDATE gd_viajes SET estado=''llego'',ended_at=?,motivo_fin=''llegue'' WHERE id=?").bind(fin, v.id).run();
-    const f = gdFin({ ...v, endedAt: fin }, g.margenMin, pr.autoMin)!;
+    const f = gdFin({ ...vf, endedAt: fin }, g.margenMin, pf.autoMin, pf.paradaMin)!;
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}: tocaste Llegu\u00e9 a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
     await gdAvisarLlego(env, v, `lleg\u00f3 bien a ${v.destino}: toc\u00f3 Llegu\u00e9 a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
     return { ok: true, estado: "llego" };
@@ -1417,6 +1476,7 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
     const base = Math.max(Date.parse(v.deadlineAt), Date.now());
     const limite = new Date(base + minutos * 60_000).toISOString();
     await env.DB.prepare("UPDATE gd_viajes SET deadline_at=?,extensiones=extensiones+1,estado=''en_camino'',aviso_at=NULL WHERE id=?").bind(limite, v.id).run();
+    if (pr.pausaHasta && Date.now() < Date.parse(pr.pausaHasta)) await gdGuardarProgreso(env, v.id, { ...pr, restaMs: (pr.restaMs ?? 0) + minutos * 60_000 }); // frenado: lo pedido se suma a lo que le queda para llegar
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Pediste ${minutos} minutos m\u00e1s para llegar a ${v.destino} (hasta las ${gdHora(limite)}).`);
     return { ok: true, estado: "en_camino" };
   }
@@ -1425,30 +1485,52 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
     if (!GD_PARADAS.includes(minutos)) return { error: "minutos_invalidos", status: 400 };
     if (g.maxExtensiones === 0) return { error: "sin_extensiones", status: 409 };
     if (pr.paradas >= GD_MAX_PARADAS) return { error: "demasiadas_paradas", status: 409 };
-    const base = Math.max(Date.parse(v.deadlineAt), Date.now());
-    const limite = new Date(base + minutos * 60_000).toISOString();
+    const ahora = Date.now();
+    const previa = pr.pausaHasta && ahora >= Date.parse(pr.pausaHasta) ? (await gdCerrarPausa(env, v, pr, ahora)).progreso : pr; // la pausa anterior ya se habia terminado
+    const sigue = !!previa.pausaHasta; // ya estaba frenado: se alarga la pausa
+    const hasta = (sigue ? Date.parse(previa.pausaHasta!) : ahora) + minutos * 60_000;
+    const resta = sigue ? Math.max(GD_PAUSA_RESTA_MINIMA_MS, previa.restaMs ?? 0) : Math.max(GD_PAUSA_RESTA_MINIMA_MS, Date.parse(v.deadlineAt) - ahora);
+    const limite = new Date(hasta + resta).toISOString();
     await env.DB.prepare("UPDATE gd_viajes SET deadline_at=?,estado=''en_camino'',aviso_at=NULL WHERE id=?").bind(limite, v.id).run();
-    await gdGuardarProgreso(env, v.id, { ...pr, paradas: pr.paradas + 1 });
-    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Vas a frenar un rato: ${minutos} minutos m\u00e1s para llegar a ${v.destino} (hasta las ${gdHora(limite)}). No se les avis\u00f3 a tus referentes.`);
+    await gdGuardarProgreso(env, v.id, { ...previa, paradas: previa.paradas + 1, pausaIni: sigue ? previa.pausaIni : new Date(ahora).toISOString(), pausaHasta: new Date(hasta).toISOString(), restaMs: resta, refLat: null, refLng: null, refAt: null });
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", sigue
+      ? `Alargaste la pausa ${minutos} minutos (hasta las ${gdHora(new Date(hasta).toISOString())}). El reloj sigue en pausa con ${Math.ceil(resta / 60_000)} minutos para llegar a ${v.destino}. No se les avis\u00f3 a tus referentes.`
+      : `Vas a frenar un rato: el reloj queda en pausa ${minutos} minutos (hasta las ${gdHora(new Date(hasta).toISOString())}) con ${Math.ceil(resta / 60_000)} minutos para llegar a ${v.destino}. No se les avis\u00f3 a tus referentes.`);
+    return { ok: true, estado: "en_camino" };
+  }
+  if (accion === "seguir") {
+    if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
+    if (!pr.pausaHasta) return { error: "sin_pausa", status: 409 };
+    const ahora = Date.now();
+    const c = await gdCerrarPausa(env, v, pr, ahora);
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Segu\u00eds en camino a ${v.destino}: el reloj sigue con ${Math.max(1, Math.ceil((Date.parse(c.viaje.deadlineAt) - ahora) / 60_000))} minutos (hasta las ${gdHora(c.viaje.deadlineAt)}).`);
     return { ok: true, estado: "en_camino" };
   }
   if (accion === "cambiar") {
     if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
-    const d = await gdDestino(env, v.ownerEmail, cuerpo);
+    const modo = cuerpo.modo === undefined || cuerpo.modo === null || cuerpo.modo === "" ? v.modo : String(cuerpo.modo); // si no elige otro, sigue con el que traia
+    if (!GD_MODOS[modo]) return { error: "modo_invalido", status: 400 };
+    const mismo = cuerpo.mismo === true; // sigue yendo al mismo lugar pero cambia como va (o recalcula desde donde esta)
+    if (mismo && (v.destLat === null || v.destLng === null)) return { error: "destino_invalido", status: 400 };
+    const d = mismo ? ({ destino: v.destino, destLat: v.destLat, destLng: v.destLng, texto: null, placeId: null } as GdDestino) : await gdDestino(env, v.ownerEmail, cuerpo);
     if ("error" in d) return d;
-    const { ruta } = await gdCalcular(env, v.ownerEmail, v.modo, d, cuerpo.origen);
+    const { ruta, fallo, origen: desde } = await gdCalcular(env, v.ownerEmail, modo, d, cuerpo.origen);
     if (ruta && ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return { error: "destino_muy_lejos", status: 400 };
     const elegido = gdElegirMinutos(ruta, cuerpo.minutos);
-    if (!elegido) return { error: "faltan_minutos", status: 400 };
+    if (!elegido) return { error: "faltan_minutos", status: 400, fallo };
     const ahora = Date.now();
     const transcurrido = Math.max(0, Math.round((ahora - Date.parse(v.startedAt)) / 60000));
     const limite = new Date(ahora + (elegido.minutos + g.margenMin) * 60_000).toISOString();
     const destLat = d.destLat ?? ruta?.destLat ?? null, destLng = d.destLng ?? ruta?.destLng ?? null;
-    await env.DB.prepare("UPDATE gd_viajes SET destino=?,dest_lat=?,dest_lng=?,estimado_min=?,deadline_at=?,estado=''en_camino'',aviso_at=NULL,llegada_at=NULL WHERE id=?")
-      .bind(d.destino, destLat, destLng, transcurrido + elegido.minutos, limite, v.id).run();
+    await env.DB.prepare("UPDATE gd_viajes SET destino=?,dest_lat=?,dest_lng=?,modo=?,estimado_min=?,deadline_at=?,estado=''en_camino'',aviso_at=NULL,llegada_at=NULL WHERE id=?")
+      .bind(d.destino, destLat, destLng, modo, transcurrido + elegido.minutos, limite, v.id).run();
     await gdGuardarProgreso(env, v.id, { ...GD_PROGRESO_VACIO, paradas: pr.paradas });
-    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Cambiaste el destino a ${d.destino}: ${elegido.minutos} min (${elegido.fuente}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).`);
-    return { ok: true, estado: "en_camino" };
+    const km = ruta ? `, ${String(ruta.km).replace(".", ",")} km` : "";
+    const desdeTxt = desde ? ` Calculado desde ${desde.fuente === "navegador" ? "donde estabas" : `la \u00faltima ubicaci\u00f3n de tu tel\u00e9fono (hace ${desde.haceMin} min)`}.` : "";
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", mismo
+      ? `Cambiaste c\u00f3mo vas a ${v.destino}: ahora ${GD_MODOS[modo]}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`
+      : `Cambiaste el destino a ${d.destino}${modo !== v.modo ? ` (ahora ${GD_MODOS[modo]})` : ""}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`);
+    return { ok: true, estado: "en_camino", origen: desde, minutos: elegido.minutos, km: ruta ? ruta.km : null, modo };
   }
   if (accion === "ayuda") {
     const ub = await gdUbicacion(env, v.ownerEmail);
@@ -1460,16 +1542,13 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   return { error: "accion_desconocida", status: 400 };
 }
 
-/** Sugerencias de lugares (direcciones y nombres) cerca de donde esta el telefono. */
+/** Sugerencias de lugares (direcciones y nombres) cerca de donde esta la persona. Si no se sabe donde esta ahora (la ultima ubicacion del telefono es vieja), solo se usa para ordenar y no se dicen distancias. */
 async function gdBuscarApi(env: Env, email: string, cuerpo: Record<string, unknown>) {
   const texto = String(cuerpo.texto ?? "").trim().slice(0, 100);
   if (texto.length < 3) return json({ ok: true, sugerencias: [] });
-  const o = cuerpo.origen as { lat?: unknown; lng?: unknown } | null;
-  const ub = await gdUbicacion(env, email);
-  const origen = o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180
-    ? { lat: Number(o.lat), lng: Number(o.lng) }
-    : ub.ubicacion ? { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } : null;
-  return json({ ok: true, ...(await gdBuscarLugares(env, texto, origen)) });
+  const o = await gdOrigenActual(env, email, cuerpo.origen);
+  if ("origen" in o) return json({ ok: true, ...(await gdBuscarLugares(env, texto, o.origen, true)) });
+  return json({ ok: true, ...(await gdBuscarLugares(env, texto, o.vieja, false)) });
 }
 
 /** API del Modo Guardi\u00e1n. Con `t` (el enlace de la persona) o con la sesi\u00f3n del panel. */
@@ -1490,7 +1569,7 @@ async function gdApi(request: Request, env: Env) {
     email = sesion.email;
     if (accion === "empezar") {
       const r = await gdEmpezar(env, email, cuerpo);
-      return json("error" in r ? { error: r.error, ...("viaje" in r ? { viaje: r.viaje } : {}) } : r, "error" in r ? r.status : 200);
+      return json("error" in r ? { error: r.error, ...("viaje" in r ? { viaje: r.viaje } : {}), ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}) } : r, "error" in r ? r.status : 200);
     }
     if (accion === "buscar") return gdBuscarApi(env, email, cuerpo);
     if (accion === "config") {
@@ -1509,10 +1588,10 @@ async function gdApi(request: Request, env: Env) {
       if (!GD_MODOS[modo]) return json({ error: "modo_invalido" }, 400);
       const d = await gdDestino(env, email, cuerpo);
       if ("error" in d) return json({ ok: true, minutos: null, km: null, fuente: null, error: d.error });
-      const { ruta, fallo, detalle } = await gdCalcular(env, email, modo, d, cuerpo.origen);
-      if (!ruta) return json({ ok: true, minutos: null, km: null, fuente: null, fallo, detalle });
-      if (ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return json({ ok: true, minutos: null, km: ruta.km, fuente: "mapas", error: "destino_muy_lejos" });
-      return json({ ok: true, minutos: ruta.minutos, km: ruta.km, fuente: ruta.fuente, editable: ruta.fuente !== "mapas", fallo, detalle });
+      const { ruta, fallo, detalle, origen } = await gdCalcular(env, email, modo, d, cuerpo.origen);
+      if (!ruta) return json({ ok: true, minutos: null, km: null, fuente: null, fallo, detalle, origen });
+      if (ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return json({ ok: true, minutos: null, km: ruta.km, fuente: "mapas", error: "destino_muy_lejos", origen });
+      return json({ ok: true, minutos: ruta.minutos, km: ruta.km, fuente: ruta.fuente, editable: ruta.fuente !== "mapas", fallo, detalle, origen });
     }
     viaje = await gdActivo(env, email);
   }
@@ -1530,12 +1609,24 @@ async function gdApi(request: Request, env: Env) {
     return gdBuscarApi(env, email, cuerpo);
   }
   const r = await gdAccion(env, viaje, accion, Number(cuerpo.minutos), cuerpo);
-  if ("error" in r) return json({ error: r.error }, r.status);
+  if ("error" in r) return json({ error: r.error, ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}) }, r.status);
   const nuevo = await gdPorId(env, viaje.id);
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
 
-const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.subpanel{border:1px solid #2a2c31;border-radius:14px;padding:12px;margin:10px 0;background:#0f1013}.modo-sw{display:flex;align-items:center;justify-content:space-between;gap:14px}.modo-sw .modo-txt{display:block;flex:1;min-width:0;color:inherit;text-decoration:none}.modo-sw h2{margin:0 0 6px}.modo-sw p{margin:0 0 6px}button.sw{position:relative;flex:none;width:56px;height:32px;padding:0;border-radius:999px;border:1px solid #4a3f1f;background:#211d12;cursor:pointer}button.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#a29e92;transition:left .15s}button.sw[aria-checked="true"]{background:#d9b24c;border-color:#d9b24c}button.sw[aria-checked="true"]::after{left:27px;background:#111}.fila-sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid #2a2c31}.fila-sw:first-child{border-top:0}.fila-sw h2{margin:0 0 2px;font-size:1rem}.lista{background:#14151a;border:1px solid #2a2c31;border-radius:18px;overflow:hidden;margin:14px 0}.lista .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #2a2c31;color:inherit;text-decoration:none}.lista .item:first-child{border-top:0}.lista .item::after{content:"\\203A";color:#a29e92;font-size:1.5rem;line-height:1}.lista .item b{display:block}.lista .item small{display:block;margin-top:2px}.lista .item:hover,.lista .item:focus-visible{background:#1a1b21}.ac body{color:#fff}.ac p,.ac small,.ac .suave,.ac label{color:#f3f1ea}.ac .tarjeta,.ac .lista,.ac input,.ac select{border-color:#8a8d95}.ac button.sec,.ac .boton.sec,.ac .atras{border-color:#d9b24c}.ac .lista .item{border-color:#8a8d95}.ab button,.ab .boton,.ab .atras{padding:16px 22px;font-size:1.1rem}.ab button.sw{padding:0;font-size:1rem}.ab .lista .item{padding:18px 16px}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
+/** Los tres modos de ir (auto, transporte, caminando) como botones con icono, para empezar un camino y para cambiarlo. */
+const GD_ICONO_MODO: Record<string, string> = {
+  auto: ''<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l1.8-4.2A1.5 1.5 0 0 1 8.2 7h7.6a1.5 1.5 0 0 1 1.4.8L19 12"/><rect x="3.5" y="12" width="17" height="5.5" rx="1.5"/><circle cx="7.5" cy="17.5" r="1.7"/><circle cx="16.5" cy="17.5" r="1.7"/></svg>'',
+  transporte: ''<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="14" rx="2.5"/><path d="M5 11h14M8 7h8"/><circle cx="8.5" cy="14.2" r=".7"/><circle cx="15.5" cy="14.2" r=".7"/><path d="M7.5 17.5V20M16.5 17.5V20"/></svg>'',
+  caminando: ''<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4.5" r="1.8"/><path d="M12.5 8.5l-2 4.5 3 2.5 1 5M12.5 8.5l3 3.2 2.5.6M12.5 8.5L9 10.3l-.8 2.7M10.5 13l-2.3 6.5"/></svg>'',
+};
+function gdModosHtml(id: string, actual: string) {
+  const rotulo: Record<string, string> = { auto: "Auto", transporte: "Transporte", caminando: "Caminando" };
+  const titulo: Record<string, string> = { auto: "En auto", transporte: "En transporte p\u00fablico", caminando: "Caminando" };
+  return `<div class="modos" id="${id}" role="radiogroup" aria-label="C\u00f3mo vas">${Object.keys(rotulo).map((m) => `<button type="button" class="modo" role="radio" data-modo="${m}" title="${titulo[m]}" aria-checked="${m === actual ? "true" : "false"}">${GD_ICONO_MODO[m]}<span>${rotulo[m]}</span></button>`).join("")}</div>`;
+}
+
+const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.subpanel{border:1px solid #2a2c31;border-radius:14px;padding:12px;margin:10px 0;background:#0f1013}.modo-sw{display:flex;align-items:center;justify-content:space-between;gap:14px}.modo-sw .modo-txt{display:block;flex:1;min-width:0;color:inherit;text-decoration:none}.modo-sw h2{margin:0 0 6px}.modo-sw p{margin:0 0 6px}button.sw{position:relative;flex:none;width:56px;height:32px;padding:0;border-radius:999px;border:1px solid #4a3f1f;background:#211d12;cursor:pointer}button.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#a29e92;transition:left .15s}button.sw[aria-checked="true"]{background:#d9b24c;border-color:#d9b24c}button.sw[aria-checked="true"]::after{left:27px;background:#111}.fila-sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid #2a2c31}.fila-sw:first-child{border-top:0}.fila-sw h2{margin:0 0 2px;font-size:1rem}.lista{background:#14151a;border:1px solid #2a2c31;border-radius:18px;overflow:hidden;margin:14px 0}.lista .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #2a2c31;color:inherit;text-decoration:none}.lista .item:first-child{border-top:0}.lista .item::after{content:"\\203A";color:#a29e92;font-size:1.5rem;line-height:1}.lista .item b{display:block}.lista .item small{display:block;margin-top:2px}.lista .item:hover,.lista .item:focus-visible{background:#1a1b21}.ac body{color:#fff}.ac p,.ac small,.ac .suave,.ac label{color:#f3f1ea}.ac .tarjeta,.ac .lista,.ac input,.ac select{border-color:#8a8d95}.ac button.sec,.ac .boton.sec,.ac .atras{border-color:#d9b24c}.ac .lista .item{border-color:#8a8d95}.ab button,.ab .boton,.ab .atras{padding:16px 22px;font-size:1.1rem}.ab button.sw{padding:0;font-size:1rem}.ab .lista .item{padding:18px 16px}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}.modos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 6px}.modos .modo{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;font:600 .85rem system-ui}.modos .modo svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.modos .modo[aria-checked="false"]{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.modos .modo[aria-checked="true"]{background:#d9b24c;color:#111;border:1px solid #d9b24c}.ac .modos .modo[aria-checked="false"]{border-color:#d9b24c}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
 
 function pldPagina(titulo: string, cuerpo: string) {
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${titulo}</title>${PLD_ESTILO}<script>try{var q=JSON.parse(localStorage.getItem("ogAcc")||"{}")||{},r=document.documentElement;if(q.t==="g")r.style.fontSize="118%";if(q.t==="x")r.style.fontSize="136%";if(q.c)r.classList.add("ac");if(q.b)r.classList.add("ab")}catch(e){}</script></head><body><main><img class="logo" src="/marca/logo-correo.png" alt="ojo guard"><span class="etiqueta">N\u00daCLEO \u00b7 EN VALIDACI\u00d3N</span>${cuerpo}</main></body></html>`;
@@ -1551,14 +1642,15 @@ function gdPaginaCamino() {
 <div id="vacio" class="tarjeta" style="display:none"><p style="margin:0 0 12px">Este enlace no sirve: est\u00e1 mal copiado o el camino ya no existe. Abr\u00ed el Modo Guardi\u00e1n desde tu panel para empezar uno nuevo.</p><div class="botones" style="margin:0"><a class="boton" href="/guardian#guardian">Ir a Tu protecci\u00f3n</a><a class="boton sec" href="/">Ir al inicio</a></div></div>
 <div id="viaje" style="display:none">
 <div class="tarjeta"><div id="destino" style="font-weight:700;font-size:1.15rem"></div><div id="detalle" class="suave"></div>
-<div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="estadoTxt"></div></div>
+<div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="pausaTxt" style="display:none;color:#f0c75a;font-weight:700;margin:0 0 6px"></div><div id="sonidoAviso" style="display:none;color:#e0806a;font-weight:700;margin:0 0 6px">Toc\u00e1 la pantalla para que suenen los pitidos.</div><div id="estadoTxt"></div></div>
 <div class="tarjeta" id="acciones">
 <button class="grande" id="bLlegue">Llegu\u00e9</button>
+<button class="grande sec" id="bSeguir" style="display:none;margin-top:10px">Ya sigo</button>
 <div id="extBloque"><p class="suave" style="margin:16px 0 4px">\u00bfNecesit\u00e1s m\u00e1s tiempo?</p>
 <div class="botones tres" style="margin-top:6px"><button class="sec" data-m="10">+10 min</button><button class="sec" data-m="20">+20 min</button><button class="sec" data-m="30">+30 min</button></div></div>
 <div class="botones" style="margin-top:6px"><button class="sec" id="bFrenar">Voy a frenar un rato</button><button class="sec" id="bCambiar">Cambiar destino</button></div>
-<div id="frenarPanel" class="subpanel" style="display:none"><p class="suave" id="frenarAyuda" style="margin:0 0 6px">\u00bfCu\u00e1nto vas a frenar? No les avisamos a tus referentes.</p><div class="botones tres" style="margin:6px 0 0"><button class="sec" data-f="15">15 min</button><button class="sec" data-f="30">30 min</button><button class="sec" data-f="60">1 hora</button></div></div>
-<div id="cambiarPanel" class="subpanel" style="display:none"><label style="margin-top:0">Nuevo destino</label><select id="cmLugar"></select>
+<div id="frenarPanel" class="subpanel" style="display:none"><p class="suave" id="frenarAyuda" style="margin:0 0 6px">\u00bfCu\u00e1nto vas a frenar? El reloj queda en pausa y no les avisamos a tus referentes.</p><div class="botones tres" style="margin:6px 0 0"><button class="sec" data-f="15">15 min</button><button class="sec" data-f="30">30 min</button><button class="sec" data-f="60">1 hora</button></div></div>
+<div id="cambiarPanel" class="subpanel" style="display:none"><label style="margin-top:0">C\u00f3mo vas</label>${gdModosHtml("cmModos", "auto")}<label>A d\u00f3nde vas</label><select id="cmLugar"></select>
 <div id="cmOtro" style="display:none"><label>Direcci\u00f3n o nombre del lugar</label><input id="cmTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="cmSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="cmAyuda" class="suave"></small></div>
 <div id="cmMinBloque" style="display:none"><label>Tiempo hasta ah\u00ed, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
 <div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde est\u00e1s ahora.</small></div>
@@ -1566,44 +1658,50 @@ function gdPaginaCamino() {
 <small class="suave">Si no lleg\u00e1s a tiempo y no ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes con tu \u00faltima ubicaci\u00f3n. \u201cNecesito ayuda\u201d les avisa ahora mismo.</small>
 </div>
 <div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protecci\u00f3n</a><a class="boton sec" id="bOtro" href="/guardian#guardian">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
-<div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button></div><small class="suave" id="sonidoTxt"></small></div>
+<div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button><button class="sec" id="bProbar">Probar sonido</button></div><small class="suave" id="sonidoTxt"></small></div>
 </div>
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
 var t=new URLSearchParams(location.search).get("t")||"";
-var V=null,desfase=0,ultimoLimite="",ultimoPitido=0,sonoFinal=false,luz=null,AC=null;
+var V=null,desfase=0,ultimoLimite="",ultimoPitido=0,sonoFinal=false,luz=null,AC=null,pausaVencida=false,POS=null;
 var SONIDO=true,VIBRA=true,LUZ=true;try{SONIDO=localStorage.getItem("gdSonido")!=="0";VIBRA=localStorage.getItem("gdVibra")!=="0";LUZ=localStorage.getItem("gdLuz")!=="0"}catch(e){}
-function audio(){try{if(!AC){var C=window.AudioContext||window.webkitAudioContext;if(C)AC=new C()}if(AC&&AC.state==="suspended")AC.resume()}catch(e){}return AC}
-function pitido(largo){var a=audio();if(!a||a.state!=="running")return false;try{var o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=largo?660:1000;g.gain.value=0.15;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(largo?0.9:0.09));if(VIBRA&&navigator.vibrate)navigator.vibrate(largo?600:80)}catch(e){}return true}
-function estadoSonido(){$("bSonido").textContent=SONIDO?"Sonido: activado":"Sonido: apagado";var a=AC;$("sonidoTxt").textContent=SONIDO?("En los \u00faltimos 15 segundos suena un pip por segundo para que no se te pase. La pantalla tiene que estar abierta"+(a&&a.state==="running"?".":" y tocarla una vez para habilitar el sonido.")):"Los pitidos de los \u00faltimos 15 segundos est\u00e1n apagados."}
+function audio(){try{if(!AC){var C=window.AudioContext||window.webkitAudioContext;if(C){AC=new C();try{if(navigator.audioSession)navigator.audioSession.type="playback"}catch(e){}}}if(AC&&AC.state==="suspended")AC.resume()}catch(e){}return AC} // "playback": en iPhone suena aunque el boton de silencio este puesto
+function vibrar(ms){if(VIBRA&&navigator.vibrate){try{navigator.vibrate(ms)}catch(e){}}}
+function pitido(largo){vibrar(largo?600:80);var a=audio();if(!a||a.state!=="running")return false;try{var o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=largo?660:1000;g.gain.value=largo?0.6:0.5;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(largo?0.9:0.14))}catch(e){}return true}
+function sonidoListo(){return !!(AC&&AC.state==="running")}
+function estadoSonido(){$("bSonido").textContent=SONIDO?"Sonido: activado":"Sonido: apagado";$("sonidoTxt").textContent=SONIDO?("En los \u00faltimos 15 segundos suena un pip por segundo para que no se te pase. La pantalla tiene que estar abierta"+(sonidoListo()?". Toc\u00e1 \u00abProbar sonido\u00bb para comprobar que lo escuch\u00e1s: si el tel\u00e9fono est\u00e1 conectado por Bluetooth (auriculares, parlante o auto), suena ah\u00ed.":" y tocarla una vez para habilitar el sonido.")):"Los pitidos de los \u00faltimos 15 segundos est\u00e1n apagados."}
+$("bProbar").onclick=function(){var a=audio(),hecho=0;var sonar=function(){var ok=pitido(false);if(++hecho<3){setTimeout(sonar,350);return}$("sonidoTxt").textContent=sonidoListo()?"Sonaron tres pips (y vibr\u00f3, si tu tel\u00e9fono puede). Si no los escuchaste: sub\u00ed el volumen de contenido, fijate que el tel\u00e9fono no est\u00e9 conectado por Bluetooth (auriculares, parlante o auto: suena ah\u00ed) y, en iPhone, que el bot\u00f3n de silencio est\u00e9 apagado.":"El navegador todav\u00eda no dej\u00f3 que suene. Toc\u00e1 \u00abProbar sonido\u00bb otra vez."};var p=a&&a.resume?a.resume():null;if(p&&p.then)p.then(function(){setTimeout(sonar,60)},function(){sonar()});else setTimeout(sonar,120)};
 function pantallaEncendida(){try{if(LUZ&&!luz&&navigator.wakeLock&&document.visibilityState==="visible"&&V&&(V.estado==="en_camino"||V.estado==="aviso")){navigator.wakeLock.request("screen").then(function(l){luz=l;l.addEventListener("release",function(){luz=null})}).catch(function(){})}}catch(e){}}
 ["pointerdown","touchstart","keydown"].forEach(function(e){document.addEventListener(e,function(){if(SONIDO)audio();estadoSonido()},{passive:true})});
 document.addEventListener("visibilitychange",pantallaEncendida);
 function aviso(x){$("aviso").textContent=x||""}
-function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;throw e}return d})})}
+function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;e.fallo=d.fallo;throw e}return d})})}
 function hora(s){try{return new Date(s).toLocaleTimeString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return s}}
 function reloj(ms){var s=Math.max(0,Math.floor(ms/1000));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;function d(n){return(n<10?"0":"")+n}return h>0?h+" h "+d(m)+" min":d(m)+":"+d(x)}
+function enPausa(){return !!(V&&V.pausa&&Date.parse(V.pausa.hasta)>Date.now()+desfase)}
 function pintar(d){
-  V=d.viaje;desfase=Date.parse(d.ahora)-Date.now();
+  V=d.viaje;desfase=Date.parse(d.ahora)-Date.now();pausaVencida=false;
   if(!V){$("vacio").style.display="block";$("viaje").style.display="none";return}
   $("vacio").style.display="none";$("viaje").style.display="block";
   $("destino").textContent="Vas a "+V.destino;
   $("detalle").textContent=V.modoTexto.charAt(0).toUpperCase()+V.modoTexto.slice(1)+" \u00b7 "+V.estimadoMin+" min + "+V.margenMin+" de margen";
   var activo=V.estado==="en_camino"||V.estado==="aviso"||V.estado==="alerta";
   $("acciones").style.display=activo?"block":"none";
-  $("extBloque").style.display=V.extensionesMax>0?"block":"none";
+  $("extBloque").style.display=V.extensionesMax>0&&!enPausa()?"block":"none";
+  $("bSeguir").style.display=activo&&enPausa()?"block":"none";
   $("despues").style.display=activo?"none":"block";
   var botones=document.querySelectorAll("button[data-m]");
   Array.prototype.forEach.call(botones,function(b){b.disabled=!V.puedeExtender});
-  $("bFrenar").style.display=V.paradasMax>0&&V.puedeCambiar?"inline-block":"none";$("bFrenar").disabled=!V.puedeParar;$("bFrenar").textContent=V.puedeParar?"Voy a frenar un rato":"Ya frenaste "+V.paradasMax+(V.paradasMax===1?" vez":" veces");
+  $("bFrenar").style.display=V.paradasMax>0&&V.puedeCambiar?"inline-block":"none";$("bFrenar").disabled=!V.puedeParar;$("bFrenar").textContent=V.puedeParar?(enPausa()?"Frenar m\u00e1s tiempo":"Voy a frenar un rato"):"Ya frenaste "+V.paradasMax+(V.paradasMax===1?" vez":" veces");
   $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";
-  $("frenarAyuda").textContent="\u00bfCu\u00e1nto vas a frenar? No les avisamos a tus referentes. Pod\u00e9s frenar "+(V.paradasMax===1?"1 vez":"hasta "+V.paradasMax+" veces")+(V.paradas>0?" (ya usaste "+V.paradas+")":"")+".";
+  $("frenarAyuda").textContent=(enPausa()?"\u00bfCu\u00e1nto m\u00e1s quer\u00e9s frenar? La pausa se alarga. ":"\u00bfCu\u00e1nto vas a frenar? El reloj queda en pausa. ")+"No les avisamos a tus referentes. Pod\u00e9s frenar "+(V.paradasMax===1?"1 vez":"hasta "+V.paradasMax+" veces")+(V.paradas>0?" (ya usaste "+V.paradas+")":"")+".";
   if(!V.puedeCambiar){$("frenarPanel").style.display="none";$("cambiarPanel").style.display="none"}
   $("bCancelar").style.display=V.estado==="alerta"?"none":"inline-block";
   var tx={en_camino:"Ten\u00e9s que llegar antes de las "+hora(V.deadlineAt)+"."+(V.ajusteAutoMin>0?" Sumamos "+V.ajusteAutoMin+" minutos por tr\u00e1nsito.":"")+" Cuando llegues, toc\u00e1 Llegu\u00e9.",aviso:"\u00bfSegu\u00eds en camino? Si no respond\u00e9s, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",llego:"Llegaste bien. \u00a1Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerr\u00f3 solo."}[V.estado]||"";
+  if(enPausa()&&V.estado==="en_camino")tx="En pausa hasta las "+hora(V.pausa.hasta)+". Cuando termine, el reloj sigue con los "+Math.ceil(V.pausa.restaMs/60000)+" minutos que te quedaban. No les avisamos a tus referentes.";
   var f=V.fin;
-  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegu\u00e9 a las "+f.hora+": "+(f.despuesMin===0?"justo en el l\u00edmite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"despu\u00e9s")+" del l\u00edmite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el c\u00e1lculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tr\u00e1nsito":"")+"."}
+  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegu\u00e9 a las "+f.hora+": "+(f.despuesMin===0?"justo en el l\u00edmite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"despu\u00e9s")+" del l\u00edmite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el c\u00e1lculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tr\u00e1nsito":"")+(f.paradaMin>0?" + "+f.paradaMin+" de parada":"")+"."}
   $("estadoTxt").textContent=tx;$("estadoTxt").className=V.estado==="alerta"?"mal":(V.estado==="llego"?"ok":"suave");
   if(V.deadlineAt!==ultimoLimite){ultimoLimite=V.deadlineAt;ultimoPitido=0;sonoFinal=false}
   $("sonidoCard").style.display=(V.estado==="en_camino"||V.estado==="aviso")?"block":"none";
@@ -1614,15 +1712,22 @@ function pintar(d){
 function tick(){
   if(!V)return;
   var activo=V.estado==="en_camino"||V.estado==="aviso"||V.estado==="alerta";
-  if(!activo){$("reloj").textContent=V.estado==="llego"?"Listo":"";return}
+  if(!activo){$("reloj").textContent=V.estado==="llego"?"Listo":"";$("reloj").style.opacity="1";$("pausaTxt").style.display="none";$("sonidoAviso").style.display="none";return}
+  if(V.pausa&&!enPausa()&&!pausaVencida){pausaVencida=true;refrescar()} // se termino la pausa: el reloj sigue
+  if(enPausa()){ // frenado: el reloj no baja, queda con lo que le faltaba
+    $("reloj").textContent=reloj(V.pausa.restaMs);$("reloj").style.opacity=".55";
+    $("sonidoAviso").style.display="none";$("pausaTxt").style.display="block";$("pausaTxt").textContent="EN PAUSA \u00b7 termina a las "+hora(V.pausa.hasta)+" (en "+reloj(Date.parse(V.pausa.hasta)-(Date.now()+desfase))+")";
+    return}
+  $("reloj").style.opacity="1";$("pausaTxt").style.display="none";
   var ms=Date.parse(V.deadlineAt)-(Date.now()+desfase);
+  $("sonidoAviso").style.display=SONIDO&&ms>0&&ms<=60000&&!sonidoListo()?"block":"none";
   $("reloj").textContent=ms>0?reloj(ms):"Se pas\u00f3 el tiempo";
   if(SONIDO&&(V.estado==="en_camino"||V.estado==="aviso")){
     if(ms>0&&ms<=15000){var seg=Math.ceil(ms/1000);if(seg!==ultimoPitido){ultimoPitido=seg;pitido(false)}}
     else if(ms<=0&&!sonoFinal){sonoFinal=true;pitido(true)}
   }
 }
-function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",demasiadas_extensiones:"Ya extendiste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",demasiadas_paradas:"Ya frenaste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n.",lugar_invalido:"Ese lugar no existe.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",sin_extensiones:"En la configuraci\u00f3n del Modo Guardi\u00e1n no se puede pedir m\u00e1s tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya termin\u00f3."})[e.codigo]||"No se pudo. Prob\u00e1 de nuevo."}
+function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",demasiadas_extensiones:"Ya extendiste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",demasiadas_paradas:"Ya frenaste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",sin_extensiones:"En la configuraci\u00f3n del Modo Guardi\u00e1n no se puede pedir m\u00e1s tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya termin\u00f3."})[e.codigo]||"No se pudo. Prob\u00e1 de nuevo."}
 function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
 $("bLlegue").onclick=function(){hacer({accion:"llegue"},"Listo: avisamos que llegaste bien.")};
@@ -1631,27 +1736,40 @@ $("bAyuda").onclick=function(){if(confirm("\u00bfPedir ayuda? Les avisamos ahora
 $("bCancelar").onclick=function(){if(confirm("\u00bfCancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 $("bFrenar").onclick=function(){$("cambiarPanel").style.display="none";$("frenarPanel").style.display=$("frenarPanel").style.display==="none"?"block":"none"};
-Array.prototype.forEach.call(document.querySelectorAll("button[data-f]"),function(b){b.onclick=function(){var n=Number(b.getAttribute("data-f"));$("frenarPanel").style.display="none";hacer({accion:"parada",minutos:n},"Listo: fren\u00e1s "+(n===60?"1 hora":n+" minutos")+". No les avisamos a tus referentes.")}});
+Array.prototype.forEach.call(document.querySelectorAll("button[data-f]"),function(b){b.onclick=function(){var n=Number(b.getAttribute("data-f")),mas=enPausa(),txt=n===60?"1 hora":n+" minutos";$("frenarPanel").style.display="none";hacer({accion:"parada",minutos:n},mas?"Listo: la pausa se alarg\u00f3 "+txt+".":"Listo: el reloj queda en pausa "+txt+". No les avisamos a tus referentes.")}});
+$("bSeguir").onclick=function(){hacer({accion:"seguir"},"Listo: segu\u00eds en camino. El reloj sigue con lo que te quedaba.")};
 var CMPLACE="",CMETIQUETA="",CMHAYSUG=false,CMTIMER=null,CMLUGARES=null;
 function cmCambio(){$("cmOtro").style.display=$("cmLugar").value?"none":"block"}
-function cmCargarLugares(){if(CMLUGARES)return;api({accion:"lugares"}).then(function(d){CMLUGARES=d.lugares||[];var s=$("cmLugar");limpiar(s);CMLUGARES.forEach(function(l){var o=document.createElement("option");o.value=l.id;o.textContent=l.name;s.appendChild(o)});var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar\u2026";s.appendChild(o2);cmCambio()}).catch(function(){CMLUGARES=[];var s=$("cmLugar");limpiar(s);var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar\u2026";s.appendChild(o2);cmCambio()})}
-$("bCambiar").onclick=function(){$("frenarPanel").style.display="none";var abrir=$("cambiarPanel").style.display==="none";$("cambiarPanel").style.display=abrir?"block":"none";if(abrir)cmCargarLugares()};
+function modosPoner(g,v){Array.prototype.forEach.call($(g).querySelectorAll("button.modo"),function(b){b.setAttribute("aria-checked",b.getAttribute("data-modo")===v?"true":"false")})}
+function modosValor(g){var b=$(g).querySelector(''button.modo[aria-checked="true"]'');return b?b.getAttribute("data-modo"):"auto"}
+Array.prototype.forEach.call($("cmModos").querySelectorAll("button.modo"),function(b){b.onclick=function(){modosPoner("cmModos",b.getAttribute("data-modo"))}});
+function cmOpcion(v,t){var o=document.createElement("option");o.value=v;o.textContent=t;$("cmLugar").appendChild(o)}
+function cmArmarOpciones(){limpiar($("cmLugar"));if(V&&V.destinoExacto)cmOpcion("__mismo","Seguir yendo a "+V.destino);(CMLUGARES||[]).forEach(function(l){cmOpcion(l.id,l.name)});cmOpcion("","Otro lugar\u2026");cmCambio()}
+function cmCargarLugares(){if(CMLUGARES){cmArmarOpciones();return}api({accion:"lugares"}).then(function(d){CMLUGARES=d.lugares||[];cmArmarOpciones()}).catch(function(){CMLUGARES=[];cmArmarOpciones()})}
+$("bCambiar").onclick=function(){$("frenarPanel").style.display="none";var abrir=$("cambiarPanel").style.display==="none";$("cambiarPanel").style.display=abrir?"block":"none";if(abrir){modosPoner("cmModos",V?V.modo:"auto");cmCargarLugares();ubicar(function(){})}};
 $("cmLugar").onchange=cmCambio;
+// donde esta la persona AHORA: la ubicacion del navegador de su telefono (se pide al abrir "Cambiar destino" y otra vez al confirmar); sirve para ordenar las sugerencias y para recalcular desde ahi
+function ubicar(cb){if(POS&&Date.now()-POS.en<20000){cb(POS);return}
+  var hecho=false,fin=function(o){if(!hecho){hecho=true;if(o)POS=o;cb(o)}};
+  try{navigator.geolocation.getCurrentPosition(function(p){fin({lat:p.coords.latitude,lng:p.coords.longitude,precision:p.coords.accuracy,en:Date.now()})},function(){fin(null)},{enableHighAccuracy:true,timeout:10000,maximumAge:15000});setTimeout(function(){fin(null)},11000)}catch(e){fin(null)}}
+function desde(o){return o&&o.fuente==="navegador"?" desde donde est\u00e1s ahora":o&&o.fuente==="telefono"?" desde la \u00faltima ubicaci\u00f3n de tu tel\u00e9fono (hace "+(o.haceMin||0)+" min)":""}
 function cmSugerir(){var q=$("cmTexto").value.trim();var caja=$("cmSugerencias");limpiar(caja);caja.style.display="none";$("cmAyuda").textContent="";if(q.length<3){CMHAYSUG=false;return}
   $("cmAyuda").textContent="Buscando\u2026";
-  api({accion:"buscar",texto:q}).then(function(d){if($("cmTexto").value.trim()!==q)return;var lista=d.sugerencias||[];CMHAYSUG=lista.length>0;
+  var pedido={accion:"buscar",texto:q};if(POS)pedido.origen={lat:POS.lat,lng:POS.lng,precision:POS.precision};
+  api(pedido).then(function(d){if($("cmTexto").value.trim()!==q)return;var lista=d.sugerencias||[];CMHAYSUG=lista.length>0;
     if(!lista.length){$("cmAyuda").textContent=d.fallo&&d.fallo!=="sin_clave"?"No pudimos buscar. Prob\u00e1 con otro nombre o escrib\u00ed la direcci\u00f3n completa.":"";return}
     lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" \u00b7 "+sg.secundario:"")+(sg.km!==null&&sg.km!==undefined?" \u00b7 a "+String(sg.km).replace(".",",")+" km":"");
       b.onclick=function(){CMPLACE=sg.placeId;CMETIQUETA=(sg.principal+(sg.secundario?", "+sg.secundario:"")).slice(0,80);$("cmTexto").value=CMETIQUETA;limpiar(caja);caja.style.display="none";$("cmAyuda").textContent="Elegiste: "+CMETIQUETA};caja.appendChild(b)});
     caja.style.display="flex";$("cmAyuda").textContent="Eleg\u00ed el lugar correcto."}).catch(function(){})}
 $("cmTexto").oninput=function(){CMPLACE="";CMETIQUETA="";clearTimeout(CMTIMER);CMTIMER=setTimeout(cmSugerir,400)};
 $("cmConfirmar").onclick=function(){
-  var c={accion:"cambiar"};
-  if($("cmLugar").value){c.lugarId=$("cmLugar").value}else if(CMPLACE){c.placeId=CMPLACE;c.texto=CMETIQUETA}else{c.texto=$("cmTexto").value.trim();if(!c.texto){aviso("Eleg\u00ed o escrib\u00ed el nuevo destino.");return}if(CMHAYSUG){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}}
+  var c={accion:"cambiar",modo:modosValor("cmModos")};
+  if($("cmLugar").value==="__mismo"){c.mismo=true}else if($("cmLugar").value){c.lugarId=$("cmLugar").value}else if(CMPLACE){c.placeId=CMPLACE;c.texto=CMETIQUETA}else{c.texto=$("cmTexto").value.trim();if(!c.texto){aviso("Eleg\u00ed o escrib\u00ed el nuevo destino.");return}if(CMHAYSUG){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}}
   if($("cmMinBloque").style.display!=="none")c.minutos=Number($("cmMin").value)||0;
-  var enviar=function(){aviso("");api(c).then(function(d){pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";aviso("Listo: cambiamos el destino y recalculamos el tiempo.")}).catch(function(e){if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso("No pudimos calcular el tiempo hasta ah\u00ed: pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.")}else aviso(errorDe(e))})};
-  var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
-  try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};
+  var boton=$("cmConfirmar"),listo=function(){boton.disabled=false;boton.textContent="Cambiar destino"};
+  var enviar=function(){aviso("");api(c).then(function(d){listo();pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";var det=d.minutos?" ("+d.minutos+" min "+({auto:"en auto",transporte:"en transporte p\u00fablico",caminando:"caminando"})[d.modo]+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"";aviso((c.mismo?"Listo: segu\u00eds yendo a "+V.destino:"Listo: cambiamos el destino")+det+" y recalculamos el tiempo"+desde(d.origen)+".")}).catch(function(e){listo();if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso(e.fallo==="ubicacion_vieja"||e.fallo==="sin_ubicacion"?"No sabemos d\u00f3nde est\u00e1s ahora: permit\u00ed la ubicaci\u00f3n en el navegador o pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.":"No pudimos calcular el tiempo hasta ah\u00ed: pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.")}else aviso(errorDe(e))})};
+  boton.disabled=true;boton.textContent="Buscando tu ubicaci\u00f3n\u2026";
+  ubicar(function(o){if(o)c.origen={lat:o.lat,lng:o.lng,precision:o.precision};enviar()})};
 function refrescar(){api({accion:"estado"}).then(pintar).catch(function(e){if(e.codigo==="enlace_invalido"){$("vacio").style.display="block";$("viaje").style.display="none"}})}
 refrescar();setInterval(refrescar,20000);setInterval(tick,1000);
 })();
@@ -1695,7 +1813,7 @@ function pldPaginaDuenio() {
 <div id="gdForm" style="display:none">
 <label style="margin-top:0">A d\u00f3nde vas</label><select id="gdLugar"></select>
 <div id="gdOtro" style="display:none"><label>Direcci\u00f3n o nombre del lugar</label><input id="gdTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="gdSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="gdAyudaDir" class="suave"></small></div>
-<label>C\u00f3mo vas</label><select id="gdModo"><option value="auto">En auto</option><option value="transporte">En transporte p\u00fablico</option><option value="caminando">Caminando</option></select>
+<label>C\u00f3mo vas</label>${gdModosHtml("gdModo", "auto")}
 <label>Tiempo del camino, en minutos <span class="suave" id="gdAyudaMin"></span></label><input id="gdMin" type="number" min="1" max="300" placeholder="Ej.: 20">
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
 <small class="suave" id="gdPie">Ten\u00e9s 2 minutos de margen. Si no lleg\u00e1s ni ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes. Pod\u00e9s extender 10, 20 o 30 minutos, hasta 3 veces.</small>
@@ -1860,7 +1978,7 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
   var d=x.d;$("gdCarga").style.display="none";var tg=$("tGuardianEstado");
   if(x.ok&&d.ok&&d.config){GDDEF=d.defaults||GDDEF;gdCfgPintar(d.config,!!d.viaje)}
   if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardi\u00e1n.";tg.textContent="";return}
-  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+".";$("gdAbrir").href=d.viaje.enlace;tg.className="ok";tg.textContent="Hay un camino en marcha: vas a "+d.viaje.destino;return}
+  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+(d.viaje.pausa?" (en pausa)":"")+".";$("gdAbrir").href=d.viaje.enlace;tg.className="ok";tg.textContent="Hay un camino en marcha: vas a "+d.viaje.destino+(d.viaje.pausa?" (en pausa)":"");return}
   $("gdActivo").style.display="none";
   if(!d.referentes){$("gdForm").style.display="none";$("gdSinRef").style.display="block";tg.className="suave";tg.textContent="Primero eleg\u00ed un referente que haya aceptado.";return}
   $("gdSinRef").style.display="none";$("gdForm").style.display="block";tg.className="suave";tg.textContent="Sin camino en marcha.";
@@ -1894,23 +2012,34 @@ $("aaBotones").onclick=function(){var p=accLeer();p.b=!p.b;accGuardar(p);accApli
 ["aaSonido:gdSonido","aaVibra:gdVibra","aaLuz:gdLuz"].forEach(function(x){var par=x.split(":");$(par[0]).onclick=function(){lsGuardar(par[1],!lsLeer(par[1]));accPintar()}});
 accPintar();
 function gdDestinoCuerpo(c){if($("gdLugar").value){c.lugarId=$("gdLugar").value}else if(GDPLACE){c.placeId=GDPLACE;c.texto=GDETIQUETA}else{c.texto=$("gdTexto").value.trim()}return c}
-function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todav\u00eda",http_400:"Google rechaz\u00f3 el pedido",http_404:"Google no encontr\u00f3 ese lugar",sin_ruta:"Google no encontr\u00f3 una ruta",red:"no hubo conexi\u00f3n con Google",sin_ubicacion:"todav\u00eda no sabemos d\u00f3nde est\u00e1 tu tel\u00e9fono",sin_resultados:"Google no encontr\u00f3 lugares con ese texto"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
+function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todav\u00eda",http_400:"Google rechaz\u00f3 el pedido",http_404:"Google no encontr\u00f3 ese lugar",sin_ruta:"Google no encontr\u00f3 una ruta",red:"no hubo conexi\u00f3n con Google",sin_ubicacion:"no sabemos d\u00f3nde est\u00e1s: permit\u00ed la ubicaci\u00f3n en el navegador",ubicacion_vieja:"no sabemos d\u00f3nde est\u00e1s ahora (la \u00faltima ubicaci\u00f3n de tu tel\u00e9fono es de hace un rato): permit\u00ed la ubicaci\u00f3n en el navegador",sin_resultados:"Google no encontr\u00f3 lugares con ese texto"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
+// donde esta la persona AHORA: la ubicacion del navegador de su telefono (se pide al calcular y al empezar); si no la da, el panel usa la ultima del telefono solo si es de los ultimos minutos
+var GDSEQ=0,GDPOS=null;
+function gdUbicar(){return new Promise(function(res){
+  if(GDPOS&&Date.now()-GDPOS.en<20000){res(GDPOS);return}
+  var hecho=false,fin=function(o){if(!hecho){hecho=true;if(o)GDPOS=o;res(o)}};
+  try{navigator.geolocation.getCurrentPosition(function(p){fin({lat:p.coords.latitude,lng:p.coords.longitude,precision:p.coords.accuracy,en:Date.now()})},function(){fin(null)},{enableHighAccuracy:true,timeout:10000,maximumAge:15000});setTimeout(function(){fin(null)},11000)}catch(e){fin(null)}})}
+function gdOrigenCuerpo(o){return{lat:o.lat,lng:o.lng,precision:o.precision}}
+function modosPoner(g,v){Array.prototype.forEach.call($(g).querySelectorAll("button.modo"),function(b){b.setAttribute("aria-checked",b.getAttribute("data-modo")===v?"true":"false")})}
+function modosValor(g){var b=$(g).querySelector(''button.modo[aria-checked="true"]'');return b?b.getAttribute("data-modo"):"auto"}
+function gdDesde(o){return o&&o.fuente==="navegador"?", desde donde est\u00e1s ahora":o&&o.fuente==="telefono"?", desde la \u00faltima ubicaci\u00f3n de tu tel\u00e9fono (hace "+(o.haceMin||0)+" min)":""}
 function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
   if(otro&&!GDPLACE&&!$("gdTexto").value.trim()){$("gdAyudaMin").textContent="(eleg\u00ed a d\u00f3nde vas)";return}
   if(otro&&GDHAYSUG&&!GDPLACE){$("gdAyudaMin").textContent="(eleg\u00ed uno de los lugares sugeridos)";return}
-  var c=gdDestinoCuerpo({accion:"estimar",modo:$("gdModo").value});
-  $("gdAyudaMin").textContent="(calculando con mapas\u2026)";
-  gdPost(c).then(function(x){var d=x.d||{};
-    if(x.ok&&d.minutos){$("gdMin").value=d.minutos;$("gdMin").readOnly=d.fuente==="mapas";$("gdAyudaMin").textContent=d.fuente==="mapas"?"(calculado con mapas y el tr\u00e1nsito de ahora)":"(estimado por la distancia: pod\u00e9s cambiarlo)"+(d.fallo?" \u2014 "+gdFalloTexto(d):"")}
+  var mi=++GDSEQ,c=gdDestinoCuerpo({accion:"estimar",modo:modosValor("gdModo")});
+  $("gdAyudaMin").textContent="(buscando d\u00f3nde est\u00e1s\u2026)";
+  gdUbicar().then(function(o){if(mi!==GDSEQ)return null;if(o)c.origen=gdOrigenCuerpo(o);$("gdAyudaMin").textContent="(calculando con mapas\u2026)";return gdPost(c)}).then(function(x){if(!x||mi!==GDSEQ)return;var d=x.d||{};
+    if(x.ok&&d.minutos){$("gdMin").value=d.minutos;$("gdMin").readOnly=d.fuente==="mapas";$("gdAyudaMin").textContent=d.fuente==="mapas"?"(calculado con mapas y el tr\u00e1nsito de ahora"+gdDesde(d.origen)+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"(estimado por la distancia: pod\u00e9s cambiarlo)"+(d.fallo?" \u2014 "+gdFalloTexto(d):"")}
     else{$("gdMin").readOnly=false;$("gdAyudaMin").textContent=d.error==="destino_muy_lejos"?"(ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n)":"(no pudimos calcularlo: "+(d.fallo?gdFalloTexto(d):"pon\u00e9 cu\u00e1nto tard\u00e1s")+")"}
-  }).catch(function(){$("gdMin").readOnly=false;$("gdAyudaMin").textContent="(no pudimos calcularlo: pon\u00e9 cu\u00e1nto tard\u00e1s)"})}
+  }).catch(function(){if(mi===GDSEQ){$("gdMin").readOnly=false;$("gdAyudaMin").textContent="(no pudimos calcularlo: pon\u00e9 cu\u00e1nto tard\u00e1s)"}})}
 function gdSugerir(){
   var t=$("gdTexto").value.trim();var caja=$("gdSugerencias");limpiar(caja);caja.style.display="none";$("gdAyudaDir").textContent="";
   if(t.length<3){GDHAYSUG=false;return}
   $("gdAyudaDir").textContent="Buscando\u2026";
-  gdPost({accion:"buscar",texto:t}).then(function(x){var d=x.d||{};
+  var pedido={accion:"buscar",texto:t};if(GDPOS)pedido.origen=gdOrigenCuerpo(GDPOS);
+  gdPost(pedido).then(function(x){var d=x.d||{};
     if($("gdTexto").value.trim()!==t)return;
     var lista=d.sugerencias||[];GDHAYSUG=lista.length>0;
     if(!lista.length){var m="";
@@ -1924,11 +2053,12 @@ function gdSugerir(){
     caja.style.display="flex";$("gdAyudaDir").textContent="Eleg\u00ed el lugar correcto (mir\u00e1 el barrio, la ciudad y la distancia).";gdCambio();
   }).catch(function(e){if($("gdTexto").value.trim()===t)$("gdAyudaDir").textContent="No pudimos buscar: no hubo respuesta del panel."})}
 $("gdTexto").oninput=function(){GDPLACE="";GDETIQUETA="";$("gdMin").value="";clearTimeout(GDTIMER);GDTIMER=setTimeout(gdSugerir,400)};
-$("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;
-$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}
-  var enviar=function(){gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero eleg\u00ed un referente que haya aceptado.",ya_hay_camino:"Ya ten\u00e9s un camino en marcha.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",faltan_minutos:"Pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n."})[x.d.error]||"No se pudo empezar el camino.")})};
-  var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
-  try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};
+$("gdLugar").onchange=gdCambio;
+Array.prototype.forEach.call($("gdModo").querySelectorAll("button.modo"),function(b){b.onclick=function(){modosPoner("gdModo",b.getAttribute("data-modo"));gdCambio()}});
+$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:modosValor("gdModo"),minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}
+  var enviar=function(){gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero eleg\u00ed un referente que haya aceptado.",ya_hay_camino:"Ya ten\u00e9s un camino en marcha.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",faltan_minutos:(x.d.fallo==="ubicacion_vieja"||x.d.fallo==="sin_ubicacion"?"No sabemos d\u00f3nde est\u00e1s ahora: permit\u00ed la ubicaci\u00f3n en el navegador o pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.":"Pon\u00e9 cu\u00e1ntos minutos tard\u00e1s."),lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n."})[x.d.error]||"No se pudo empezar el camino.")})};
+  $("gdEmpezar").disabled=true;$("gdEmpezar").textContent="Buscando tu ubicaci\u00f3n\u2026";
+  gdUbicar().then(function(o){if(o)c.origen=gdOrigenCuerpo(o);$("gdEmpezar").disabled=false;$("gdEmpezar").textContent="Empezar camino";enviar()})};
 $("persona").onchange=function(){location.search=this.value?"?persona="+encodeURIComponent(this.value):""};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});
@@ -2002,10 +2132,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldrecalculo") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldpausa") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2015,5 +2145,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: el Modo Guardian ahora acomoda el tiempo solo si hay transito (y te vas acercando), y la pantalla del camino tiene Voy a frenar un rato y Cambiar destino. Abri /guardian con Ctrl+F5 y proba."
+Ok "LISTO: Voy a frenar un rato ahora pausa el reloj, Cambiar destino calcula desde donde estas, hay iconos para elegir como vas y se puede probar el sonido. Abri /guardian con Ctrl+F5 y proba."
 Write-Host ""
