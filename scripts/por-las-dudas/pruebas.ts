@@ -780,6 +780,8 @@ console.log("== Modo Guardian: el camino");
   const pc: string = await (gdPaginaCamino() as any).text();
   ok(["bSonido", "sonidoTxt", "sonidoCard"].every((i) => pc.includes('id="' + i + '"')) && /function pitido\(/.test(pc) && /ms<=15000/.test(pc) && /wakeLock/.test(pc) && /Tocaste Llegué a las/.test(pc), "la pagina del camino pita cada segundo en los ultimos 15 segundos (se puede apagar), mantiene la pantalla encendida y dice a que hora toco Llegue");
   ok(["reloj", "bLlegue", "bAyuda", "bCancelar", "destino", "estadoTxt", "viaje", "vacio", "acciones"].every((i) => pc.includes('id="' + i + '"')) && /data-m="10"/.test(pc) && /data-m="30"/.test(pc) && /\/api\/guardian/.test(pc), "la pagina del camino tiene el reloj, Llegue, Extender 10 / 20 / 30, Necesito ayuda y Cancelar");
+  ok(/<a class="atras" id="atras" href="\/guardian">← Volver a Tu protección<\/a>/.test(pc) && /id="bVolver" href="\/guardian">Volver a Tu protección/.test(pc) && /id="bOtro" href="\/guardian#gdSeccion">Empezar otro camino/.test(pc) && /\$\("despues"\)\.style\.display=activo\?"none":"block"/.test(pc) && /Ir a Tu protección/.test(pc), "la pagina del camino se puede dejar: arriba hay un enlace para volver a Tu proteccion y, cuando el camino terminó o se canceló, los botones Volver y Empezar otro camino");
+  ok(!/hacer\(\{accion:"cancelar"\},/.test(pc), "al cancelar no se repite el texto arriba (la tarjeta ya dice que se canceló)");
   await preparar();
 }
 

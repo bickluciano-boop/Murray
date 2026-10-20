@@ -28,7 +28,7 @@ const servidor = createServer(async (req, res) => {
   const ruta = `${req.method} ${url.pathname}`;
   let r: Response;
   try {
-    if (ruta === "GET /por-las-dudas") r = pldPaginaDuenio();
+    if (ruta === "GET /por-las-dudas" || ruta === "GET /guardian") r = pldPaginaDuenio();
     else if (url.pathname === "/api/remote/por-las-dudas") r = await pldApiDuenio(request, env);
     else if (ruta === "GET /referente") r = pldPaginaReferente();
     else if (ruta === "POST /api/referente/estado") r = await pldApiReferenteEstado(request, env);
