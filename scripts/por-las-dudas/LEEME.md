@@ -7,7 +7,7 @@
   ayudantes del servidor (`now`, `hash`, `json`, mails...). Para correrlas, con `tablas.sql` en la carpeta actual:
   1. convertir los acentos: `python3 -c "import re;s=open('pld.ts',encoding='utf-8').read();open('pld_ascii.ts','w').write(re.sub(r'[^\x00-\x7f]',lambda m:'\\\\u%04x'%ord(m.group(0)),s))"`
   2. `cat stubs.ts pld_ascii.ts pruebas.ts > harness.mts` y cambiar `new URL("./tablas.sql", import.meta.url)` por una ruta
-     absoluta, y `node --no-warnings harness.mts` (263 pruebas, incluidas las del aviso automático del cron, el SOS, Tu protección plegable y Pausar o apagar).
+     absoluta, y `node --no-warnings harness.mts` (274 pruebas, incluidas las del aviso automático del cron, el SOS, Tu protección plegable y Pausar o apagar).
 - `servidor.ts` y `e2e.js`: un servidor local con las mismas funciones y un recorrido en navegador real (Playwright):
   la persona agrega un referente, el referente acepta y aprieta "No lo encuentro", la persona responde "Estoy bien".
 - `e2e-enlace.js`: recorrido en navegador del enlace personal del referente ("Copiar enlace", "Mandar por WhatsApp", mail que falla,

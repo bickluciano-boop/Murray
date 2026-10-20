@@ -789,7 +789,10 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
   const fetchReal = globalThis.fetch;
   const llamadas: Array<{ url: string; cabeceras: any; cuerpo: any }> = [];
   let respuesta: () => Response = () => new Response("{}", { status: 500 });
+  const llamadasP: Array<{ url: string; cabeceras: any; cuerpo: any }> = [];
+  let respuestaP: () => Response = () => new Response("{}", { status: 500 });
   globalThis.fetch = (async (url: any, init: any) => {
+    if (String(url).includes("places.googleapis.com")) { llamadasP.push({ url: String(url), cabeceras: init.headers, cuerpo: JSON.parse(init.body) }); return respuestaP(); }
     if (String(url).includes("routes.googleapis.com")) { llamadas.push({ url: String(url), cabeceras: init.headers, cuerpo: JSON.parse(init.body) }); return respuesta(); }
     return fetchReal(url, init);
   }) as any;
@@ -859,8 +862,47 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
   r3 = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "transporte" })).json();
   ok(r3.fuente === "distancia", "si Google no encuentra una ruta (por ejemplo en transporte) se estima por la distancia");
 
+  // por que falla Google (para decirselo a la persona)
+  respuesta = () => new Response(JSON.stringify({ error: { code: 403, message: "Routes API has not been used in project 123 before or it is disabled." } }), { status: 403 });
+  r3 = await (await gd({ accion: "estimar", texto: "Una direccion", modo: "auto" })).json();
+  ok(r3.minutos === null && r3.fallo === "http_403" && /Routes API has not been used/.test(r3.detalle), "si Google rechaza la clave, se lo dice (http_403 y el motivo que da Google) en vez de dejar un numero viejo");
+  r3 = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto" })).json();
+  ok(r3.fuente === "distancia" && r3.fallo === "http_403", "para un Lugar se estima por la distancia y tambien avisa que Google no pudo");
+
+  console.log("-- sugerencias de direcciones (Google Places)");
+  respuestaP = () => new Response(JSON.stringify({ suggestions: [
+    { placePrediction: { placeId: "ChIJabcdefghij1", text: { text: "Av. Cabildo 2359, C1428 Cdad. Autónoma de Buenos Aires" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Belgrano, Buenos Aires" } } } },
+    { placePrediction: { placeId: "ChIJabcdefghij2", text: { text: "Av. Cabildo 2359, Rosario" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Rosario, Santa Fe" } } } },
+  ] }), { status: 200 });
+  let rb: any = await (await gd({ accion: "buscar", texto: "av cab" })).json();
+  const lp = llamadasP[0];
+  ok(rb.sugerencias.length === 2 && rb.sugerencias[0].placeId === "ChIJabcdefghij1" && rb.sugerencias[0].principal === "Av. Cabildo 2359" && rb.sugerencias[0].secundario === "Belgrano, Buenos Aires", "al escribir devuelve sugerencias con el barrio y la ciudad");
+  ok(/places:autocomplete/.test(lp.url) && lp.cabeceras["X-Goog-Api-Key"] === "clave-de-prueba" && lp.cuerpo.input === "av cab" && lp.cuerpo.regionCode === "AR" && lp.cuerpo.languageCode === "es" && lp.cuerpo.locationBias.circle.center.latitude === -34.6, "se le pide a Google con la clave, en espanol, en Argentina y cerca de donde esta el telefono");
+  const antesP = llamadasP.length;
+  rb = await (await gd({ accion: "buscar", texto: "av" })).json();
+  ok(rb.sugerencias.length === 0 && llamadasP.length === antesP, "con menos de 3 letras no se busca");
+  respuestaP = () => new Response(JSON.stringify({ error: { message: "Places API (New) has not been used in project 123." } }), { status: 403 });
+  rb = await (await gd({ accion: "buscar", texto: "av cabildo" })).json();
+  ok(rb.sugerencias.length === 0 && rb.fallo === "http_403" && /Places API \(New\)/.test(rb.detalle), "si Google no deja buscar (Places sin habilitar) se lo dice");
+  delete (env as any).GOOGLE_ROUTES_KEY;
+  rb = await (await gd({ accion: "buscar", texto: "av cabildo" })).json();
+  ok(rb.sugerencias.length === 0 && rb.fallo === "sin_clave", "sin clave no hay sugerencias");
+  (env as any).GOOGLE_ROUTES_KEY = "clave-de-prueba";
+
+  console.log("-- elegir una sugerencia");
+  respuesta = ruta(1500, { lat: -34.56, lng: -58.45 });
+  const nR = llamadas.length;
+  r3 = await (await gd({ accion: "estimar", placeId: "ChIJabcdefghij1", texto: "Av. Cabildo 2359, Belgrano, Buenos Aires", modo: "auto" })).json();
+  ok(r3.fuente === "mapas" && r3.minutos === 25 && llamadas[nR].cuerpo.destination.placeId === "ChIJabcdefghij1" && !("address" in llamadas[nR].cuerpo.destination), "con una sugerencia elegida, Google calcula hasta ESE lugar exacto (placeId), no una calle suelta");
+  ok((await (await gd({ accion: "estimar", placeId: "x y;z", modo: "auto" })).json() as any).error === "destino_invalido", "un identificador de lugar raro se rechaza");
+  const e5: any = await (await gd({ accion: "empezar", placeId: "ChIJabcdefghij1", texto: "Av. Cabildo 2359, Belgrano, Buenos Aires", modo: "auto" })).json();
+  ok(e5.viaje.destino === "Av. Cabildo 2359, Belgrano, Buenos Aires" && e5.viaje.estimadoMin === 25 && viaje().dest_lat === -34.56 && viaje().dest_lng === -58.45, "el camino queda con el nombre completo (barrio y ciudad), el tiempo de Google y las coordenadas exactas del destino");
+  sqlite.exec("DELETE FROM gd_viajes");
+
   delete (env as any).GOOGLE_ROUTES_KEY;
   globalThis.fetch = fetchReal;
+  const tg: string = await (pldPaginaDuenio() as any).text();
+  ok(/id="gdSugerencias"/.test(tg) && /accion:"buscar"/.test(tg) && /GDPLACE/.test(tg) && /Elegí una de las direcciones que te sugerimos/.test(tg), "la tarjeta del Guardian muestra las sugerencias y no deja empezar sin elegir una");
   await preparar();
 }
 

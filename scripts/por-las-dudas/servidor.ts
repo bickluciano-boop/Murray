@@ -10,7 +10,12 @@ setSesion({ email: "lucas@correo.com", method: "passkey" });
 const fetchReal = globalThis.fetch;
 globalThis.fetch = (async (url: any, init: any) => String(url).includes("routes.googleapis.com")
   ? new Response(JSON.stringify({ routes: [{ duration: "780s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.49, longitude: -58.4 } } }] }] }), { status: 200 })
-  : fetchReal(url, init)) as any;
+  : String(url).includes("places.googleapis.com")
+    ? new Response(JSON.stringify({ suggestions: [
+      { placePrediction: { placeId: "ChIJabcdefghij1", structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Belgrano, Buenos Aires" } } } },
+      { placePrediction: { placeId: "ChIJabcdefghij2", structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Rosario, Santa Fe" } } } },
+    ] }), { status: 200 })
+    : fetchReal(url, init)) as any;
 const servidor = createServer(async (req, res) => {
   const origen = "http://localhost:" + (servidor.address() as any).port;
   const url = new URL(req.url!, origen);
