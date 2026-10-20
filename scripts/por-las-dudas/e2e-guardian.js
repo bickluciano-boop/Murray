@@ -121,7 +121,18 @@ const B = 'http://localhost:8799';
   await pag.reload();
   await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
   console.log('boton de sonido:', await pag.textContent('#bSonido'), '|', (await pag.textContent('#sonidoTxt')).trim().slice(0, 70));
-  await pag.waitForTimeout(19000);
+  // ultimos 15 segundos: el reloj parpadea en rojo y dice que hacer (no depende del sonido)
+  await pag.waitForFunction(() => document.getElementById('reloj').className === 'urgente', null, { timeout: 15000 });
+  const opacidades = [];
+  for (let i = 0; i < 8; i++) { opacidades.push(await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).opacity)); await pag.waitForTimeout(300); }
+  console.log('ultimos 15 segundos: clase del reloj:', await pag.getAttribute('#reloj', 'class'), '| color:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).color), '| parpadea (opacidades vistas):', [...new Set(opacidades)], '| texto:', await pag.textContent('#finalTxt'), '| borde de la tarjeta:', await pag.evaluate(() => getComputedStyle(document.getElementById('relojCard')).borderTopColor));
+  await pag.screenshot({ path: 'e2e_guardian_parpadeo.png', fullPage: true });
+  await pag.emulateMedia({ reducedMotion: 'reduce' });
+  console.log('con "reducir movimiento": animacion:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).animationName), '| sigue rojo:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).color));
+  await pag.emulateMedia({ reducedMotion: 'no-preference' });
+  await pag.waitForFunction(() => document.getElementById('reloj').textContent.includes('Se pasó el tiempo'), null, { timeout: 25000 });
+  await pag.waitForTimeout(1500);
+  console.log('pasado el limite: clase del reloj:', await pag.getAttribute('#reloj', 'class'), '| animacion:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).animationName), '| texto de los ultimos segundos oculto:', !(await pag.isVisible('#finalTxt')));
   const pits = await pag.evaluate(() => window.__pitidos);
   console.log('pitidos cortos:', pits.filter((f) => f === 1000).length, '(esperados ~15) | largos:', pits.filter((f) => f === 660).length, '| reloj:', await pag.textContent('#reloj'));
   await pag.click('#bSonido');
