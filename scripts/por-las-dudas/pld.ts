@@ -1107,7 +1107,7 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
   const conUbicacion: Record<string, unknown> = origen
     ? { ...base, locationBias: { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } }, origin: { latitude: origen.lat, longitude: origen.lng } }
     : base;
-  // Si Google rechaza el pedido completo (400) o se corta la conexion, se prueba con uno mas simple: asi una opcion que Google no acepte no deja a la persona sin sugerencias.
+  // Si Google rechaza el pedido completo (400), se corta la conexion o no encuentra nada, se prueba con uno mas simple: asi una opcion que Google no acepte no deja a la persona sin sugerencias.
   const intentos: Array<[string, Record<string, unknown>]> = [["A", conUbicacion], ["B", base], ["C", { input: texto }]];
   let fallo = "";
   let primero = "";
@@ -1134,11 +1134,12 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
         secundario: String(p!.structuredFormat?.secondaryText?.text ?? "").slice(0, 120),
         km: Number.isFinite(Number(p!.distanceMeters)) && Number(p!.distanceMeters) >= 0 ? Math.round(Number(p!.distanceMeters) / 100) / 10 : null,
       })).filter((x) => x.principal);
-      return { sugerencias };
+      if (sugerencias.length) return { sugerencias };
     } catch {
       if (!fallo) { fallo = "http_200"; primero = "respuesta ilegible"; }
     }
   }
+  if (!fallo) return { sugerencias: [] as Sugerencia[], fallo: "sin_resultados", detalle: `[${marcas.join(" ")}] ${gdNotaClave(k)}`.slice(0, 240) };
   return { sugerencias: [] as Sugerencia[], fallo: fallo || "http_400", detalle: `[${marcas.join(" ")}] ${primero} (${gdNotaClave(k)})`.slice(0, 240) };
 }
 
@@ -1509,7 +1510,7 @@ function mostrarInvitacion(i){
 function accion(cuerpo,ok){aviso("");return api(cuerpo).then(function(d){pintar(d);mostrarInvitacion(d.invitacion);if(d.invitacion&&!d.invitacion.enviado)aviso("No pudimos mandar el mail. Usá el enlace de abajo.");else if(ok)aviso(ok)}).catch(function(e){aviso(e.message)})}
 $("rAgregar").onclick=function(){var cc=$("rCorreo").value.trim();if(cc&&!confirm("Le vamos a mandar el mail a esta dirección: ["+cc+"]. Fijate letra por letra: si está mal escrito, le llega a otra persona. ¿Está bien escrito?"))return;accion({accion:"agregar",name:$("rNombre").value,email:$("rCorreo").value},"Listo: le mandamos el mail a tu referente.").then(function(){$("rNombre").value="";$("rCorreo").value=""})};
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value}},"Condiciones guardadas.")};
-function gdPost(c){return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})})}
+function gdPost(c){return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}},function(){return{ok:false,d:{error:"respuesta_"+r.status}}})})}
 function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
   var d=x.d;$("gdCarga").style.display="none";
   if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián.";return}
@@ -1524,7 +1525,7 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdDestinoCuerpo(c){if($("gdLugar").value){c.lugarId=$("gdLugar").value}else if(GDPLACE){c.placeId=GDPLACE;c.texto=GDETIQUETA}else{c.texto=$("gdTexto").value.trim()}return c}
-function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google rechazó el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
+function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google rechazó el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono",sin_resultados:"Google no encontró lugares con ese texto"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
 function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
@@ -1539,14 +1540,20 @@ function gdCambio(){
 function gdSugerir(){
   var t=$("gdTexto").value.trim();var caja=$("gdSugerencias");limpiar(caja);caja.style.display="none";$("gdAyudaDir").textContent="";
   if(t.length<3){GDHAYSUG=false;return}
+  $("gdAyudaDir").textContent="Buscando…";
   gdPost({accion:"buscar",texto:t}).then(function(x){var d=x.d||{};
     if($("gdTexto").value.trim()!==t)return;
     var lista=d.sugerencias||[];GDHAYSUG=lista.length>0;
-    if(!lista.length){$("gdAyudaDir").textContent=d.fallo&&d.fallo!=="sin_clave"?"No pudimos buscar direcciones: "+gdFalloTexto(d)+". Escribila completa, con barrio y ciudad.":"";return}
+    if(!lista.length){var m="";
+      if(!x.ok)m="No pudimos buscar: el panel contestó con un error"+(d.error?" ("+d.error+")":"")+".";
+      else if(d.fallo==="sin_clave")m="Al panel le falta la clave de Google, por eso no puede sugerir lugares.";
+      else if(d.fallo==="sin_resultados")m=gdFalloTexto(d)+". Probá con otro nombre, o con la dirección y la ciudad.";
+      else if(d.fallo)m="No pudimos buscar direcciones: "+gdFalloTexto(d)+". Escribila completa, con barrio y ciudad.";
+      $("gdAyudaDir").textContent=m;return}
     lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" · "+sg.secundario:"")+(sg.km!==null&&sg.km!==undefined?" · a "+String(sg.km).replace(".",",")+" km":"");
       b.onclick=function(){GDPLACE=sg.placeId;GDETIQUETA=(sg.principal+(sg.secundario?", "+sg.secundario:"")).slice(0,80);$("gdTexto").value=GDETIQUETA;limpiar(caja);caja.style.display="none";$("gdAyudaDir").textContent="Elegiste: "+GDETIQUETA;gdCambio()};caja.appendChild(b)});
     caja.style.display="flex";$("gdAyudaDir").textContent="Elegí el lugar correcto (mirá el barrio, la ciudad y la distancia).";gdCambio();
-  }).catch(function(){})}
+  }).catch(function(e){if($("gdTexto").value.trim()===t)$("gdAyudaDir").textContent="No pudimos buscar: no hubo respuesta del panel."})}
 $("gdTexto").oninput=function(){GDPLACE="";GDETIQUETA="";$("gdMin").value="";clearTimeout(GDTIMER);GDTIMER=setTimeout(gdSugerir,400)};
 $("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;
 $("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Elegí uno de los lugares que te sugerimos, así sabemos bien a dónde vas.");return}

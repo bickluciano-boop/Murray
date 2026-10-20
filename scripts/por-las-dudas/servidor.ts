@@ -10,7 +10,9 @@ setSesion({ email: "lucas@correo.com", method: "passkey" });
 const fetchReal = globalThis.fetch;
 globalThis.fetch = (async (url: any, init: any) => String(url).includes("routes.googleapis.com")
   ? new Response(JSON.stringify({ routes: [{ duration: "780s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.49, longitude: -58.4 } } }] }] }), { status: 200 })
-  : String(url).includes("places.googleapis.com")
+  : String(url).includes("places.googleapis.com") && String(JSON.parse(init.body).input).includes("zzzz")
+    ? new Response("{}", { status: 200 })
+    : String(url).includes("places.googleapis.com")
     ? new Response(JSON.stringify({ suggestions: [
       { placePrediction: { placeId: "ChIJrestaurante1", distanceMeters: 1800, structuredFormat: { mainText: { text: "Kansas Cabildo" }, secondaryText: { text: "Av. Cabildo 2501, Belgrano" } } } },
       { placePrediction: { placeId: "ChIJabcdefghij1", distanceMeters: 3240, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Belgrano, Buenos Aires" } } } },

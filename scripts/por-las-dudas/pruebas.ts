@@ -930,6 +930,18 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
   respuesta = () => { throw new Error("Network connection lost."); };
   r3 = await (await gd({ accion: "estimar", texto: "Una direccion", modo: "auto" })).json();
   ok(r3.minutos === null && r3.fallo === "red" && /Network connection lost/.test(r3.detalle), "si la conexion no vuelve, el motivo que se muestra es la falta de conexion con Google");
+  // Google contesta bien pero sin resultados: se prueba mas simple y, si sigue vacio, se dice que no encontro nada
+  respuestaP = () => new Response("{}", { status: 200 });
+  const nV = llamadasP.length;
+  rb = await (await gd({ accion: "buscar", texto: "zzzz" })).json();
+  ok(rb.sugerencias.length === 0 && rb.fallo === "sin_resultados" && /\[A200 B200 C200\]/.test(rb.detalle) && llamadasP.length === nV + 3, "si Google no encuentra nada, prueba los tres pedidos y dice que no hubo resultados (no queda en blanco)");
+  let vacios = 0;
+  respuestaP = () => { vacios++; return vacios === 1 ? new Response("{}", { status: 200 }) : new Response(buenas, { status: 200 }); };
+  rb = await (await gd({ accion: "buscar", texto: "la panera rosa caba" })).json();
+  ok(rb.sugerencias.length === 1 && !rb.fallo && vacios === 2, "si el pedido con ubicacion no da resultados, el pedido mas simple los encuentra");
+  const tp: string = await (pldPaginaDuenio() as any).text();
+  ok(/Buscando…/.test(tp) && /Al panel le falta la clave de Google/.test(tp) && /el panel contestó con un error/.test(tp) && /Probá con otro nombre, o con la dirección y la ciudad/.test(tp) && /respuesta_"\+r\.status/.test(tp), "la pantalla siempre dice que paso: buscando, sin clave, error del panel o sin resultados");
+
   // clave con caracteres invisibles (por ejemplo al pegarla en la consola): se limpia antes de mandarla
   const buena = "AIza" + "b".repeat(35);
   (env as any).GOOGLE_ROUTES_KEY = "\u001b[200~" + buena + "\u001b[201~";
