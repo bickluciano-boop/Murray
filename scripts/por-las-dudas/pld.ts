@@ -822,10 +822,10 @@ const GD_MODOS: Record<string, string> = { auto: "en auto", transporte: "en tran
 type GdViaje = {
   id: string; ownerEmail: string; destino: string; destLat: number | null; destLng: number | null; modo: string;
   estimadoMin: number; startedAt: string; deadlineAt: string; extensiones: number; estado: string;
-  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null;
+  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null; endedAt: string | null;
 };
 
-const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt";
+const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt,ended_at AS endedAt";
 
 /** Minutos que se calculan para ir de un punto a otro (distancia por calles ~30 % más larga que en línea recta; el transporte suma 5 min de espera). */
 function gdEstimar(km: number, modo: string) {
@@ -867,8 +867,26 @@ function gdHora(iso: string | null) {
   }
 }
 
+/** Cuándo terminó el camino respecto del límite: minutos antes (negativo) o después (positivo) de la hora prevista, y cuánto duró. */
+function gdFin(v: GdViaje) {
+  if (!v.endedAt) return null;
+  const fin = Date.parse(v.endedAt), limite = Date.parse(v.deadlineAt), inicio = Date.parse(v.startedAt);
+  const total = Math.round((limite - inicio) / 60000);
+  return {
+    hora: gdHora(v.endedAt), limiteHora: gdHora(v.deadlineAt), despuesMin: Math.round((fin - limite) / 60000),
+    duracionMin: Math.max(0, Math.round((fin - inicio) / 60000)), extraMin: Math.max(0, total - v.estimadoMin - GD_MARGEN_MIN),
+  };
+}
+
+function gdDemoraTexto(despuesMin: number, limiteHora: string) {
+  if (despuesMin === 0) return `justo en el límite (${limiteHora})`;
+  const n = Math.abs(despuesMin);
+  return `${n} ${n === 1 ? "minuto" : "minutos"} ${despuesMin < 0 ? "antes" : "después"} del límite (${limiteHora})`;
+}
+
 async function gdPresentar(env: Env, v: GdViaje) {
   return {
+    fin: gdFin(v),
     id: v.id, destino: v.destino, modo: v.modo, modoTexto: GD_MODOS[v.modo] ?? v.modo, estado: v.estado, estimadoMin: v.estimadoMin, margenMin: GD_MARGEN_MIN,
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: GD_MAX_EXTENSIONES, alertas: v.alertas,
     puedeExtender: (v.estado === "en_camino" || v.estado === "aviso") && v.extensiones < GD_MAX_EXTENSIONES, opcionesExtender: GD_EXTENSIONES,
@@ -1096,9 +1114,11 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
   if (!activo) return { error: "camino_terminado", status: 409 };
   if (accion === "llegue" || (accion === "cancelar" && v.estado === "alerta")) {
-    await env.DB.prepare("UPDATE gd_viajes SET estado='llego',ended_at=?,motivo_fin='llegue' WHERE id=?").bind(now(), v.id).run();
-    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}.`);
-    await gdAvisarLlego(env, v, `llegó bien a ${v.destino}.`);
+    const fin = now();
+    await env.DB.prepare("UPDATE gd_viajes SET estado='llego',ended_at=?,motivo_fin='llegue' WHERE id=?").bind(fin, v.id).run();
+    const f = gdFin({ ...v, endedAt: fin })!;
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}: tocaste Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
+    await gdAvisarLlego(env, v, `llegó bien a ${v.destino}: tocó Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
     return { ok: true, estado: "llego" };
   }
   if (accion === "cancelar") {
@@ -1192,12 +1212,20 @@ function gdPaginaCamino() {
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo.</small>
 </div>
+<div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button></div><small class="suave" id="sonidoTxt"></small></div>
 </div>
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
 var t=new URLSearchParams(location.search).get("t")||"";
-var V=null,desfase=0;
+var V=null,desfase=0,ultimoLimite="",ultimoPitido=0,sonoFinal=false,luz=null,AC=null;
+var SONIDO=true;try{SONIDO=localStorage.getItem("gdSonido")!=="0"}catch(e){}
+function audio(){try{if(!AC){var C=window.AudioContext||window.webkitAudioContext;if(C)AC=new C()}if(AC&&AC.state==="suspended")AC.resume()}catch(e){}return AC}
+function pitido(largo){var a=audio();if(!a||a.state!=="running")return false;try{var o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=largo?660:1000;g.gain.value=0.15;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(largo?0.9:0.09));if(navigator.vibrate)navigator.vibrate(largo?600:80)}catch(e){}return true}
+function estadoSonido(){$("bSonido").textContent=SONIDO?"Sonido: activado":"Sonido: apagado";var a=AC;$("sonidoTxt").textContent=SONIDO?("En los últimos 15 segundos suena un pip por segundo para que no se te pase. La pantalla tiene que estar abierta"+(a&&a.state==="running"?".":" y tocarla una vez para habilitar el sonido.")):"Los pitidos de los últimos 15 segundos están apagados."}
+function pantallaEncendida(){try{if(!luz&&navigator.wakeLock&&document.visibilityState==="visible"&&V&&(V.estado==="en_camino"||V.estado==="aviso")){navigator.wakeLock.request("screen").then(function(l){luz=l;l.addEventListener("release",function(){luz=null})}).catch(function(){})}}catch(e){}}
+["pointerdown","touchstart","keydown"].forEach(function(e){document.addEventListener(e,function(){if(SONIDO)audio();estadoSonido()},{passive:true})});
+document.addEventListener("visibilitychange",pantallaEncendida);
 function aviso(x){$("aviso").textContent=x||""}
 function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;throw e}return d})})}
 function hora(s){try{return new Date(s).toLocaleTimeString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return s}}
@@ -1214,7 +1242,13 @@ function pintar(d){
   Array.prototype.forEach.call(botones,function(b){b.disabled=!V.puedeExtender});
   $("bCancelar").style.display=V.estado==="alerta"?"none":"inline-block";
   var tx={en_camino:"Tenés que llegar antes de las "+hora(V.deadlineAt)+". Cuando llegues, tocá Llegué.",aviso:"¿Seguís en camino? Si no respondés, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Tocá Llegué cuando estés bien.",llego:"Llegaste bien. ¡Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerró solo."}[V.estado]||"";
+  var f=V.fin;
+  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegué a las "+f.hora+": "+(f.despuesMin===0?"justo en el límite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"después")+" del límite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el cálculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+"."}
   $("estadoTxt").textContent=tx;$("estadoTxt").className=V.estado==="alerta"?"mal":(V.estado==="llego"?"ok":"suave");
+  if(V.deadlineAt!==ultimoLimite){ultimoLimite=V.deadlineAt;ultimoPitido=0;sonoFinal=false}
+  $("sonidoCard").style.display=(V.estado==="en_camino"||V.estado==="aviso")?"block":"none";
+  estadoSonido();pantallaEncendida();
+  if(!activo&&luz){try{luz.release()}catch(e){}luz=null}
   tick();
 }
 function tick(){
@@ -1223,9 +1257,14 @@ function tick(){
   if(!activo){$("reloj").textContent=V.estado==="llego"?"Listo":"";return}
   var ms=Date.parse(V.deadlineAt)-(Date.now()+desfase);
   $("reloj").textContent=ms>0?reloj(ms):"Se pasó el tiempo";
+  if(SONIDO&&(V.estado==="en_camino"||V.estado==="aviso")){
+    if(ms>0&&ms<=15000){var seg=Math.ceil(ms/1000);if(seg!==ultimoPitido){ultimoPitido=seg;pitido(false)}}
+    else if(ms<=0&&!sonoFinal){sonoFinal=true;pitido(true)}
+  }
 }
 function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó."})[e.codigo]||"No se pudo. Probá de nuevo."}
 function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
+$("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
 $("bLlegue").onclick=function(){hacer({accion:"llegue"},"Listo: avisamos que llegaste bien.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: tenés "+b.getAttribute("data-m")+" minutos más.")}});
 $("bAyuda").onclick=function(){if(confirm("¿Pedir ayuda? Les avisamos ahora mismo a tus referentes, con tu última ubicación."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};

@@ -710,6 +710,8 @@ console.log("== Modo Guardian: el camino");
   const rl: any = await (await gd({ t: TOKEN, accion: "llegue" })).json();
   nuevos = mailsDesde(n);
   ok(rl.estado === "llego" && viaje().estado === "llego" && nuevos.length === 2 && nuevos.every((c) => /está bien/.test(c.subject)), "al tocar Llegue se cierra y se les cuenta a los referentes que esta bien");
+  ok(nuevos.every((c) => /tocó Llegué a las \d\d:\d\d, \d+ minutos? después del límite/.test(c.html)) && rl.viaje.fin.despuesMin > 0 && /^\d\d:\d\d$/.test(rl.viaje.fin.hora), "el mail dice a que hora toco Llegue y con cuanta demora respecto del limite, y la pagina tambien lo sabe");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Llegaste bien a Casa: tocaste Llegué a las \d\d:\d\d, \d+ minutos? después del límite/.test(x.detail)), "y en el registro");
   ok((await gd({ t: TOKEN, accion: "llegue" })).status === 409, "un camino terminado no se puede tocar de nuevo");
   ok((await (await api()).json() as any).registro.some((x: any) => /Llegaste bien a Casa/.test(x.detail)), "queda en el registro");
 
@@ -719,8 +721,10 @@ console.log("== Modo Guardian: el camino");
   ok(e2.viaje.destino === "Casa de Ana" && e2.viaje.estimadoMin === 25, "otro lugar: la persona pone los minutos");
   const T2 = e2.viaje.enlace.split("t=")[1];
   n = correos.length;
-  await gd({ t: T2, accion: "llegue" });
+  const rl2: any = await (await gd({ t: T2, accion: "llegue" })).json();
   ok(viaje().estado === "llego" && correos.length === n, "si llega a tiempo no se les manda nada a los referentes");
+  ok(rl2.viaje.fin.despuesMin <= -26 && rl2.viaje.fin.despuesMin >= -28 && rl2.viaje.fin.duracionMin === 0 && rl2.viaje.fin.extraMin === 0, "llegando enseguida, la pagina dice que toco Llegue unos 27 minutos antes del limite");
+  ok((await (await api()).json() as any).registro.some((x: any) => /tocaste Llegué a las \d\d:\d\d, 2[678] minutos antes del límite/.test(x.detail)), "y el registro lo cuenta");
   e2 = await (await gd({ accion: "empezar", texto: "Cine", modo: "transporte", minutos: 40 })).json();
   const T3 = e2.viaje.enlace.split("t=")[1];
   await gd({ t: T3, accion: "cancelar" });
@@ -774,6 +778,7 @@ console.log("== Modo Guardian: el camino");
 
   console.log("-- la pagina del camino");
   const pc: string = await (gdPaginaCamino() as any).text();
+  ok(["bSonido", "sonidoTxt", "sonidoCard"].every((i) => pc.includes('id="' + i + '"')) && /function pitido\(/.test(pc) && /ms<=15000/.test(pc) && /wakeLock/.test(pc) && /Tocaste Llegué a las/.test(pc), "la pagina del camino pita cada segundo en los ultimos 15 segundos (se puede apagar), mantiene la pantalla encendida y dice a que hora toco Llegue");
   ok(["reloj", "bLlegue", "bAyuda", "bCancelar", "destino", "estadoTxt", "viaje", "vacio", "acciones"].every((i) => pc.includes('id="' + i + '"')) && /data-m="10"/.test(pc) && /data-m="30"/.test(pc) && /\/api\/guardian/.test(pc), "la pagina del camino tiene el reloj, Llegue, Extender 10 / 20 / 30, Necesito ayuda y Cancelar");
   await preparar();
 }

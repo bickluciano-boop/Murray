@@ -9,6 +9,11 @@ const B = 'http://localhost:8799';
     const r = await fetch(req.url().replace('https://panel.test', B), { method: req.method(), headers: { 'content-type': 'application/json' }, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postData() });
     await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') || 'text/plain' }, body: Buffer.from(await r.arrayBuffer()) });
   });
+  // un AudioContext de mentira que cuenta los pitidos (1000 Hz: corto, 660 Hz: el largo del final)
+  await ctx.addInitScript(() => {
+    window.__pitidos = [];
+    window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; } resume() { return Promise.resolve(); } createGain() { return { gain: { value: 0 }, connect() {} }; } createOscillator() { const o = { frequency: { value: 0 }, type: '', connect() {}, start() { window.__pitidos.push(o.frequency.value); }, stop() {} }; return o; } };
+  });
   const pag = await ctx.newPage();
   const errores = [];
   pag.on('pageerror', (e) => errores.push('pageerror: ' + e.message));
@@ -32,7 +37,7 @@ const B = 'http://localhost:8799';
   // con la clave de Google Rutas: el tiempo sale de los mapas y no se puede cambiar
   await fetch(B + '/__clave', { method: 'POST', body: '1' });
   await pag.selectOption('#gdModo', 'transporte');
-  await pag.waitForFunction(() => document.getElementById('gdAyudaMin').textContent.includes('mapas'));
+  await pag.waitForFunction(() => document.getElementById('gdAyudaMin').textContent.includes('calculado con mapas'));
   console.log('con clave:', await pag.inputValue('#gdMin'), 'min |', await pag.textContent('#gdAyudaMin'), '| solo lectura:', await pag.$eval('#gdMin', (e) => e.readOnly));
   await pag.screenshot({ path: 'e2e_guardian_mapas.png', fullPage: true });
   await pag.selectOption('#gdLugar', '');
@@ -54,6 +59,17 @@ const B = 'http://localhost:8799';
   await pag.click('button[data-m="10"]');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('10 minutos más'));
   console.log('tras extender:', await pag.textContent('#aviso'));
+  // los ultimos 15 segundos: un pip por segundo, y uno largo al final
+  await fetch(B + '/__gd-minutos', { method: 'POST', body: '0.27' });
+  await pag.reload();
+  await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
+  console.log('boton de sonido:', await pag.textContent('#bSonido'), '|', (await pag.textContent('#sonidoTxt')).trim().slice(0, 70));
+  await pag.waitForTimeout(19000);
+  const pits = await pag.evaluate(() => window.__pitidos);
+  console.log('pitidos cortos:', pits.filter((f) => f === 1000).length, '(esperados ~15) | largos:', pits.filter((f) => f === 660).length, '| reloj:', await pag.textContent('#reloj'));
+  await pag.click('#bSonido');
+  console.log('boton de sonido tras tocarlo:', await pag.textContent('#bSonido'));
+  await pag.click('#bSonido');
   // se vence: el reloj corre en el servidor
   await fetch(B + '/__gd-minutos', { method: 'POST', body: '-1' });
   await fetch(B + '/__gd-cron', { method: 'POST' });
@@ -63,7 +79,7 @@ const B = 'http://localhost:8799';
   console.log('mails al referente:', mails.filter((c) => c.to === 'mama@correo.com' && /no llegó/.test(c.subject)).map((c) => c.subject));
   await pag.screenshot({ path: 'e2e_guardian_alerta.png', fullPage: true });
   await pag.click('#bLlegue');
-  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('Llegaste bien'));
+  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('Tocaste Llegué'));
   console.log('llegue:', (await pag.textContent('#estadoTxt')).trim(), '| acciones visibles:', await pag.isVisible('#acciones'));
   const mails2 = await (await fetch(B + '/__correos')).json();
   console.log('mails de "esta bien":', mails2.filter((c) => c.to === 'mama@correo.com' && /está bien/.test(c.subject)).length);
