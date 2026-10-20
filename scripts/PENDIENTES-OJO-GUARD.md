@@ -1173,7 +1173,11 @@ Actualizado: 16/10/2026.
 - **Propuesta, etapa 1 (sin hardware):** al aceptar, todos los equipos **autorizados** de esa persona se ven solos en el mapa y en Ubicar / Sonar, y los que sume después también; la persona puede apagar el uso
   compartido de un equipo y la familia lo ve (sin modo oculto). Se mantiene la autorización de cada equipo nuevo (evita sumar un teléfono espía solo con el mail); se puede facilitar con un código o QR desde un equipo ya autorizado.
 - **Etapa 2, artículos:** lo de Apple (AirTag) depende de su red de iPhones y no se puede copiar. Opciones reales: GPS baratos para auto / mochila / mascota que se leen por API, y el "Modo cercanía" con Bluetooth
-  (ya anotado en Antirrobo). Falta confirmar con Luciano qué entiende por "artículos" (¿llaves, mochila, auto?). Va para una build posterior.
+  (ya anotado en Antirrobo). **Luciano confirmó (20/10/2026): "artículos" = llaves, mochila, auto (tipo AirTag).** Va para una build posterior.
+- **¿Se puede "espejar" lo de Apple (Buscar) para no entrar a dos lugares? No.** Apple no ofrece una API pública para que otras apps lean la ubicación de AirTags, dispositivos o personas de Buscar: la ubicación está
+  cifrada de punta a punta y solo la descifra el dueño; los accesorios "Works with Find My" (Chipolo, etc.) también se ven solo en la app Buscar. Las vías no oficiales (ingeniería inversa, pedir el Apple ID y el código 2FA)
+  rompen los términos de Apple, son frágiles y la App Store las rechaza: no las usamos. (Google Find Hub, igual.) **Alternativa legítima:** un atajo "Abrir Buscar" / "Abrir Find Hub" dentro de Ojo Guard (un toque,
+  sin espejar datos) + más adelante rastreadores GPS propios con API para auto / mascota / mochila que sí se ven en nuestro mapa, y el Modo cercanía por Bluetooth.
 
 ## Antirrobo (app)
 
