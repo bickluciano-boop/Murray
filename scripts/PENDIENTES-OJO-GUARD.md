@@ -1181,6 +1181,21 @@ Actualizado: 16/10/2026.
   rompen los términos de Apple, son frágiles y la App Store las rechaza: no las usamos. (Google Find Hub, igual.) **Alternativa legítima:** un atajo "Abrir Buscar" / "Abrir Find Hub" dentro de Ojo Guard (un toque,
   sin espejar datos) + más adelante rastreadores GPS propios con API para auto / mascota / mochila que sí se ven en nuestro mapa, y el Modo cercanía por Bluetooth.
 
+- **Decidido por Luciano (20/10/2026): "sí" a las dos.** (1) **Etapa 1 queda como próxima etapa de la app:** "Familia: todos los dispositivos de cada persona por defecto" (permiso por persona; los equipos autorizados de cada
+  persona aparecen solos en el mapa y en Ubicar / Sonar; la persona puede apagar el uso compartido de un equipo y la familia lo ve; se mantiene la autorización de cada equipo nuevo). (2) **Artículos:** atajo "Abrir Buscar" /
+  "Abrir Find Hub" ahora (sin espejar datos) y rastreadores GPS propios con API más adelante.
+
+### Lista de la próxima build de la app (juntada el 20/10/2026, falta armarla y probarla)
+
+1. Pantalla **"Estoy bien"** al tocar el aviso "¿Estás bien?" (no depender del mail).
+2. Que la app **despierte sola después de reiniciar** el teléfono (hoy no manda señales hasta abrirla una vez).
+3. **Configuración sin bloqueo de pantalla** para una persona cuidada (papá): hoy la app pide "Configurá un acceso seguro" y el PIN; elegida la opción B: no abrir esa pantalla en ese teléfono.
+4. **Sin foto al tocar mal el código** para personas mayores (no debe asustar ni sacar foto).
+5. **Regla de menores y administrador en la app:** el menor solo ve su protección, el titular y los adultos de la familia la arman (ya está en el servidor y el panel).
+6. **Familia: todos los dispositivos de cada persona por defecto** (etapa 1 de arriba) y el atajo "Abrir Buscar" / "Abrir Find Hub".
+7. Título del iPhone alineado; pendientes sueltos de la lista de iPhone / Android más arriba (por ejemplo "Compartir de nuevo" cortado en Familia).
+8. Trámites que acompañan: declaración **DSA de trader** en App Store Connect, `--auto-submit`, y la respuesta de Apple por Alertas críticas (21/10).
+
 ## Antirrobo (app)
 
 - [ ] **Probar en la calle el "Modo cercanía"** (Configuración → Modo cercanía:
