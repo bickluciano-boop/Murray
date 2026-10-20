@@ -6,7 +6,7 @@
 #  - Si todavia no hay ubicacion del telefono, lo dice y repite lo del 911. Cancelado el SOS, todo vuelve a ser como antes (con las condiciones del Modo Cautela).
 #  - El boton del SOS sigue en 3 segundos (no se toca). Incluye todo lo de los parches anteriores. Se puede correr encima de cualquiera de ellos.
 # Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciocho versiones desde
-# aplicar-guardian-mejoras-panel.ps1). Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldsos. Al final publica el panel solo.
+# aplicar-guardian-mejoras-panel.ps1). Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldsosenlace. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -51,9 +51,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldsos")) { Mal "Ya existe src\index.ts.bak-pldsos. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldsos")
-Ok "Respaldo creado: src\index.ts.bak-pldsos"
+if (Test-Path ($indice + ".bak-pldsosenlace")) { Mal "Ya existe src\index.ts.bak-pldsosenlace. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldsosenlace")
+Ok "Respaldo creado: src\index.ts.bak-pldsosenlace"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -2266,7 +2266,7 @@ $v = Leer $indice
 $bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function pldSosActivo(') -eq 1) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldsos") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldsosenlace") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
