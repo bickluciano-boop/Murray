@@ -66,6 +66,7 @@ const B = 'http://localhost:8799';
   console.log('estado:', (await pag.textContent('#estadoTxt')).trim());
   await pag.screenshot({ path: 'e2e_guardian_camino.png', fullPage: true });
   console.log('volver (camino en marcha): enlace arriba:', await pag.getAttribute('#atras', 'href'), '|', (await pag.textContent('#atras')).trim(), '| botones del final visibles:', await pag.isVisible('#despues'));
+  console.log('inicio (camino en marcha):', (await pag.textContent('#aInicio')).trim(), '->', await pag.getAttribute('#aInicio', 'href'));
   await pag.click('button[data-m="10"]');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('10 minutos más'));
   console.log('tras extender:', await pag.textContent('#aviso'));
@@ -97,6 +98,7 @@ const B = 'http://localhost:8799';
   await pag.waitForURL('**/guardian');
   await pag.waitForFunction(() => document.getElementById('gdForm').style.display === 'block');
   console.log('al tocar Volver quedo en:', new URL(pag.url()).pathname, '| esta la tarjeta del Guardian:', await pag.isVisible('#gdSeccion'));
+  console.log('Tu proteccion, arriba:', (await pag.textContent('#aInicio')).trim(), '->', await pag.getAttribute('#aInicio', 'href'));
   const mails2 = await (await fetch(B + '/__correos')).json();
   console.log('mails de "esta bien":', mails2.filter((c) => c.to === 'mama@correo.com' && /está bien/.test(c.subject)).length);
   // cancelar un camino nuevo: se puede volver y empezar otro
