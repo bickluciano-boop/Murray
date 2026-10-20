@@ -590,7 +590,7 @@ console.log("== Menores: solo ven; el titular arma la proteccion de cada menor")
   ok((await pldAvisarSos(env, MENOR, ubic)) === 2 && correos.length === n + 2 && correos.slice(n).map((c) => c.to).sort().join() === "mama@correo.com,tia@correo.com" && /Tomi/.test(correos[n].subject), "si Tomi aprieta el SOS, se les avisa a sus referentes (los que eligio el titular y el hermano mayor)");
   const tp: string = await (pldPaginaDuenio() as any).text();
   ok(/function personaPantalla/.test(tp) && /Esto lo completa el administrador de tu familia/.test(tp) && /Est\u00e1s armando la protecci\u00f3n de/.test(tp) && /\?persona=/.test(tp), "la pagina avisa 'Esto lo completa el administrador de tu familia', arma la de otro y muestra el selector");
-  ok(/Mientras est\u00e1 apagado no se manda ning\u00fan aviso autom\u00e1tico a tus referentes\. El SOS sigue avisando/.test(tp) && !/tampoco el del SOS/.test(tp), "la pagina dice que el SOS sigue avisando aunque este apagado");
+  ok(/Mientras est\u00e9 apagado no se manda ning\u00fan aviso autom\u00e1tico a tus referentes\. El SOS sigue avisando/.test(tp) && /Si lo apag\u00e1s no se manda ning\u00fan aviso autom\u00e1tico; el SOS sigue avisando/.test(tp) && !/tampoco el del SOS/.test(tp), "la pagina dice que el SOS sigue avisando aunque este apagado");
   sqlite.exec("DELETE FROM family_members");
 }
 
@@ -994,26 +994,149 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
   await preparar();
 }
 
+console.log("== Modo Guardian: configuracion propia (margen, aviso previo, mas tiempo, avisos)");
+{
+  const gd = async (cuerpo: unknown) => gdApi(pedido(ORIGEN + "/api/guardian", "POST", cuerpo), env);
+  const viaje = () => sqlite.prepare("SELECT * FROM gd_viajes WHERE owner_email=? ORDER BY started_at DESC LIMIT 1").get(DUENIO) as any;
+  const min = (n: number) => new Date(Date.now() + n * 60_000).toISOString();
+  const fijar = (campos: Record<string, unknown>) => { const ks = Object.keys(campos); sqlite.prepare(`UPDATE gd_viajes SET ${ks.map((k) => k + "=?").join(",")} WHERE id=?`).run(...ks.map((k) => campos[k] as any), viaje().id); };
+  await preparar();
+  sqlite.exec("DELETE FROM gd_viajes; DELETE FROM family_places; DELETE FROM gd_config");
+  sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl1", DUENIO, "Casa", -34.57, -58.4, 150, now());
+  dispositivo({ seen: 1, bat: 80, lat: -34.6, lng: -58.4 });
+  setSesion({ email: DUENIO, method: "passkey" });
+
+  console.log("-- valores recomendados");
+  const c0: any = await (await gd({ accion: "estado" })).json();
+  ok(c0.config.margenMin === 2 && c0.config.avisoMin === 2 && c0.config.maxExtensiones === 3 && c0.config.entreAlertasMin === 10 && c0.config.maxAlertas === 3 && JSON.stringify(c0.config) === JSON.stringify(c0.defaults), "sin haber cambiado nada el Modo Guardian usa los valores recomendados (2 min de margen, preguntar 2 min antes, 3 veces mas tiempo, avisos cada 10 min hasta 3)");
+
+  console.log("-- cambiar y guardar");
+  const nuevaCfg = { margenMin: 5, avisoMin: 4, maxExtensiones: 1, entreAlertasMin: 15, maxAlertas: 2 };
+  let cf: any = await (await gd({ accion: "config", config: nuevaCfg })).json();
+  ok(cf.ok && JSON.stringify(cf.config) === JSON.stringify(nuevaCfg) && JSON.stringify(cf.defaults) === JSON.stringify(c0.defaults), "se guardan los tiempos y avisos que la persona elige");
+  ok(JSON.stringify((await (await gd({ accion: "estado" })).json() as any).config) === JSON.stringify(nuevaCfg), "y quedan guardados");
+  cf = await (await gd({ accion: "config", config: { margenMin: 99, avisoMin: 0, maxExtensiones: -3, entreAlertasMin: 1, maxAlertas: 99 } })).json();
+  ok(cf.config.margenMin === 15 && cf.config.avisoMin === 1 && cf.config.maxExtensiones === 0 && cf.config.entreAlertasMin === 5 && cf.config.maxAlertas === 5, "los numeros fuera de rango se acomodan a los limites (margen 1 a 15, aviso 1 a 10, mas tiempo 0 a 5, repetir 5 a 60, avisos 1 a 5)");
+  cf = await (await gd({ accion: "config", config: { margenMin: "abc", avisoMin: 7 } })).json();
+  ok(cf.config.margenMin === 15 && cf.config.avisoMin === 7 && cf.config.maxAlertas === 5, "si un valor no es un numero o no viene, queda el que estaba");
+  cf = await (await gd({ accion: "config", config: { restablecer: true } })).json();
+  ok(JSON.stringify(cf.config) === JSON.stringify(c0.defaults) && JSON.stringify((await (await gd({ accion: "estado" })).json() as any).config) === JSON.stringify(c0.defaults), "'Volver a los valores recomendados' deja todo como vino");
+  const reg = (await (await api()).json() as any).registro.map((x: any) => x.detail).join(" | ");
+  ok(/Cambiaste los tiempos y avisos del Modo Guardi/.test(reg) && /valores recomendados/.test(reg), "los cambios quedan en el registro");
+  setSesion(null);
+  ok((await gd({ accion: "config", config: nuevaCfg })).status === 401, "sin entrar al panel no se puede cambiar");
+  setSesion({ email: DUENIO, method: "passkey" });
+  await gd({ accion: "config", config: nuevaCfg });
+
+  console.log("-- el margen y el limite del camino");
+  let rs: any = await (await gd({ accion: "empezar", lugarId: "pl1", modo: "auto" })).json();
+  ok(rs.viaje.margenMin === 5 && rs.viaje.extensionesMax === 1 && Math.abs((Date.parse(rs.viaje.deadlineAt) - Date.parse(rs.viaje.startedAt)) / 60000 - (rs.viaje.estimadoMin + 5)) < 0.1, "con margen de 5 minutos, el limite es lo que tarda mas 5");
+  ok((await (await api()).json() as any).registro.some((x: any) => /\+ 5 de margen/.test(x.detail)), "y el registro dice 5 de margen");
+  const bloq = await gd({ accion: "config", config: { margenMin: 3 } });
+  ok(bloq.status === 409 && (await bloq.json() as any).error === "camino_en_marcha" && (await (await gd({ accion: "estado" })).json() as any).config.margenMin === 5, "con un camino en marcha no se cambian los tiempos y avisos (se cambian cuando termine)");
+  const TOKEN = rs.viaje.enlace.split("t=")[1];
+  ok((await gd({ t: TOKEN, accion: "config", config: { margenMin: 3 } })).status === 400, "y desde el enlace del camino tampoco se puede");
+  const estT: any = await (await gd({ t: TOKEN, accion: "estado" })).json();
+  ok(!("config" in estT) && !("defaults" in estT), "el enlace del camino no muestra la configuracion");
+
+  console.log("-- preguntar si sigue en camino");
+  let n = correos.length;
+  fijar({ deadline_at: min(6) });
+  await gdCron(env);
+  ok(viaje().estado === "en_camino" && mailsDesde(n).length === 0, "faltando 6 minutos todavia no se pregunta (el aviso es a los 4)");
+  fijar({ deadline_at: min(3.5) });
+  await gdCron(env);
+  ok(viaje().estado === "aviso" && mailsDesde(n).some((c) => /Seguís en camino/.test(c.subject)), "faltando 3 minutos y medio ya se pregunta si sigue en camino (con el valor recomendado, de 2 minutos, todavia no)");
+
+  console.log("-- pedir mas tiempo");
+  setSesion(null);
+  let ex = await gd({ t: TOKEN, accion: "extender", minutos: 10 });
+  ok(ex.status === 200 && viaje().extensiones === 1, "con una sola vez permitida, la primera sale");
+  ex = await gd({ t: TOKEN, accion: "extender", minutos: 10 });
+  const estX: any = await (await gd({ t: TOKEN, accion: "estado" })).json();
+  ok(ex.status === 409 && (await ex.json() as any).error === "demasiadas_extensiones" && estX.viaje.puedeExtender === false && estX.viaje.extensionesMax === 1, "y la segunda no (la pagina lo sabe: puedeExtender = false)");
+
+  console.log("-- avisos a los referentes si no llega");
+  setSesion({ email: DUENIO, method: "passkey" });
+  n = correos.length;
+  fijar({ estado: "en_camino", deadline_at: min(-1), aviso_at: null });
+  await gdCron(env);
+  const aRef = (desde: number) => mailsDesde(desde).filter((c) => /no llegó a Casa/.test(c.subject));
+  ok(viaje().alertas === 1 && aRef(n).length === 2 && /aviso 1 de 2 como máximo/.test(aRef(n)[0].html), "el primer aviso dice cuantos avisos como maximo hay (2)");
+  n = correos.length;
+  fijar({ last_alert_at: new Date(Date.now() - 12 * 60_000).toISOString() });
+  await gdCron(env);
+  ok(viaje().alertas === 1 && aRef(n).length === 0, "con avisos cada 15 minutos, a los 12 todavia no se repite");
+  fijar({ last_alert_at: new Date(Date.now() - 16 * 60_000).toISOString() });
+  await gdCron(env);
+  ok(viaje().alertas === 2 && aRef(n).length === 2 && /aviso 2 de 2 como máximo/.test(aRef(n)[0].html), "a los 16 sale el segundo");
+  n = correos.length;
+  fijar({ last_alert_at: new Date(Date.now() - 40 * 60_000).toISOString() });
+  await gdCron(env);
+  ok(viaje().alertas === 2 && aRef(n).length === 0, "y no hay un tercero: el maximo es 2");
+  setSesion(null);
+  await gd({ t: TOKEN, accion: "llegue" });
+  setSesion({ email: DUENIO, method: "passkey" });
+
+  console.log("-- sin pedir mas tiempo");
+  await gd({ accion: "config", config: { maxExtensiones: 0 } });
+  rs = await (await gd({ accion: "empezar", lugarId: "pl1", modo: "auto" })).json();
+  const T2 = rs.viaje.enlace.split("t=")[1];
+  ok(rs.viaje.extensionesMax === 0 && rs.viaje.puedeExtender === false, "con 0 veces de mas tiempo, el camino empieza sin esa opcion");
+  setSesion(null);
+  const r0 = await gd({ t: T2, accion: "extender", minutos: 10 });
+  ok(r0.status === 409 && (await r0.json() as any).error === "sin_extensiones" && viaje().extensiones === 0, "y si se intenta, el servidor dice que en la configuracion no se puede");
+  await gd({ t: T2, accion: "cancelar" });
+
+  console.log("-- un menor no lo cambia");
+  setSesion({ email: DUENIO, method: "passkey" });
+  sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fmcfg", "titular@correo.com", DUENIO, "Lucas", "Titular", "menor", "activo");
+  const cm = await gd({ accion: "config", config: { margenMin: 9 } });
+  ok(cm.status === 403 && (await cm.json() as any).error === "solo_administrador", "una persona menor no cambia los tiempos y avisos (los cambia el administrador de la familia)");
+  sqlite.exec("DELETE FROM family_members WHERE id='fmcfg'");
+  await gd({ accion: "config", config: { restablecer: true } });
+  const pano: any = await (await api()).json();
+  ok(JSON.stringify(pano.defaults) === JSON.stringify(PLD_POR_DEFECTO) && pano.defaults.nightFrom === 21, "la pagina de Tu proteccion recibe tambien los valores recomendados del Modo Cautela (para 'Volver a los valores recomendados')");
+  console.log("-- la tabla se crea sola (no hace falta tocar la base al instalar)");
+  sqlite.exec("DROP TABLE gd_config");
+  gdTablaLista = false;
+  const sinTabla: any = await (await gd({ accion: "estado" })).json();
+  ok(JSON.stringify(sinTabla.config) === JSON.stringify(c0.defaults), "si la tabla todavia no existe, se usan los valores recomendados");
+  const creada: any = await (await gd({ accion: "config", config: nuevaCfg })).json();
+  ok(creada.ok && JSON.stringify((await (await gd({ accion: "estado" })).json() as any).config) === JSON.stringify(nuevaCfg), "y al guardar por primera vez se crea la tabla y queda guardado");
+  await gd({ accion: "config", config: { restablecer: true } });
+  sqlite.exec("DELETE FROM gd_viajes");
+  await preparar();
+}
+
 console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
 {
   const tp: string = await (pldPaginaDuenio() as any).text();
   ok(/Tu protecci\u00f3n/.test(tp) && /Modo Cautela/.test(tp) && /Modo Guardi\u00e1n/.test(tp) && /Empezar camino/.test(tp), "la pagina se llama Tu proteccion y muestra Modo Cautela y el Modo Guardian para empezar un camino");
-  const pos = (x: string) => tp.indexOf(x);
   const corte = (desde: string, hasta: string) => tp.slice(tp.indexOf(desde), hasta ? tp.indexOf(hasta) : undefined);
-  const vInicio = corte('<div id="vInicio">', '<div id="vReferentes"'), vRef = corte('<div id="vReferentes"', '<div id="vCautela"'), vCaut = corte('<div id="vCautela"', '<div id="vGuardian"'), vGuar = corte('<div id="vGuardian"', '<script>');
-  ok(/id="tReferentes" href="#tus-referentes"/.test(vInicio) && /id="tCautela" href="#cautela"/.test(vInicio) && /id="tGuardian" href="#guardian"/.test(vInicio) && vInicio.indexOf("tReferentes") < vInicio.indexOf("tCautela") && vInicio.indexOf("tCautela") < vInicio.indexOf("tGuardian") && vInicio.indexOf("tGuardian") < vInicio.indexOf("<h2>Registro</h2>"), "la pantalla de inicio de Tu proteccion muestra tres tarjetas (referentes, Modo Cautela, Modo Guardian) y el registro");
-  ok(!/Pausar o apagar|Condiciones|Empezar camino|id="rAgregar"|id="cGuardar"|id="gdEmpezar"/.test(vInicio), "y la pantalla de inicio no trae nada de la configuracion de ningun modo");
-  ok(/id="rAgregar"/.test(vRef) && /id="referentes"/.test(vRef) && /No lo encuentro/.test(vRef) && !/Pausar o apagar|Condiciones|Empezar camino/.test(vRef), "Tus referentes tiene solo lo de los referentes");
-  ok(vCaut.indexOf("Pausar o apagar") > 0 && vCaut.indexOf("Pausar o apagar") < vCaut.indexOf("Estado de tu tel\u00e9fono") && vCaut.indexOf("Estado de tu tel\u00e9fono") < vCaut.indexOf("<h2>Condiciones</h2>") && /id="cEncender"/.test(vCaut) && /id="refLineaC"/.test(vCaut) && !/Empezar camino|id="gdEmpezar"|id="gdLugar"|id="rAgregar"|Tus referentes<\/h2>/.test(vCaut), "el Modo Cautela muestra solo lo suyo (pausar o apagar, estado del telefono, condiciones) y no mezcla el Guardian ni los referentes");
-  ok(/id="gdSeccion"/.test(vGuar) && /id="gdEmpezar"/.test(vGuar) && /id="gdLugar"/.test(vGuar) && /id="refLineaG"/.test(vGuar) && !/Pausar o apagar|Condiciones|Estado de tu tel\u00e9fono|id="cEncender"|id="rAgregar"/.test(vGuar), "el Modo Guardian muestra solo lo suyo (a donde vas, como vas, cuanto tardas) y no mezcla el Modo Cautela ni los referentes");
-  ok(/location\.hash/.test(tp) && /hashchange/.test(tp) && /"tus-referentes":"vReferentes"/.test(tp) && /h==="gdSeccion"\)h="guardian"/.test(tp) && /!PROPIA\)h=""/.test(tp), "la pagina elige que mostrar segun la direccion (#cautela, #guardian, #tus-referentes), acepta el viejo #gdSeccion y no abre el Guardian en la proteccion de otra persona");
+  const vInicio = corte('<div id="vInicio">', '<div id="vCautela"'), vCaut = corte('<div id="vCautela"', '<div id="vGuardian"'), vGuar = corte('<div id="vGuardian"', '<div id="vConfig"'), vConf = corte('<div id="vConfig"', '<div id="vCfgRef"');
+  const vRef = corte('<div id="vCfgRef"', '<div id="vCfgCaut"'), vCfgC = corte('<div id="vCfgCaut"', '<div id="vCfgGuard"'), vCfgG = corte('<div id="vCfgGuard"', '<div id="vCfgAjustes"'), vAju = corte('<div id="vCfgAjustes"', '<div id="vCfgAcc"'), vAcc = corte('<div id="vCfgAcc"', '<div id="vCfgReg"'), vReg = corte('<div id="vCfgReg"', '<script>\n(function(){');
+  ok(/id="tCautela"/.test(vInicio) && /id="swCautelaInicio" role="switch"/.test(vInicio) && /id="tGuardian" href="#guardian"/.test(vInicio) && /id="tConfig" href="#configuracion"/.test(vInicio) && vInicio.indexOf("tCautela") < vInicio.indexOf("tGuardian") && vInicio.indexOf("tGuardian") < vInicio.indexOf("tConfig"), "el inicio de Tu proteccion tiene el Modo Cautela con su interruptor, el Modo Guardian y la Configuracion");
+  ok(/id="avisoRef"/.test(vInicio) && /href="#config-referentes">Elegir referentes/.test(vInicio), "si todavia no hay referentes, el inicio avisa y lleva a Configuracion para elegirlos");
+  ok(!/Pausar|Condiciones|Empezar camino|id="rAgregar"|id="cGuardar"|id="gdEmpezar"|Registro|<details/.test(vInicio), "y el inicio no trae nada de la configuracion de ningun modo ni el registro");
+  ok(/id="cEncender" role="switch"/.test(vCaut) && /id="estadoModo"/.test(vCaut) && /Pausar los avisos/.test(vCaut) && /data-h="8"/.test(vCaut) && /id="pOtro"/.test(vCaut) && /id="refLineaC"/.test(vCaut) && /href="#config-cautela"/.test(vCaut) && !/id="cDesde"|id="cGuardar"|Condiciones<\/h2>|id="gdEmpezar"|id="gdLugar"|id="rAgregar"|id="cNombre"/.test(vCaut), "el Modo Cautela solo tiene lo de todos los dias (el interruptor, el estado y la pausa) y un enlace a sus condiciones: no mezcla el Guardian, los referentes ni las condiciones");
+  ok(/id="gdSeccion"/.test(vGuar) && /id="gdEmpezar"/.test(vGuar) && /id="gdLugar"/.test(vGuar) && /id="gdTexto"/.test(vGuar) && /id="gdModo"/.test(vGuar) && /id="gdMin"/.test(vGuar) && /id="refLineaG"/.test(vGuar) && !/Pausar|Condiciones|Estado de tu tel\u00e9fono|id="cEncender"|id="rAgregar"|id="gMargen"/.test(vGuar), "el Modo Guardian tiene lo de todos los dias (a donde vas, como vas, cuanto tardas) y no mezcla el Modo Cautela, los referentes ni sus ajustes");
+  ok(["config-referentes", "config-cautela", "config-guardian", "config-ajustes", "config-accesibilidad", "config-registro"].every((h) => vConf.includes('href="#' + h + '"')) && /<b>Referentes<\/b>/.test(vConf) && /<b>Ajustes<\/b>/.test(vConf) && /<b>Accesibilidad<\/b>/.test(vConf) && /<b>Registro<\/b>/.test(vConf) && !/id="rAgregar"|id="cDesde"|id="gMargen"/.test(vConf), "Configuracion es una lista de categorias (Referentes, Modo Cautela, Modo Guardian, Ajustes, Accesibilidad, Registro) y no un solo texto largo");
+  ok(/id="rAgregar"/.test(vRef) && /id="referentes"/.test(vRef) && /No lo encuentro/.test(vRef) && !/Pausar|id="cDesde"|id="gdEmpezar"/.test(vRef), "Referentes tiene solo lo de los referentes");
+  ok(["cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "cReset", "hoy"].every((i) => vCfgC.includes('id="' + i + '"')) && /Estado de tu tel\u00e9fono/.test(vCfgC) && !/id="cNombre"|id="gMargen"|id="pOtro"/.test(vCfgC), "las condiciones del Modo Cautela y el estado del telefono estan en su categoria de Configuracion");
+  ok(["gMargen", "gAviso", "gExt", "gEntre", "gMaxAv", "gGuardar", "gReset", "gdCfgBloqueo"].every((i) => vCfgG.includes('id="' + i + '"')) && /Margen extra/.test(vCfgG) && /Seguís en camino/.test(vCfgG) && /Avisos a tus referentes/.test(vCfgG) && !/id="gdEmpezar"|id="gdLugar"/.test(vCfgG), "el Modo Guardian tiene su categoria de Configuracion: margen extra, cuando preguntar si seguis en camino, veces de mas tiempo y avisos a referentes, con valores recomendados");
+  ok(/id="cNombre"/.test(vAju) && /id="cNombreGuardar"/.test(vAju) && /Acerca de Tu protecci\u00f3n/.test(vAju) && /en validaci\u00f3n/.test(vAju), "Ajustes tiene como te llaman tus referentes y lo de la validacion");
+  ok(["aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz"].every((i) => vAcc.includes('id="' + i + '" role="switch"')) && /data-t="g"/.test(vAcc) && /data-t="x"/.test(vAcc) && /Tama\u00f1o del texto/.test(vAcc) && /se guardan en este tel\u00e9fono/.test(vAcc), "Accesibilidad: tamano del texto, alto contraste, botones grandes, sonido, vibracion y pantalla encendida (se guardan en el telefono)");
+  ok(/id="registro"/.test(vReg) && !/id="rAgregar"/.test(vReg), "el Registro esta en su categoria de Configuracion");
+  ok(!/<details/.test(tp), "ya no hay tarjetas plegables: cada cosa tiene su pantalla");
+  ok(/location\.hash/.test(tp) && /hashchange/.test(tp) && /"config-referentes":"vCfgRef"/.test(tp) && /h==="gdSeccion"\)h="guardian"/.test(tp) && /h==="tus-referentes"\)h="config-referentes"/.test(tp) && /!PROPIA&&h==="guardian"\)h=""/.test(tp), "la pagina elige que mostrar segun la direccion (#cautela, #guardian, #configuracion y sus categorias), acepta los viejos #gdSeccion y #tus-referentes y no abre el Guardian en la proteccion de otra persona");
+  ok(/if\(arriba\)\{aviso\(""\);window\.scrollTo\(0,0\)\}/.test(tp), "al cambiar de pantalla se borra el mensaje de la anterior (por ejemplo 'Cambios guardados.')");
+  ok(/RO=!!pe\.soloLectura/.test(tp) && /\.disabled=enMarcha\|\|!PROPIA\|\|RO/.test(tp) && /!\$\("vCfgAcc"\)\.contains\(e\)/.test(tp), "un menor ve los tiempos y avisos del Guardian bloqueados, pero puede usar Accesibilidad (es solo de su telefono)");
   ok(/\$\("refLineaG"\)\.style\.display=nombres\.length\?"block":"none"/.test(tp), "en el Modo Guardian, si no hay referentes no se repite el aviso (ya lo dice la tarjeta de abajo)");
-  ok(/<a class="atras" id="aHub"/.test(tp) && /\$\("aHub"\)\.style\.display=v\?"inline-block":"none"/.test(tp) && /NOMBREPERSONA/.test(tp), "dentro de un modo aparece el enlace para volver a Tu proteccion y el titulo dice de cual se trata");
-  ok(['detHoy', 'detCondiciones', 'detRegistro'].every((i) => new RegExp('<details class="tarjeta" id="' + i + '"').test(tp)) && !/<details[^>]*\sopen/.test(tp), "como estas hoy, condiciones y registro estan plegados");
-  ok(/id="detCondiciones">.*?id="cGuardar".*?<\/details>/s.test(tp) && /id="detRegistro">.*?id="registro".*?<\/details>/s.test(tp) && /id="detHoy">.*?id="hoy".*?<\/details>/s.test(tp), "los campos estan dentro de su tarjeta plegable");
+  ok(/<a class="atras" id="aHub"/.test(tp) && /h\.textContent=p==="configuracion"\?"← Configuración":"← Tu protección"/.test(tp) && /NOMBREPERSONA/.test(tp), "dentro de cada pantalla aparece el enlace para volver (a Tu proteccion o a Configuracion) y el titulo dice de cual se trata");
   ok(!/Pr\u00f3ximamente/.test(tp) && /id="guardianCard"/.test(tp) && /id="gdEmpezar"/.test(tp) && /id="gdSeccion"/.test(tp), "el Modo Guardian ya no dice Proximamente: tiene su tarjeta para empezar un camino");
-  ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Encender Modo Cautela|Apagar Modo Cautela/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
-  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe", "gdSeccion", "guardianCard", "gdCarga", "gdActivo", "gdAbrir", "gdForm", "gdLugar", "gdOtro", "gdTexto", "gdModo", "gdMin", "gdEmpezar", "gdSinRef"];
+  ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /id="cEncender" role="switch" aria-checked="true" aria-label="Modo Cautela"/.test(tp) && /Por las dudas: si dejo de responder/.test(tp) && /function alternarCautela/.test(tp) && /\$\("swCautelaInicio"\)\.onclick=alternarCautela/.test(tp), "el Modo Cautela se prende y se apaga con un interruptor, tanto en el inicio como en su pantalla");
+  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe", "gdSeccion", "guardianCard", "gdCarga", "gdActivo", "gdAbrir", "gdForm", "gdLugar", "gdOtro", "gdTexto", "gdModo", "gdMin", "gdEmpezar", "gdSinRef", "swCautelaInicio", "tCautela", "tGuardian", "tConfig", "avisoRef", "cfRef", "cNombreGuardar", "cReset", "gMargen", "gAviso", "gExt", "gEntre", "gMaxAv", "gGuardar", "gReset", "aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz", "gdPie"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
   ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && />12 horas<\/button>/.test(tp) && />24 horas<\/button>/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar por 8, 12 y 24 horas, otro tiempo y quitar la pausa");
   ok(!/C\u00f3mo est\u00e1s hoy/.test(tp) && /Estado de tu tel\u00e9fono/.test(tp), "la tarjeta ya no se llama 'Como estas hoy' (parecia una pregunta de animo): se llama 'Estado de tu telefono'");

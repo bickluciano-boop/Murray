@@ -3,13 +3,13 @@ const B = 'http://localhost:8799';
 (async () => {
   const nav = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
   const pag = await (await nav.newContext({ viewport: { width: 390, height: 844 } })).newPage();
-  const vista = async (h) => { await pag.evaluate((x) => { location.hash = x; }, h); await pag.waitForSelector('#' + ({ '': 'vInicio', cautela: 'vCautela', guardian: 'vGuardian', 'tus-referentes': 'vReferentes' })[h], { state: 'visible' }); };
+  const vista = async (h) => { await pag.evaluate((x) => { location.hash = x; }, h); await pag.waitForSelector('#' + ({ '': 'vInicio', cautela: 'vCautela', guardian: 'vGuardian', configuracion: 'vConfig', 'config-referentes': 'vCfgRef', 'config-cautela': 'vCfgCaut', 'config-guardian': 'vCfgGuard', 'config-ajustes': 'vCfgAjustes', 'config-accesibilidad': 'vCfgAcc', 'config-registro': 'vCfgReg' })[h], { state: 'visible' }); };
   const err = []; pag.on('pageerror', (e) => err.push(e.message));
   let msg = '', aceptar = false;
   pag.on('dialog', (d) => { msg = d.message(); aceptar ? d.accept() : d.dismiss(); });
   await pag.goto(B + '/por-las-dudas');
   await pag.waitForFunction(() => document.getElementById('hoy').textContent.includes('señales'));
-  await vista('tus-referentes');
+  await vista('config-referentes');
   await pag.fill('#rNombre', 'Mariana'); await pag.fill('#rCorreo', '  marianaflombaum@gmail.com ');
   await pag.click('#rAgregar'); await pag.waitForTimeout(600);
   const n1 = (await (await fetch(B + '/__correos')).json()).length;

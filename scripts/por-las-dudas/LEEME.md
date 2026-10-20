@@ -7,13 +7,14 @@
   ayudantes del servidor (`now`, `hash`, `json`, mails...). Para correrlas, con `tablas.sql` en la carpeta actual:
   1. convertir los acentos: `python3 -c "import re;s=open('pld.ts',encoding='utf-8').read();open('pld_ascii.ts','w').write(re.sub(r'[^\x00-\x7f]',lambda m:'\\\\u%04x'%ord(m.group(0)),s))"`
   2. `cat stubs.ts pld_ascii.ts pruebas.ts > harness.mts` y cambiar `new URL("./tablas.sql", import.meta.url)` por una ruta
-     absoluta, y `node --no-warnings harness.mts` (309 pruebas, incluidas las del aviso automático del cron, el SOS, Tu protección plegable y Pausar o apagar).
+     absoluta, y `node --no-warnings harness.mts` (344 pruebas, incluidas las del aviso automático del cron, el SOS, Pausar o apagar, las pantallas de Tu protección, la Configuración por categorías y los tiempos y avisos propios del Modo Guardián).
 - `servidor.ts` y `e2e.js`: un servidor local con las mismas funciones y un recorrido en navegador real (Playwright):
   la persona agrega un referente, el referente acepta y aprieta "No lo encuentro", la persona responde "Estoy bien".
 - `e2e-enlace.js`: recorrido en navegador del enlace personal del referente ("Copiar enlace", "Mandar por WhatsApp", mail que falla,
   "Reenviar"); necesita el interruptor `POST /__correo-falla` de `servidor.ts`.
 - `e2e-pausa.js`: recorrido en navegador de "Pausar o apagar" (pausar 12 horas, otro tiempo, quitar pausa, apagar con pregunta, encender).
 - `e2e-menores.js`: recorrido en navegador del titular que arma la protección de un menor (selector, cartel, referentes y pausa de Tomi) del hermano mayor (adulto de la familia) que también lo arma, y del menor que solo puede mirar (campos bloqueados, 403 por la API). `servidor.ts` trae la familia de ejemplo.
+- `e2e-config.js`: recorrido en navegador de Configuración: el interruptor del Modo Cautela (con la pregunta al apagar), las seis categorías y el botón de volver, guardar y "Volver a los valores recomendados" de las condiciones, el nombre en Ajustes, los tiempos y avisos del Modo Guardián (se ven bloqueados con un camino en marcha y cambian el pie de "Empezar camino" y el límite del camino), y Accesibilidad (tamaño de texto, contraste, botones grandes, sonido, vibración y pantalla encendida: se guarda en el teléfono, vale en el camino y se puede apagar). Los siete recorridos anteriores entran primero a la pantalla que prueban (`#config-referentes`, `#cautela`, `#config-cautela`, `#guardian`...).
 - `e2e-guardian.js`: recorrido en navegador del Modo Guardián: tarjeta en Tu protección (sin referentes / con minutos calculados), empezar el camino, la página `/camino` (reloj, Llegué, +10 min), el vencimiento con el cron y el aviso a los referentes. `servidor.ts` trae los endpoints de prueba `/__gd-cron` y `/__gd-minutos`.
 - `generar_pld.py`: arma el instalador `.ps1` a partir de `pld.ts` (hay que pasarlo antes por la conversión de acentos).
 
