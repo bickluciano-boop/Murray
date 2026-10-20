@@ -992,35 +992,101 @@ async function gdCron(env: Env) {
   }
 }
 
-/** Empieza un camino. `cuerpo`: lugarId (de sus Lugares) o texto (otro destino, con minutos), modo y, si quiere, minutos. */
+/** El tiempo del camino según Google Mapas, con el tránsito de ahora (auto), a pie o en transporte público. Hace falta la clave GOOGLE_ROUTES_KEY (con la Routes API habilitada).
+ *  Devuelve null si no hay clave, no hay ruta o Google no contesta: en ese caso se estima por la distancia o la persona pone los minutos. */
+async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, destino: { lat: number; lng: number } | { texto: string }, modo: string) {
+  const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  if (!clave) return null;
+  const punto = (p: { lat: number; lng: number }) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+  const cuerpo: Record<string, unknown> = {
+    origin: punto(origen),
+    destination: "texto" in destino ? { address: destino.texto } : punto(destino),
+    travelMode: modo === "auto" ? "DRIVE" : modo === "caminando" ? "WALK" : "TRANSIT",
+    languageCode: "es-AR",
+    regionCode: "AR",
+    units: "METRIC",
+  };
+  if (modo === "auto") cuerpo.routingPreference = "TRAFFIC_AWARE";
+  try {
+    const r = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.legs.endLocation" },
+      body: JSON.stringify(cuerpo),
+    });
+    if (!r.ok) return null;
+    const d = await r.json() as { routes?: Array<{ duration?: string; distanceMeters?: number; legs?: Array<{ endLocation?: { latLng?: { latitude?: number; longitude?: number } } }> }> };
+    const ruta = d.routes?.[0];
+    const segundos = Number(String(ruta?.duration ?? "").replace("s", ""));
+    if (!ruta || !Number.isFinite(segundos) || segundos <= 0) return null;
+    const fin = ruta.legs?.[ruta.legs.length - 1]?.endLocation?.latLng;
+    return {
+      minutos: Math.max(1, Math.ceil(segundos / 60)),
+      km: Math.round((Number(ruta.distanceMeters) || 0) / 100) / 10,
+      destLat: Number.isFinite(Number(fin?.latitude)) ? Number(fin?.latitude) : null,
+      destLng: Number.isFinite(Number(fin?.longitude)) ? Number(fin?.longitude) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+type GdDestino = { destino: string; destLat: number | null; destLng: number | null; texto: string | null };
+
+/** A dónde va: uno de sus Lugares o una dirección escrita. */
+async function gdDestino(env: Env, email: string, cuerpo: Record<string, unknown>): Promise<GdDestino | { error: string; status: number }> {
+  if (cuerpo.lugarId) {
+    const lugar = await env.DB.prepare("SELECT name,latitude,longitude FROM family_places WHERE id=? AND owner_email=?").bind(String(cuerpo.lugarId), email).first<{ name: string; latitude: number; longitude: number }>();
+    if (!lugar) return { error: "lugar_invalido", status: 400 };
+    return { destino: String(lugar.name).slice(0, 80), destLat: Number(lugar.latitude), destLng: Number(lugar.longitude), texto: null };
+  }
+  const texto = String(cuerpo.texto ?? "").trim().slice(0, 120);
+  if (!texto) return { error: "falta_destino", status: 400 };
+  return { destino: texto.slice(0, 80), destLat: null, destLng: null, texto };
+}
+
+/** Cuánto tarda: primero Google Mapas (con el tránsito de ahora); si no se puede, la distancia en línea recta cuando se sabe el destino. */
+async function gdCalcular(env: Env, email: string, modo: string, d: GdDestino, origenPedido: unknown) {
+  const ub = await gdUbicacion(env, email);
+  const o = origenPedido as { lat?: unknown; lng?: unknown } | null;
+  const origen = o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180
+    ? { lat: Number(o.lat), lng: Number(o.lng) }
+    : ub.ubicacion ? { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } : null;
+  if (!origen) return null;
+  const mapas = await gdRutaMapas(env, origen, d.destLat !== null && d.destLng !== null ? { lat: d.destLat, lng: d.destLng } : { texto: d.texto ?? d.destino }, modo);
+  if (mapas) return { ...mapas, fuente: "mapas" as const };
+  if (d.destLat !== null && d.destLng !== null) {
+    const km = pldDistanciaKm(origen.lat, origen.lng, d.destLat, d.destLng);
+    return { minutos: gdEstimar(km, modo), km: Math.round(km * 10) / 10, destLat: d.destLat, destLng: d.destLng, fuente: "distancia" as const };
+  }
+  return null;
+}
+
+/** Empieza un camino. `cuerpo`: lugarId (de sus Lugares) o texto (otra dirección), modo y, si no se puede calcular, minutos. */
 async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown>) {
   const modo = String(cuerpo.modo ?? "");
   if (!GD_MODOS[modo]) return { error: "modo_invalido", status: 400 };
   const previo = await gdActivo(env, email);
   if (previo) return { error: "ya_hay_camino", status: 409, viaje: await gdPresentar(env, previo) };
   if (!(await pldReferentesActivos(env, email)).length) return { error: "sin_referentes", status: 400 };
-  const ub = await gdUbicacion(env, email);
-  let destino = "", destLat: number | null = null, destLng: number | null = null;
-  if (cuerpo.lugarId) {
-    const lugar = await env.DB.prepare("SELECT name,latitude,longitude FROM family_places WHERE id=? AND owner_email=?").bind(String(cuerpo.lugarId), email).first<{ name: string; latitude: number; longitude: number }>();
-    if (!lugar) return { error: "lugar_invalido", status: 400 };
-    destino = String(lugar.name).slice(0, 80); destLat = Number(lugar.latitude); destLng = Number(lugar.longitude);
-  } else {
-    destino = String(cuerpo.texto ?? "").trim().slice(0, 80);
-    if (!destino) return { error: "falta_destino", status: 400 };
-  }
-  let minutos = Number(cuerpo.minutos);
-  if (!Number.isFinite(minutos) || minutos <= 0) {
-    if (destLat !== null && destLng !== null && ub.ubicacion) minutos = gdEstimar(pldDistanciaKm(ub.ubicacion.lat, ub.ubicacion.lng, destLat, destLng), modo);
-    else return { error: "faltan_minutos", status: 400 };
-  }
+  const d = await gdDestino(env, email, cuerpo);
+  if ("error" in d) return d;
+  const ruta = await gdCalcular(env, email, modo, d, cuerpo.origen);
+  if (ruta && ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return { error: "destino_muy_lejos", status: 400 };
+  const propios = Number(cuerpo.minutos);
+  let minutos: number, fuente: string;
+  if (ruta && ruta.fuente === "mapas") { minutos = ruta.minutos; fuente = "calculado con mapas y el tránsito de ahora"; }
+  else if (Number.isFinite(propios) && propios > 0) { minutos = propios; fuente = "tiempo que pusiste vos"; }
+  else if (ruta) { minutos = ruta.minutos; fuente = "estimado por la distancia"; }
+  else return { error: "faltan_minutos", status: 400 };
+  const destino = d.destino;
+  const destLat = d.destLat ?? ruta?.destLat ?? null, destLng = d.destLng ?? ruta?.destLng ?? null;
   minutos = Math.min(GD_MAX_MINUTOS, Math.max(1, Math.round(minutos)));
   const id = `gdv${pldSecreto().slice(0, 14)}`;
   const inicio = now();
   const limite = new Date(Date.now() + (minutos + GD_MARGEN_MIN) * 60_000).toISOString();
   await env.DB.prepare("INSERT INTO gd_viajes (id,owner_email,destino,dest_lat,dest_lng,modo,estimado_min,started_at,deadline_at,extensiones,estado,alertas) VALUES (?,?,?,?,?,?,?,?,?,0,'en_camino',0)")
     .bind(id, email, destino, destLat, destLng, modo, minutos, inicio, limite).run();
-  await pldRegistrar(env, email, null, "guardian", `Empezaste un camino a ${destino} ${GD_MODOS[modo]}: ${minutos} min + ${GD_MARGEN_MIN} de margen (hasta las ${gdHora(limite)}).`);
+  await pldRegistrar(env, email, null, "guardian", `Empezaste un camino a ${destino} ${GD_MODOS[modo]}: ${minutos} min (${fuente}) + ${GD_MARGEN_MIN} de margen (hasta las ${gdHora(limite)}).`);
   const v = (await gdPorId(env, id))!;
   return { ok: true, viaje: await gdPresentar(env, v) };
 }
@@ -1081,10 +1147,14 @@ async function gdApi(request: Request, env: Env) {
       return json("error" in r ? { error: r.error, ...("viaje" in r ? { viaje: r.viaje } : {}) } : r, "error" in r ? r.status : 200);
     }
     if (accion === "estimar") {
-      const lugar = cuerpo.lugarId ? await env.DB.prepare("SELECT name,latitude,longitude FROM family_places WHERE id=? AND owner_email=?").bind(String(cuerpo.lugarId), email).first<{ name: string; latitude: number; longitude: number }>() : null;
-      const ub = await gdUbicacion(env, email);
-      const km = lugar && ub.ubicacion ? pldDistanciaKm(ub.ubicacion.lat, ub.ubicacion.lng, Number(lugar.latitude), Number(lugar.longitude)) : null;
-      return json({ ok: true, minutos: km === null ? null : gdEstimar(km, String(cuerpo.modo ?? "auto")), km: km === null ? null : Math.round(km * 10) / 10 });
+      const modo = String(cuerpo.modo ?? "auto");
+      if (!GD_MODOS[modo]) return json({ error: "modo_invalido" }, 400);
+      const d = await gdDestino(env, email, cuerpo);
+      if ("error" in d) return json({ ok: true, minutos: null, km: null, fuente: null, error: d.error });
+      const ruta = await gdCalcular(env, email, modo, d, cuerpo.origen);
+      if (!ruta) return json({ ok: true, minutos: null, km: null, fuente: null });
+      if (ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return json({ ok: true, minutos: null, km: ruta.km, fuente: "mapas", error: "destino_muy_lejos" });
+      return json({ ok: true, minutos: ruta.minutos, km: ruta.km, fuente: ruta.fuente, editable: ruta.fuente !== "mapas" });
     }
     viaje = await gdActivo(env, email);
   }
@@ -1206,9 +1276,9 @@ function pldPaginaDuenio() {
 <div id="gdActivo" style="display:none"><p id="gdActivoTxt" style="margin-top:0"></p><div class="botones"><a class="boton" id="gdAbrir" href="#">Abrir mi camino</a></div></div>
 <div id="gdForm" style="display:none">
 <label style="margin-top:0">A dónde vas</label><select id="gdLugar"></select>
-<div id="gdOtro" style="display:none"><label>Nombre del lugar</label><input id="gdTexto" maxlength="80" placeholder="Casa de Ana"></div>
+<div id="gdOtro" style="display:none"><label>Dirección o lugar</label><input id="gdTexto" maxlength="120" placeholder="Av. Cabildo 2040, Buenos Aires"></div>
 <label>Cómo vas</label><select id="gdModo"><option value="auto">En auto</option><option value="transporte">En transporte público</option><option value="caminando">Caminando</option></select>
-<label>Minutos que tardás <span class="suave" id="gdAyudaMin"></span></label><input id="gdMin" type="number" min="1" max="300" placeholder="Ej.: 20">
+<label>Tiempo del camino, en minutos <span class="suave" id="gdAyudaMin"></span></label><input id="gdMin" type="number" min="1" max="300" placeholder="Ej.: 20">
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
 <small class="suave">Tenés 2 minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. Podés extender 10, 20 o 30 minutos, hasta 3 veces.</small>
 </div>
@@ -1302,11 +1372,20 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
   var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar…";sel.appendChild(o2);
   gdCambio();
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
-function gdCambio(){var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";if(otro){$("gdAyudaMin").textContent="(poné cuánto tardás)";return}
-  gdPost({accion:"estimar",lugarId:$("gdLugar").value,modo:$("gdModo").value}).then(function(x){if(x.ok&&x.d.minutos){$("gdMin").value=x.d.minutos;$("gdAyudaMin").textContent="(calculamos "+x.d.minutos+" según la distancia: podés cambiarlo)"}else{$("gdAyudaMin").textContent="(poné cuánto tardás)"}})}
-$("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;
+function gdCambio(){
+  var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
+  var c={accion:"estimar",modo:$("gdModo").value};
+  if(otro){var t=$("gdTexto").value.trim();if(!t){$("gdMin").readOnly=false;$("gdAyudaMin").textContent="(escribí la dirección y salí del casillero)";return}c.texto=t}else{c.lugarId=$("gdLugar").value}
+  $("gdAyudaMin").textContent="(calculando con mapas…)";
+  gdPost(c).then(function(x){var d=x.d||{};
+    if(x.ok&&d.minutos){$("gdMin").value=d.minutos;$("gdMin").readOnly=d.fuente==="mapas";$("gdAyudaMin").textContent=d.fuente==="mapas"?"(calculado con mapas y el tránsito de ahora)":"(estimado por la distancia: podés cambiarlo)"}
+    else{$("gdMin").readOnly=false;$("gdAyudaMin").textContent=d.error==="destino_muy_lejos"?"(ese lugar queda a más de 5 horas: revisá la dirección)":"(no pudimos calcularlo: poné cuánto tardás)"}
+  }).catch(function(){$("gdMin").readOnly=false;$("gdAyudaMin").textContent="(no pudimos calcularlo: poné cuánto tardás)"})}
+$("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;$("gdTexto").onchange=gdCambio;
 $("gdEmpezar").onclick=function(){var c={accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0};if($("gdLugar").value)c.lugarId=$("gdLugar").value;else c.texto=$("gdTexto").value;
-  gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero elegí un referente que haya aceptado.",ya_hay_camino:"Ya tenés un camino en marcha.",falta_destino:"Escribí el nombre del lugar.",faltan_minutos:"Poné cuántos minutos tardás.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas."})[x.d.error]||"No se pudo empezar el camino.")})};
+  var enviar=function(){gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero elegí un referente que haya aceptado.",ya_hay_camino:"Ya tenés un camino en marcha.",falta_destino:"Escribí a dónde vas.",faltan_minutos:"Poné cuántos minutos tardás.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección."})[x.d.error]||"No se pudo empezar el camino.")})};
+  var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
+  try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};
 $("persona").onchange=function(){location.search=this.value?"?persona="+encodeURIComponent(this.value):""};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});

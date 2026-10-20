@@ -778,6 +778,87 @@ console.log("== Modo Guardian: el camino");
   await preparar();
 }
 
+console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
+{
+  const gd = async (cuerpo: unknown) => gdApi(pedido(ORIGEN + "/api/guardian", "POST", cuerpo), env);
+  const fetchReal = globalThis.fetch;
+  const llamadas: Array<{ url: string; cabeceras: any; cuerpo: any }> = [];
+  let respuesta: () => Response = () => new Response("{}", { status: 500 });
+  globalThis.fetch = (async (url: any, init: any) => {
+    if (String(url).includes("routes.googleapis.com")) { llamadas.push({ url: String(url), cabeceras: init.headers, cuerpo: JSON.parse(init.body) }); return respuesta(); }
+    return fetchReal(url, init);
+  }) as any;
+  const ruta = (seg: number, fin = { lat: -34.57, lng: -58.4 }) => () => new Response(JSON.stringify({ routes: [{ duration: seg + "s", distanceMeters: 4200, legs: [{ endLocation: { latLng: { latitude: fin.lat, longitude: fin.lng } } }] }] }), { status: 200 });
+  const viaje = () => sqlite.prepare("SELECT * FROM gd_viajes WHERE owner_email=? ORDER BY started_at DESC LIMIT 1").get(DUENIO) as any;
+
+  await preparar();
+  sqlite.exec("DELETE FROM gd_viajes; DELETE FROM family_places");
+  sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl1", DUENIO, "Casa", -34.57, -58.4, 150, now());
+  dispositivo({ seen: 1, bat: 80, lat: -34.6, lng: -58.4 });
+  setSesion({ email: DUENIO, method: "passkey" });
+
+  // sin clave: se estima por la distancia (como antes)
+  delete (env as any).GOOGLE_ROUTES_KEY;
+  let r3: any = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto" })).json();
+  ok(r3.fuente === "distancia" && r3.editable === true && llamadas.length === 0, "sin clave de Google se estima por la distancia y la persona puede cambiar el tiempo");
+
+  // con clave
+  (env as any).GOOGLE_ROUTES_KEY = "clave-de-prueba";
+  respuesta = ruta(1230);
+  r3 = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto" })).json();
+  ok(r3.fuente === "mapas" && r3.minutos === 21 && r3.editable === false && r3.km === 4.2, "con la clave, el tiempo sale de Google Mapas (1230 s = 21 min) y no se puede cambiar");
+  const l = llamadas[0];
+  ok(/computeRoutes/.test(l.url) && l.cabeceras["X-Goog-Api-Key"] === "clave-de-prueba" && /routes\.duration/.test(l.cabeceras["X-Goog-FieldMask"]), "se le pide a Google la ruta con la clave y solo los campos que hacen falta");
+  ok(l.cuerpo.travelMode === "DRIVE" && l.cuerpo.routingPreference === "TRAFFIC_AWARE" && l.cuerpo.origin.location.latLng.latitude === -34.6 && l.cuerpo.destination.location.latLng.latitude === -34.57 && l.cuerpo.regionCode === "AR", "en auto va con el transito de ahora, desde donde esta el telefono hasta el Lugar");
+  await gd({ accion: "estimar", lugarId: "pl1", modo: "caminando" });
+  ok(llamadas[1].cuerpo.travelMode === "WALK" && !("routingPreference" in llamadas[1].cuerpo), "caminando es WALK, sin preferencia de transito");
+  await gd({ accion: "estimar", lugarId: "pl1", modo: "transporte" });
+  ok(llamadas[2].cuerpo.travelMode === "TRANSIT" && !("routingPreference" in llamadas[2].cuerpo), "transporte publico es TRANSIT");
+  await gd({ accion: "estimar", lugarId: "pl1", modo: "auto", origen: { lat: -34.61, lng: -58.45 } });
+  ok(llamadas[3].cuerpo.origin.location.latLng.latitude === -34.61 && llamadas[3].cuerpo.origin.location.latLng.longitude === -58.45, "si el celular de la persona da su ubicacion exacta, sale desde ahi");
+  await gd({ accion: "estimar", lugarId: "pl1", modo: "auto", origen: { lat: 999, lng: 0 } });
+  ok(llamadas[4].cuerpo.origin.location.latLng.latitude === -34.6, "una ubicacion imposible se ignora");
+
+  // otra direccion escrita
+  respuesta = ruta(900, { lat: -34.55, lng: -58.45 });
+  r3 = await (await gd({ accion: "estimar", texto: "Av. Cabildo 2040, Buenos Aires", modo: "auto" })).json();
+  ok(r3.fuente === "mapas" && r3.minutos === 15 && llamadas[5].cuerpo.destination.address === "Av. Cabildo 2040, Buenos Aires", "una direccion escrita tambien la calcula Google");
+  respuesta = ruta(20 * 3600);
+  r3 = await (await gd({ accion: "estimar", texto: "Kansas", modo: "auto" })).json();
+  ok(r3.minutos === null && r3.error === "destino_muy_lejos", "si queda a mas de 5 horas (por ejemplo Kansas, EEUU) se avisa que revise la direccion");
+  let re = await gd({ accion: "empezar", texto: "Kansas", modo: "auto", minutos: 10 });
+  ok(re.status === 400 && (await re.json() as any).error === "destino_muy_lejos", "y no deja empezar ese camino, ni poniendo minutos a mano");
+
+  // empezar: manda Google, no lo que escriba la persona
+  respuesta = ruta(1230);
+  re = await gd({ accion: "empezar", lugarId: "pl1", modo: "auto", minutos: 3 });
+  const e3: any = await re.json();
+  ok(re.status === 200 && e3.viaje.estimadoMin === 21 && viaje().estimado_min === 21, "al empezar vale el tiempo de Google (21 min) aunque la pantalla mande otro numero");
+  ok((await (await api()).json() as any).registro.some((x: any) => /21 min \(calculado con mapas y el tránsito de ahora\)/.test(x.detail)), "el registro dice de donde salio el tiempo");
+  sqlite.exec("DELETE FROM gd_viajes");
+  respuesta = ruta(600, { lat: -34.5, lng: -58.5 });
+  re = await gd({ accion: "empezar", texto: "Una direccion", modo: "auto" });
+  ok(re.status === 200 && viaje().dest_lat === -34.5 && viaje().dest_lng === -58.5 && viaje().estimado_min === 10, "con una direccion escrita se guardan las coordenadas que devolvio Google (sirven para saber si llego)");
+  sqlite.exec("DELETE FROM gd_viajes");
+
+  // si Google falla
+  respuesta = () => new Response("error", { status: 500 });
+  r3 = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "auto" })).json();
+  ok(r3.fuente === "distancia" && r3.minutos >= 8, "si Google no contesta, para un Lugar se estima por la distancia");
+  r3 = await (await gd({ accion: "estimar", texto: "Una direccion", modo: "auto" })).json();
+  ok(r3.minutos === null && r3.fuente === null, "y para una direccion escrita no hay calculo: la persona pone los minutos");
+  re = await gd({ accion: "empezar", texto: "Una direccion", modo: "auto", minutos: 25 });
+  ok(re.status === 200 && viaje().estimado_min === 25 && (await (await api()).json() as any).registro.some((x: any) => /tiempo que pusiste vos/.test(x.detail)), "con los minutos que pone la persona se puede empezar (queda anotado)");
+  sqlite.exec("DELETE FROM gd_viajes");
+  respuesta = () => new Response(JSON.stringify({ routes: [] }), { status: 200 });
+  r3 = await (await gd({ accion: "estimar", lugarId: "pl1", modo: "transporte" })).json();
+  ok(r3.fuente === "distancia", "si Google no encuentra una ruta (por ejemplo en transporte) se estima por la distancia");
+
+  delete (env as any).GOOGLE_ROUTES_KEY;
+  globalThis.fetch = fetchReal;
+  await preparar();
+}
+
 console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
 {
   const tp: string = await (pldPaginaDuenio() as any).text();
