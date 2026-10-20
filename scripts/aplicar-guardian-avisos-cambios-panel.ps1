@@ -1,16 +1,17 @@
-﻿# aplicar-guardian-llegada-estricta-panel.ps1 - Modo Guardian: Llegue sin salida (hay que estar en el lugar), margen de llegada de 150 m que se elige en Configuracion y cuenta regresiva que siempre titila y avisa del sonido.
-# Luciano (20/10/2026): "los chicos son tramposos y dirian que van a lo de un amigo, el papa se queda tranquilo porque llego, pero se quedo en el lugar bailando esperando que termine el tiempo";
-# "que tenga un margen de 100, 150 metros, por las dudas de que no geolocalice bien"; y "ahora empieza a pitar despues de los 5 segundos y tampoco parpadea en rojo".
+﻿# aplicar-guardian-avisos-cambios-panel.ps1 - Modo Guardian: si la persona cancela el camino o cambia el destino, se les avisa a sus referentes (se puede apagar en Configuracion).
+# Luciano (20/10/2026): "si, avisar cuando cambia o cancela" (para que un chico no pueda cancelar el camino ni irse a otro lado sin que nadie se entere).
 # Que cambia (solo el servidor del panel; sin tocar la base: la tabla gd_config gana una columna sola):
-#  - Llegue estricto: al tocar Llegue se comprueba con la ubicacion (la del navegador y la del telefono si es de los ultimos 10 minutos; con cualquiera de las dos cerca alcanza). Si no esta a menos del
-#    margen de llegada el camino sigue abierto y la pantalla dice a cuantos km o metros esta; ya no existe "Llegue igual". Si el GPS es flojo se puede volver a comprobar, pedir mas tiempo o cancelar.
-#    Con los referentes ya avisados (alerta) no se discute: es "ya estoy bien" y el mail cuenta si la ubicacion lo confirma o a cuantos km estaba.
-#  - Margen de llegada: 150 m recomendado. Se cambia en Tu proteccion > Configuracion > Modo Guardian > Llegada (de 50 a 500 m) y vuelve a 150 con "Volver a los valores recomendados".
-#  - Cuenta regresiva: el reloj titila en rojo los ultimos 15 segundos con un temporizador (antes era una animacion de estilos y no andaba si el telefono tenia el movimiento reducido o las animaciones
-#    apagadas). El aviso "Sonido sin activar: toca la pantalla una vez" se ve desde que se abre el camino (el navegador no deja sonar hasta que se toca la pantalla, y por eso los pitidos empezaban tarde).
-#  - Incluye todo lo de los parches anteriores de Guardian, lugares, Configuracion, recalculo por transito, pausa, parpadeo y llegada comprobada. Este los reemplaza: se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las quince versiones que dejaron los parches desde
-# aplicar-guardian-mejoras-panel.ps1). No toca nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldestricta. Al final publica el panel solo.
+#  - Al cancelar el camino, cada referente que acepto recibe un mail: quien lo cancelo, a que hora, a donde iba, la ultima ubicacion del telefono (con el mapa y a cuanto estaba del destino)
+#    y "Si no lo esperabas, comunicate con ...". Nadie puede cancelar sin que se sepa.
+#  - Al cambiar el destino (a otro lugar), el mail dice a donde iba, a donde va ahora, como va, hasta que hora tiene y la ultima ubicacion. Si sigue yendo al mismo lugar y solo cambia como va
+#    (auto, transporte, caminando) o recalcula el tiempo, no se avisa. Frenar un rato tampoco avisa (eso ya era asi).
+#  - La pantalla del camino lo dice antes de hacerlo (en Cambiar destino: "Si cambias de destino, se les avisa a tus referentes."; al cancelar: "Se les avisa a tus referentes.") y despues lo confirma.
+#  - Configuracion > Modo Guardian > Avisos a tus referentes: "Avisarles tambien si cambio el destino o cancelo el camino" (viene en Si; con un menor lo cambia solo el administrador;
+#    con un camino en marcha no se cambia). Vuelve a Si con "Volver a los valores recomendados". La alerta de "no llego" y el aviso de "llego bien" no cambian.
+#  - Incluye todo lo de los parches anteriores de Guardian (llegada estricta con margen de 150 m, cuenta regresiva que titila, pausa, recalculo por transito, lugares, Configuracion). Este los reemplaza:
+#    se puede correr encima de cualquiera de ellos.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciseis versiones que dejaron los parches desde
+# aplicar-guardian-mejoras-panel.ps1). No toca nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldcambios. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -36,12 +37,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'id="gRadio"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'id="gCambios"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -55,9 +56,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldestricta")) { Mal "Ya existe src\index.ts.bak-pldestricta. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldestricta")
-Ok "Respaldo creado: src\index.ts.bak-pldestricta"
+if (Test-Path ($indice + ".bak-pldcambios")) { Mal "Ya existe src\index.ts.bak-pldcambios. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldcambios")
+Ok "Respaldo creado: src\index.ts.bak-pldcambios"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -893,9 +894,9 @@ const GD_PRECISION_MAX_M = 5000; // una ubicacion del navegador mas imprecisa qu
 const GD_MODOS: Record<string, string> = { auto: "en auto", transporte: "en transporte p\u00fablico", caminando: "caminando" };
 
 /** Lo que cada persona puede cambiar del Modo Guardi\u00e1n (Configuraci\u00f3n). Los valores recomendados son las constantes de arriba; cada cambio queda en gd_config. */
-type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number; autoAjusteMin: number; radioLlegadaM: number };
-const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS, autoAjusteMin: GD_AJUSTE_AUTO_MAX_MIN, radioLlegadaM: GD_RADIO_VERIFICAR_M };
-const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180], radioLlegadaM: [50, 500] };
+type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number; autoAjusteMin: number; radioLlegadaM: number; avisarCambios: number };
+const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS, autoAjusteMin: GD_AJUSTE_AUTO_MAX_MIN, radioLlegadaM: GD_RADIO_VERIFICAR_M, avisarCambios: 1 };
+const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180], radioLlegadaM: [50, 500], avisarCambios: [0, 1] };
 let gdTablaLista = false;
 
 /** Agrega a una tabla de una instalacion anterior las columnas que le faltan (mira cuales tiene y solo agrega las que no estan). */
@@ -911,8 +912,8 @@ async function gdAgregarColumnas(env: Env, tabla: string, columnas: string[]) {
 /** Las tablas se crean solas la primera vez que se usan, y si vienen de una instalacion anterior se les agregan las columnas nuevas (no hace falta tocar la base de datos al instalar). */
 async function gdAsegurarTabla(env: Env) {
   if (gdTablaLista) return;
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, radio_llegada_m INTEGER, updated_at TEXT)").run();
-  await gdAgregarColumnas(env, "gd_config", ["auto_max_min INTEGER", "radio_llegada_m INTEGER"]);
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, radio_llegada_m INTEGER, avisar_cambios INTEGER, updated_at TEXT)").run();
+  await gdAgregarColumnas(env, "gd_config", ["auto_max_min INTEGER", "radio_llegada_m INTEGER", "avisar_cambios INTEGER"]);
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, pausa_ini TEXT, pausa_hasta TEXT, resta_ms INTEGER, parada_min INTEGER NOT NULL DEFAULT 0, updated_at TEXT)").run();
   await gdAgregarColumnas(env, "gd_progreso", ["pausa_ini TEXT", "pausa_hasta TEXT", "resta_ms INTEGER", "parada_min INTEGER NOT NULL DEFAULT 0"]);
   gdTablaLista = true;
@@ -920,13 +921,13 @@ async function gdAsegurarTabla(env: Env) {
 
 function gdConfigValida(c: Record<string, unknown>, base: GdConfig): GdConfig {
   const n = (k: keyof GdConfig) => (c[k] === undefined || c[k] === null || c[k] === "" ? base[k] : Math.round(pldNumero(c[k], GD_LIMITES[k][0], GD_LIMITES[k][1], base[k])));
-  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas"), autoAjusteMin: n("autoAjusteMin"), radioLlegadaM: n("radioLlegadaM") };
+  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas"), autoAjusteMin: n("autoAjusteMin"), radioLlegadaM: n("radioLlegadaM"), avisarCambios: n("avisarCambios") };
 }
 
 async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
   try {
     await gdAsegurarTabla(env);
-    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas,auto_max_min AS autoAjusteMin,radio_llegada_m AS radioLlegadaM FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
+    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas,auto_max_min AS autoAjusteMin,radio_llegada_m AS radioLlegadaM,avisar_cambios AS avisarCambios FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
     return f ? gdConfigValida(f, GD_POR_DEFECTO) : { ...GD_POR_DEFECTO };
   } catch {
     return { ...GD_POR_DEFECTO };
@@ -935,8 +936,8 @@ async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
 
 async function gdGuardarConfig(env: Env, email: string, c: GdConfig) {
   await gdAsegurarTabla(env);
-  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,auto_max_min,radio_llegada_m,updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,auto_max_min=excluded.auto_max_min,radio_llegada_m=excluded.radio_llegada_m,updated_at=excluded.updated_at")
-    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, c.radioLlegadaM, now()).run();
+  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,auto_max_min,radio_llegada_m,avisar_cambios,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,auto_max_min=excluded.auto_max_min,radio_llegada_m=excluded.radio_llegada_m,avisar_cambios=excluded.avisar_cambios,updated_at=excluded.updated_at")
+    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, c.radioLlegadaM, c.avisarCambios, now()).run();
 }
 
 /** Lo que se sabe de un camino mientras dura: la ultima muestra de ubicacion (para ver si se acerca), cuando se recalculo, cuantos minutos se sumaron solos por transito, cuantas paradas hizo y,
@@ -1056,6 +1057,7 @@ async function gdPresentar(env: Env, v: GdViaje) {
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
     puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
     ajusteAutoMin: pr.autoMin, pausa: enPausa ? { hasta: pr.pausaHasta, restaMs: pr.restaMs ?? 0 } : null, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo, destinoExacto: v.destLat !== null && v.destLng !== null,
+    avisaCambios: g.avisarCambios === 1,
     llegada: v.estado === "llego" ? (v.motivoFin === "llegue_comprobada" ? "comprobada" : v.motivoFin === "llegue_sin_comprobar" ? "sin_comprobar" : null) : null,
     enlace: await gdEnlace(env, v),
   };
@@ -1486,6 +1488,39 @@ function gdClausulaComprobacion(c: GdComprobacion, destino: string, ella: boolea
   return `no pudimos ver d\u00f3nde ${ella ? "est\u00e1s" : "est\u00e1"} para comprobar que ${ella ? "llegaste" : "lleg\u00f3"} a ${destino}`;
 }
 
+/** Cuando la persona cancela el camino (sin `nuevo`) o le cambia el destino (con `nuevo`: a d\u00f3nde va ahora) se les avisa a sus referentes (si no, un chico podr\u00eda cancelar o irse a otro lado sin que nadie se entere).
+ *  Sale solo si lo tiene prendido en Configuraci\u00f3n (viene prendido; si es menor, lo apaga el administrador). Va con la \u00faltima ubicaci\u00f3n del tel\u00e9fono y a cu\u00e1nto est\u00e1 del destino. Devuelve a cu\u00e1ntos les sali\u00f3. */
+async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; modo: string; limite: string; lat: number | null; lng: number | null }) {
+  const referentes = await pldReferentesActivos(env, v.ownerEmail);
+  if (!referentes.length) return 0;
+  const cfg = await pldLeerConfig(env, v.ownerEmail);
+  const quien = pldNombreDe(v.ownerEmail, cfg);
+  const ub = await gdUbicacion(env, v.ownerEmail);
+  const u = ub.ubicacion;
+  const destinoTxt = nuevo ? nuevo.destino : v.destino;
+  const dLat = nuevo ? nuevo.lat : v.destLat, dLng = nuevo ? nuevo.lng : v.destLng;
+  const lejos = u && dLat !== null && dLng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, dLat, dLng) * 1000) : null;
+  const hora = gdHora(now());
+  const asunto = nuevo ? `${quien} cambi\u00f3 el destino: ahora va a ${nuevo.destino}` : `${quien} cancel\u00f3 el camino a ${v.destino}`;
+  const que = nuevo
+    ? `<strong style="color:#fff">${escapeHtml(quien)}</strong> cambi\u00f3 el destino del camino a las ${escapeHtml(hora)}: antes iba a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> y ahora va a <strong style="color:#fff">${escapeHtml(nuevo.destino)}</strong> ${escapeHtml(GD_MODOS[nuevo.modo] ?? "")}, con tiempo hasta las ${escapeHtml(gdHora(nuevo.limite))}. Desde ahora el aviso es por llegar ah\u00ed.`
+    : `<strong style="color:#fff">${escapeHtml(quien)}</strong> cancel\u00f3 a las ${escapeHtml(hora)} el camino a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> que hab\u00eda activado en el Modo Guardi\u00e1n. Desde ahora no se les avisa si no llega.`;
+  let enviados = 0;
+  for (const x of referentes) {
+    const ok = await pldCorreo(
+      env, x.email, asunto,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55">${que}</p>`
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">\u00daltima ubicaci\u00f3n${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}${lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destinoTxt)}` : ""}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todav\u00eda no hay una ubicaci\u00f3n de su tel\u00e9fono.</p>`)
+      + `<p style="color:#d2d2ce;line-height:1.55">Si no lo esperabas, comunicate con ${escapeHtml(quien)}.</p>`,
+    );
+    if (ok) {
+      enviados++;
+      await pldRegistrar(env, v.ownerEmail, x.id, "guardian", nuevo ? `Se le avis\u00f3 a ${x.name} que cambiaste el destino a ${nuevo.destino}.` : `Se le avis\u00f3 a ${x.name} que cancelaste el camino a ${v.destino}.`);
+    }
+  }
+  return enviados;
+}
+
 /** Llegu\u00e9 / Extender / Necesito ayuda / Cancelar. */
 async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, cuerpo: Record<string, unknown> = {}) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
@@ -1523,7 +1558,8 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   if (accion === "cancelar") {
     await env.DB.prepare("UPDATE gd_viajes SET estado=''cancelado'',ended_at=?,motivo_fin=''cancelado'' WHERE id=?").bind(now(), v.id).run();
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Cancelaste el camino a ${v.destino}.`);
-    return { ok: true, estado: "cancelado" };
+    const avisados = g.avisarCambios === 1 ? await gdAvisarCambio(env, v) : 0;
+    return { ok: true, estado: "cancelado", avisados };
   }
   if (accion === "extender") {
     if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
@@ -1587,7 +1623,8 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
     await pldRegistrar(env, v.ownerEmail, null, "guardian", mismo
       ? `Cambiaste c\u00f3mo vas a ${v.destino}: ahora ${GD_MODOS[modo]}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`
       : `Cambiaste el destino a ${d.destino}${modo !== v.modo ? ` (ahora ${GD_MODOS[modo]})` : ""}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`);
-    return { ok: true, estado: "en_camino", origen: desde, minutos: elegido.minutos, km: ruta ? ruta.km : null, modo };
+    const avisados = !mismo && d.destino !== v.destino && g.avisarCambios === 1 ? await gdAvisarCambio(env, v, { destino: d.destino, modo, limite, lat: destLat, lng: destLng }) : 0;
+    return { ok: true, estado: "en_camino", origen: desde, minutos: elegido.minutos, km: ruta ? ruta.km : null, modo, avisados };
   }
   if (accion === "ayuda") {
     const ub = await gdUbicacion(env, v.ownerEmail);
@@ -1711,7 +1748,7 @@ function gdPaginaCamino() {
 <div id="cambiarPanel" class="subpanel" style="display:none"><label style="margin-top:0">C\u00f3mo vas</label>${gdModosHtml("cmModos", "auto")}<label>A d\u00f3nde vas</label><select id="cmLugar"></select>
 <div id="cmOtro" style="display:none"><label>Direcci\u00f3n o nombre del lugar</label><input id="cmTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="cmSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="cmAyuda" class="suave"></small></div>
 <div id="cmMinBloque" style="display:none"><label>Tiempo hasta ah\u00ed, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
-<div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde est\u00e1s ahora.</small></div>
+<div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave" id="cmNota">Recalculamos el tiempo desde donde est\u00e1s ahora.</small></div>
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no lleg\u00e1s a tiempo y no ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes con tu \u00faltima ubicaci\u00f3n. \u201cNecesito ayuda\u201d les avisa ahora mismo. Al tocar \u201cLlegu\u00e9\u201d comprobamos con tu ubicaci\u00f3n que est\u00e1s en el destino; si no est\u00e1s, el camino sigue.</small>
 </div>
@@ -1752,7 +1789,7 @@ function pintar(d){
   var botones=document.querySelectorAll("button[data-m]");
   Array.prototype.forEach.call(botones,function(b){b.disabled=!V.puedeExtender});
   $("bFrenar").style.display=V.paradasMax>0&&V.puedeCambiar?"inline-block":"none";$("bFrenar").disabled=!V.puedeParar;$("bFrenar").textContent=V.puedeParar?(enPausa()?"Frenar m\u00e1s tiempo":"Voy a frenar un rato"):"Ya frenaste "+V.paradasMax+(V.paradasMax===1?" vez":" veces");
-  $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";
+  $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";$("cmNota").textContent="Recalculamos el tiempo desde donde est\u00e1s ahora."+(V.avisaCambios?" Si cambi\u00e1s de destino, se les avisa a tus referentes.":"");
   $("frenarAyuda").textContent=(enPausa()?"\u00bfCu\u00e1nto m\u00e1s quer\u00e9s frenar? La pausa se alarga. ":"\u00bfCu\u00e1nto vas a frenar? El reloj queda en pausa. ")+"No les avisamos a tus referentes. Pod\u00e9s frenar "+(V.paradasMax===1?"1 vez":"hasta "+V.paradasMax+" veces")+(V.paradas>0?" (ya usaste "+V.paradas+")":"")+".";
   if(!V.puedeCambiar){$("frenarPanel").style.display="none";$("cambiarPanel").style.display="none"}
   $("bCancelar").style.display=V.estado==="alerta"?"none":"inline-block";
@@ -1794,7 +1831,7 @@ function tick(){
   }
 }
 function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",demasiadas_extensiones:"Ya extendiste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",demasiadas_paradas:"Ya frenaste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",sin_extensiones:"En la configuraci\u00f3n del Modo Guardi\u00e1n no se puede pedir m\u00e1s tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya termin\u00f3.",lejos_del_destino:"Todav\u00eda no est\u00e1s en el destino: segu\u00ed hasta ah\u00ed y toc\u00e1 Llegu\u00e9 de nuevo.",sin_comprobar:"No pudimos ver d\u00f3nde est\u00e1s para comprobar que llegaste."})[e.codigo]||"No se pudo. Prob\u00e1 de nuevo."}
-function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
+function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(typeof ok==="function"?ok(d):ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
 function dist(m){return m<1000?Math.max(10,Math.round(m/10)*10)+" m":String(Math.round(m/100)/10).replace(".",",")+" km"}
 function noLlego(d){ // el servidor no dio por llegada: se cuenta por que y se ofrece volver a comprobar (el reloj sigue)
@@ -1816,7 +1853,7 @@ $("bLlegue").onclick=llegue;
 $("bLlegueDeNuevo").onclick=llegue;
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: ten\u00e9s "+b.getAttribute("data-m")+" minutos m\u00e1s.")}});
 $("bAyuda").onclick=function(){if(confirm("\u00bfPedir ayuda? Les avisamos ahora mismo a tus referentes, con tu \u00faltima ubicaci\u00f3n."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};
-$("bCancelar").onclick=function(){if(confirm("\u00bfCancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
+$("bCancelar").onclick=function(){if(confirm("\u00bfCancelar el camino? "+(V&&V.avisaCambios?"Se les avisa a tus referentes.":"No se les avisa a tus referentes.")))hacer({accion:"cancelar"},function(d){return d.avisados>0?"Listo: cancelaste el camino. Se les avis\u00f3 a tus referentes.":""})};
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 $("bFrenar").onclick=function(){$("cambiarPanel").style.display="none";$("frenarPanel").style.display=$("frenarPanel").style.display==="none"?"block":"none"};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-f]"),function(b){b.onclick=function(){var n=Number(b.getAttribute("data-f")),mas=enPausa(),txt=n===60?"1 hora":n+" minutos";$("frenarPanel").style.display="none";hacer({accion:"parada",minutos:n},mas?"Listo: la pausa se alarg\u00f3 "+txt+".":"Listo: el reloj queda en pausa "+txt+". No les avisamos a tus referentes.")}});
@@ -1850,7 +1887,7 @@ $("cmConfirmar").onclick=function(){
   if($("cmLugar").value==="__mismo"){c.mismo=true}else if($("cmLugar").value){c.lugarId=$("cmLugar").value}else if(CMPLACE){c.placeId=CMPLACE;c.texto=CMETIQUETA}else{c.texto=$("cmTexto").value.trim();if(!c.texto){aviso("Eleg\u00ed o escrib\u00ed el nuevo destino.");return}if(CMHAYSUG){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}}
   if($("cmMinBloque").style.display!=="none")c.minutos=Number($("cmMin").value)||0;
   var boton=$("cmConfirmar"),listo=function(){boton.disabled=false;boton.textContent="Cambiar destino"};
-  var enviar=function(){aviso("");api(c).then(function(d){listo();pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";var det=d.minutos?" ("+d.minutos+" min "+({auto:"en auto",transporte:"en transporte p\u00fablico",caminando:"caminando"})[d.modo]+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"";aviso((c.mismo?"Listo: segu\u00eds yendo a "+V.destino:"Listo: cambiamos el destino")+det+" y recalculamos el tiempo"+desde(d.origen)+".")}).catch(function(e){listo();if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso(e.fallo==="ubicacion_vieja"||e.fallo==="sin_ubicacion"?"No sabemos d\u00f3nde est\u00e1s ahora: permit\u00ed la ubicaci\u00f3n en el navegador o pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.":"No pudimos calcular el tiempo hasta ah\u00ed: pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.")}else aviso(errorDe(e))})};
+  var enviar=function(){aviso("");api(c).then(function(d){listo();pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";var det=d.minutos?" ("+d.minutos+" min "+({auto:"en auto",transporte:"en transporte p\u00fablico",caminando:"caminando"})[d.modo]+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"";aviso((c.mismo?"Listo: segu\u00eds yendo a "+V.destino:"Listo: cambiamos el destino")+det+" y recalculamos el tiempo"+desde(d.origen)+"."+(d.avisados>0?" Se les avis\u00f3 a tus referentes.":""))}).catch(function(e){listo();if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso(e.fallo==="ubicacion_vieja"||e.fallo==="sin_ubicacion"?"No sabemos d\u00f3nde est\u00e1s ahora: permit\u00ed la ubicaci\u00f3n en el navegador o pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.":"No pudimos calcular el tiempo hasta ah\u00ed: pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.")}else aviso(errorDe(e))})};
   boton.disabled=true;boton.textContent="Buscando tu ubicaci\u00f3n\u2026";
   ubicar(function(o){if(o)c.origen={lat:o.lat,lng:o.lng,precision:o.precision};enviar()})};
 function refrescar(){api({accion:"estado"}).then(pintar).catch(function(e){if(e.codigo==="enlace_invalido"){$("vacio").style.display="block";$("viaje").style.display="none"}})}
@@ -1946,9 +1983,10 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Llegada</h2>
 <label>Margen de llegada: a qu\u00e9 distancia del destino se da por llegada al tocar Llegu\u00e9 (metros)</label><input id="gRadio" type="number" min="50" max="500">
 <small class="suave" style="display:block;margin-top:6px">Al tocar Llegu\u00e9 se comprueba con tu ubicaci\u00f3n que est\u00e1s a menos de esta distancia del destino; si no, el camino sigue abierto. M\u00e1s chico es m\u00e1s estricto, pero si el GPS no es preciso puede no dejarte cerrar el camino.</small></div>
-<div class="tarjeta"><h2>Avisos a tus referentes si no lleg\u00e1s</h2>
-<label>Repetir el aviso cada (min)</label><input id="gEntre" type="number" min="5" max="60">
-<label>Cantidad m\u00e1xima de avisos</label><input id="gMaxAv" type="number" min="1" max="5">
+<div class="tarjeta"><h2>Avisos a tus referentes</h2>
+<label>Si no lleg\u00e1s: repetir el aviso cada (min)</label><input id="gEntre" type="number" min="5" max="60">
+<label>Si no lleg\u00e1s: cantidad m\u00e1xima de avisos</label><input id="gMaxAv" type="number" min="1" max="5">
+<label>Avisarles tambi\u00e9n si cambio el destino o cancelo el camino</label><select id="gCambios"><option value="1">S\u00ed</option><option value="0">No</option></select>
 <small class="suave" style="display:block;margin-top:8px">El primer aviso sale cuando se pasa el tiempo y despu\u00e9s se repite hasta ese m\u00e1ximo. Si toc\u00e1s \u201cLlegu\u00e9\u201d, dejan de salir.</small></div>
 <div class="botones"><button id="gGuardar">Guardar</button><button class="sec" id="gReset">Volver a los valores recomendados</button></div>
 <small class="suave" id="gRecomendado"></small>
@@ -2075,13 +2113,13 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardi\u00e1n."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdCfgPintar(c,enMarcha){
-  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;$("gAuto").value=c.autoAjusteMin;$("gRadio").value=c.radioLlegadaM;
+  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;$("gAuto").value=c.autoAjusteMin;$("gRadio").value=c.radioLlegadaM;$("gCambios").value=String(c.avisarCambios);
   $("gdCfgBloqueo").style.display=enMarcha?"block":"none";
-  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gAuto","gRadio","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
-  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces m\u00e1s tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+"), hasta "+GDDEF.autoAjusteMin+" min m\u00e1s por tr\u00e1nsito y llegada a menos de "+GDDEF.radioLlegadaM+" m.";
-  $("gdPie").textContent="Ten\u00e9s "+c.margenMin+" minutos de margen. Si no lleg\u00e1s ni ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Pod\u00e9s extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuraci\u00f3n no se puede pedir m\u00e1s tiempo.")+(c.autoAjusteMin>0?" Si hay m\u00e1s tr\u00e1nsito y te ven\u00eds acercando, el l\u00edmite se acomoda solo (hasta "+c.autoAjusteMin+" min).":"")+" Al tocar Llegu\u00e9 comprobamos que est\u00e9s a menos de "+c.radioLlegadaM+" m del destino."}
+  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gAuto","gRadio","gCambios","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
+  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces m\u00e1s tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+"), hasta "+GDDEF.autoAjusteMin+" min m\u00e1s por tr\u00e1nsito y llegada a menos de "+GDDEF.radioLlegadaM+" m"+(GDDEF.avisarCambios===1?" y aviso a tus referentes si cambi\u00e1s el destino o cancel\u00e1s.":".");
+  $("gdPie").textContent="Ten\u00e9s "+c.margenMin+" minutos de margen. Si no lleg\u00e1s ni ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Pod\u00e9s extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuraci\u00f3n no se puede pedir m\u00e1s tiempo.")+(c.autoAjusteMin>0?" Si hay m\u00e1s tr\u00e1nsito y te ven\u00eds acercando, el l\u00edmite se acomoda solo (hasta "+c.autoAjusteMin+" min).":"")+" Al tocar Llegu\u00e9 comprobamos que est\u00e9s a menos de "+c.radioLlegadaM+" m del destino."+(c.avisarCambios===1?" Si cambi\u00e1s el destino o cancel\u00e1s el camino, tambi\u00e9n se les avisa a tus referentes.":"")}
 function gdCfgRespuesta(x,ok){if(x.ok&&x.d.ok){aviso(ok);gdCfgPintar(x.d.config,false)}else aviso(({camino_en_marcha:"Hay un camino en marcha: cambialo cuando termine.",solo_administrador:"Esto lo completa el administrador de tu familia."})[x.d.error]||"No se pudo guardar.")}
-$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value,autoAjusteMin:$("gAuto").value,radioLlegadaM:$("gRadio").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
+$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value,autoAjusteMin:$("gAuto").value,radioLlegadaM:$("gRadio").value,avisarCambios:$("gCambios").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
 $("gReset").onclick=function(){if(!confirm("\u00bfVolver los tiempos y avisos del Modo Guardi\u00e1n a los valores recomendados?"))return;gdPost({accion:"config",config:{restablecer:true}}).then(function(x){gdCfgRespuesta(x,"Valores recomendados restablecidos.")}).catch(function(){aviso("No se pudo guardar.")})};
 // accesibilidad: se guarda en este telefono y vale para todas las pantallas de Ojo Guard
 function accLeer(){try{return JSON.parse(localStorage.getItem("ogAcc")||"{}")||{}}catch(e){return{}}}
@@ -2218,10 +2256,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldestricta") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldcambios") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2231,5 +2269,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: Llegue ahora no cierra si no estas en el lugar (margen de 150 m, se cambia en Configuracion), y la cuenta regresiva titila siempre. Abri el camino con Ctrl+F5 y proba."
+Ok "LISTO: si cancelas el camino o cambias el destino, se les avisa a tus referentes (se apaga en Tu proteccion > Configuracion > Modo Guardian). Abri el camino con Ctrl+F5 y proba."
 Write-Host ""

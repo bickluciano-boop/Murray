@@ -833,9 +833,9 @@ const GD_PRECISION_MAX_M = 5000; // una ubicacion del navegador mas imprecisa qu
 const GD_MODOS: Record<string, string> = { auto: "en auto", transporte: "en transporte público", caminando: "caminando" };
 
 /** Lo que cada persona puede cambiar del Modo Guardián (Configuración). Los valores recomendados son las constantes de arriba; cada cambio queda en gd_config. */
-type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number; autoAjusteMin: number; radioLlegadaM: number };
-const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS, autoAjusteMin: GD_AJUSTE_AUTO_MAX_MIN, radioLlegadaM: GD_RADIO_VERIFICAR_M };
-const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180], radioLlegadaM: [50, 500] };
+type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number; autoAjusteMin: number; radioLlegadaM: number; avisarCambios: number };
+const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS, autoAjusteMin: GD_AJUSTE_AUTO_MAX_MIN, radioLlegadaM: GD_RADIO_VERIFICAR_M, avisarCambios: 1 };
+const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180], radioLlegadaM: [50, 500], avisarCambios: [0, 1] };
 let gdTablaLista = false;
 
 /** Agrega a una tabla de una instalacion anterior las columnas que le faltan (mira cuales tiene y solo agrega las que no estan). */
@@ -851,8 +851,8 @@ async function gdAgregarColumnas(env: Env, tabla: string, columnas: string[]) {
 /** Las tablas se crean solas la primera vez que se usan, y si vienen de una instalacion anterior se les agregan las columnas nuevas (no hace falta tocar la base de datos al instalar). */
 async function gdAsegurarTabla(env: Env) {
   if (gdTablaLista) return;
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, radio_llegada_m INTEGER, updated_at TEXT)").run();
-  await gdAgregarColumnas(env, "gd_config", ["auto_max_min INTEGER", "radio_llegada_m INTEGER"]);
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, radio_llegada_m INTEGER, avisar_cambios INTEGER, updated_at TEXT)").run();
+  await gdAgregarColumnas(env, "gd_config", ["auto_max_min INTEGER", "radio_llegada_m INTEGER", "avisar_cambios INTEGER"]);
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, pausa_ini TEXT, pausa_hasta TEXT, resta_ms INTEGER, parada_min INTEGER NOT NULL DEFAULT 0, updated_at TEXT)").run();
   await gdAgregarColumnas(env, "gd_progreso", ["pausa_ini TEXT", "pausa_hasta TEXT", "resta_ms INTEGER", "parada_min INTEGER NOT NULL DEFAULT 0"]);
   gdTablaLista = true;
@@ -860,13 +860,13 @@ async function gdAsegurarTabla(env: Env) {
 
 function gdConfigValida(c: Record<string, unknown>, base: GdConfig): GdConfig {
   const n = (k: keyof GdConfig) => (c[k] === undefined || c[k] === null || c[k] === "" ? base[k] : Math.round(pldNumero(c[k], GD_LIMITES[k][0], GD_LIMITES[k][1], base[k])));
-  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas"), autoAjusteMin: n("autoAjusteMin"), radioLlegadaM: n("radioLlegadaM") };
+  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas"), autoAjusteMin: n("autoAjusteMin"), radioLlegadaM: n("radioLlegadaM"), avisarCambios: n("avisarCambios") };
 }
 
 async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
   try {
     await gdAsegurarTabla(env);
-    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas,auto_max_min AS autoAjusteMin,radio_llegada_m AS radioLlegadaM FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
+    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas,auto_max_min AS autoAjusteMin,radio_llegada_m AS radioLlegadaM,avisar_cambios AS avisarCambios FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
     return f ? gdConfigValida(f, GD_POR_DEFECTO) : { ...GD_POR_DEFECTO };
   } catch {
     return { ...GD_POR_DEFECTO };
@@ -875,8 +875,8 @@ async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
 
 async function gdGuardarConfig(env: Env, email: string, c: GdConfig) {
   await gdAsegurarTabla(env);
-  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,auto_max_min,radio_llegada_m,updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,auto_max_min=excluded.auto_max_min,radio_llegada_m=excluded.radio_llegada_m,updated_at=excluded.updated_at")
-    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, c.radioLlegadaM, now()).run();
+  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,auto_max_min,radio_llegada_m,avisar_cambios,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,auto_max_min=excluded.auto_max_min,radio_llegada_m=excluded.radio_llegada_m,avisar_cambios=excluded.avisar_cambios,updated_at=excluded.updated_at")
+    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, c.radioLlegadaM, c.avisarCambios, now()).run();
 }
 
 /** Lo que se sabe de un camino mientras dura: la ultima muestra de ubicacion (para ver si se acerca), cuando se recalculo, cuantos minutos se sumaron solos por transito, cuantas paradas hizo y,
@@ -996,6 +996,7 @@ async function gdPresentar(env: Env, v: GdViaje) {
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
     puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
     ajusteAutoMin: pr.autoMin, pausa: enPausa ? { hasta: pr.pausaHasta, restaMs: pr.restaMs ?? 0 } : null, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo, destinoExacto: v.destLat !== null && v.destLng !== null,
+    avisaCambios: g.avisarCambios === 1,
     llegada: v.estado === "llego" ? (v.motivoFin === "llegue_comprobada" ? "comprobada" : v.motivoFin === "llegue_sin_comprobar" ? "sin_comprobar" : null) : null,
     enlace: await gdEnlace(env, v),
   };
@@ -1426,6 +1427,39 @@ function gdClausulaComprobacion(c: GdComprobacion, destino: string, ella: boolea
   return `no pudimos ver dónde ${ella ? "estás" : "está"} para comprobar que ${ella ? "llegaste" : "llegó"} a ${destino}`;
 }
 
+/** Cuando la persona cancela el camino (sin `nuevo`) o le cambia el destino (con `nuevo`: a dónde va ahora) se les avisa a sus referentes (si no, un chico podría cancelar o irse a otro lado sin que nadie se entere).
+ *  Sale solo si lo tiene prendido en Configuración (viene prendido; si es menor, lo apaga el administrador). Va con la última ubicación del teléfono y a cuánto está del destino. Devuelve a cuántos les salió. */
+async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; modo: string; limite: string; lat: number | null; lng: number | null }) {
+  const referentes = await pldReferentesActivos(env, v.ownerEmail);
+  if (!referentes.length) return 0;
+  const cfg = await pldLeerConfig(env, v.ownerEmail);
+  const quien = pldNombreDe(v.ownerEmail, cfg);
+  const ub = await gdUbicacion(env, v.ownerEmail);
+  const u = ub.ubicacion;
+  const destinoTxt = nuevo ? nuevo.destino : v.destino;
+  const dLat = nuevo ? nuevo.lat : v.destLat, dLng = nuevo ? nuevo.lng : v.destLng;
+  const lejos = u && dLat !== null && dLng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, dLat, dLng) * 1000) : null;
+  const hora = gdHora(now());
+  const asunto = nuevo ? `${quien} cambió el destino: ahora va a ${nuevo.destino}` : `${quien} canceló el camino a ${v.destino}`;
+  const que = nuevo
+    ? `<strong style="color:#fff">${escapeHtml(quien)}</strong> cambió el destino del camino a las ${escapeHtml(hora)}: antes iba a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> y ahora va a <strong style="color:#fff">${escapeHtml(nuevo.destino)}</strong> ${escapeHtml(GD_MODOS[nuevo.modo] ?? "")}, con tiempo hasta las ${escapeHtml(gdHora(nuevo.limite))}. Desde ahora el aviso es por llegar ahí.`
+    : `<strong style="color:#fff">${escapeHtml(quien)}</strong> canceló a las ${escapeHtml(hora)} el camino a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> que había activado en el Modo Guardián. Desde ahora no se les avisa si no llega.`;
+  let enviados = 0;
+  for (const x of referentes) {
+    const ok = await pldCorreo(
+      env, x.email, asunto,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55">${que}</p>`
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}${lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destinoTxt)}` : ""}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todavía no hay una ubicación de su teléfono.</p>`)
+      + `<p style="color:#d2d2ce;line-height:1.55">Si no lo esperabas, comunicate con ${escapeHtml(quien)}.</p>`,
+    );
+    if (ok) {
+      enviados++;
+      await pldRegistrar(env, v.ownerEmail, x.id, "guardian", nuevo ? `Se le avisó a ${x.name} que cambiaste el destino a ${nuevo.destino}.` : `Se le avisó a ${x.name} que cancelaste el camino a ${v.destino}.`);
+    }
+  }
+  return enviados;
+}
+
 /** Llegué / Extender / Necesito ayuda / Cancelar. */
 async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, cuerpo: Record<string, unknown> = {}) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
@@ -1463,7 +1497,8 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   if (accion === "cancelar") {
     await env.DB.prepare("UPDATE gd_viajes SET estado='cancelado',ended_at=?,motivo_fin='cancelado' WHERE id=?").bind(now(), v.id).run();
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Cancelaste el camino a ${v.destino}.`);
-    return { ok: true, estado: "cancelado" };
+    const avisados = g.avisarCambios === 1 ? await gdAvisarCambio(env, v) : 0;
+    return { ok: true, estado: "cancelado", avisados };
   }
   if (accion === "extender") {
     if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
@@ -1527,7 +1562,8 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
     await pldRegistrar(env, v.ownerEmail, null, "guardian", mismo
       ? `Cambiaste cómo vas a ${v.destino}: ahora ${GD_MODOS[modo]}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`
       : `Cambiaste el destino a ${d.destino}${modo !== v.modo ? ` (ahora ${GD_MODOS[modo]})` : ""}: ${elegido.minutos} min (${elegido.fuente}${km}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).${desdeTxt}`);
-    return { ok: true, estado: "en_camino", origen: desde, minutos: elegido.minutos, km: ruta ? ruta.km : null, modo };
+    const avisados = !mismo && d.destino !== v.destino && g.avisarCambios === 1 ? await gdAvisarCambio(env, v, { destino: d.destino, modo, limite, lat: destLat, lng: destLng }) : 0;
+    return { ok: true, estado: "en_camino", origen: desde, minutos: elegido.minutos, km: ruta ? ruta.km : null, modo, avisados };
   }
   if (accion === "ayuda") {
     const ub = await gdUbicacion(env, v.ownerEmail);
@@ -1651,7 +1687,7 @@ function gdPaginaCamino() {
 <div id="cambiarPanel" class="subpanel" style="display:none"><label style="margin-top:0">Cómo vas</label>${gdModosHtml("cmModos", "auto")}<label>A dónde vas</label><select id="cmLugar"></select>
 <div id="cmOtro" style="display:none"><label>Dirección o nombre del lugar</label><input id="cmTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="cmSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="cmAyuda" class="suave"></small></div>
 <div id="cmMinBloque" style="display:none"><label>Tiempo hasta ahí, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
-<div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde estás ahora.</small></div>
+<div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave" id="cmNota">Recalculamos el tiempo desde donde estás ahora.</small></div>
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo. Al tocar “Llegué” comprobamos con tu ubicación que estás en el destino; si no estás, el camino sigue.</small>
 </div>
@@ -1692,7 +1728,7 @@ function pintar(d){
   var botones=document.querySelectorAll("button[data-m]");
   Array.prototype.forEach.call(botones,function(b){b.disabled=!V.puedeExtender});
   $("bFrenar").style.display=V.paradasMax>0&&V.puedeCambiar?"inline-block":"none";$("bFrenar").disabled=!V.puedeParar;$("bFrenar").textContent=V.puedeParar?(enPausa()?"Frenar más tiempo":"Voy a frenar un rato"):"Ya frenaste "+V.paradasMax+(V.paradasMax===1?" vez":" veces");
-  $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";
+  $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";$("cmNota").textContent="Recalculamos el tiempo desde donde estás ahora."+(V.avisaCambios?" Si cambiás de destino, se les avisa a tus referentes.":"");
   $("frenarAyuda").textContent=(enPausa()?"¿Cuánto más querés frenar? La pausa se alarga. ":"¿Cuánto vas a frenar? El reloj queda en pausa. ")+"No les avisamos a tus referentes. Podés frenar "+(V.paradasMax===1?"1 vez":"hasta "+V.paradasMax+" veces")+(V.paradas>0?" (ya usaste "+V.paradas+")":"")+".";
   if(!V.puedeCambiar){$("frenarPanel").style.display="none";$("cambiarPanel").style.display="none"}
   $("bCancelar").style.display=V.estado==="alerta"?"none":"inline-block";
@@ -1734,7 +1770,7 @@ function tick(){
   }
 }
 function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",demasiadas_paradas:"Ya frenaste el máximo de veces: tocá Llegué o pedí ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas.",destino_invalido:"Elegí de nuevo la dirección.",falta_destino:"Escribí a dónde vas.",sin_extensiones:"En la configuración del Modo Guardián no se puede pedir más tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó.",lejos_del_destino:"Todavía no estás en el destino: seguí hasta ahí y tocá Llegué de nuevo.",sin_comprobar:"No pudimos ver dónde estás para comprobar que llegaste."})[e.codigo]||"No se pudo. Probá de nuevo."}
-function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
+function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(typeof ok==="function"?ok(d):ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
 function dist(m){return m<1000?Math.max(10,Math.round(m/10)*10)+" m":String(Math.round(m/100)/10).replace(".",",")+" km"}
 function noLlego(d){ // el servidor no dio por llegada: se cuenta por que y se ofrece volver a comprobar (el reloj sigue)
@@ -1756,7 +1792,7 @@ $("bLlegue").onclick=llegue;
 $("bLlegueDeNuevo").onclick=llegue;
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: tenés "+b.getAttribute("data-m")+" minutos más.")}});
 $("bAyuda").onclick=function(){if(confirm("¿Pedir ayuda? Les avisamos ahora mismo a tus referentes, con tu última ubicación."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};
-$("bCancelar").onclick=function(){if(confirm("¿Cancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
+$("bCancelar").onclick=function(){if(confirm("¿Cancelar el camino? "+(V&&V.avisaCambios?"Se les avisa a tus referentes.":"No se les avisa a tus referentes.")))hacer({accion:"cancelar"},function(d){return d.avisados>0?"Listo: cancelaste el camino. Se les avisó a tus referentes.":""})};
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 $("bFrenar").onclick=function(){$("cambiarPanel").style.display="none";$("frenarPanel").style.display=$("frenarPanel").style.display==="none"?"block":"none"};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-f]"),function(b){b.onclick=function(){var n=Number(b.getAttribute("data-f")),mas=enPausa(),txt=n===60?"1 hora":n+" minutos";$("frenarPanel").style.display="none";hacer({accion:"parada",minutos:n},mas?"Listo: la pausa se alargó "+txt+".":"Listo: el reloj queda en pausa "+txt+". No les avisamos a tus referentes.")}});
@@ -1790,7 +1826,7 @@ $("cmConfirmar").onclick=function(){
   if($("cmLugar").value==="__mismo"){c.mismo=true}else if($("cmLugar").value){c.lugarId=$("cmLugar").value}else if(CMPLACE){c.placeId=CMPLACE;c.texto=CMETIQUETA}else{c.texto=$("cmTexto").value.trim();if(!c.texto){aviso("Elegí o escribí el nuevo destino.");return}if(CMHAYSUG){aviso("Elegí uno de los lugares que te sugerimos, así sabemos bien a dónde vas.");return}}
   if($("cmMinBloque").style.display!=="none")c.minutos=Number($("cmMin").value)||0;
   var boton=$("cmConfirmar"),listo=function(){boton.disabled=false;boton.textContent="Cambiar destino"};
-  var enviar=function(){aviso("");api(c).then(function(d){listo();pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";var det=d.minutos?" ("+d.minutos+" min "+({auto:"en auto",transporte:"en transporte público",caminando:"caminando"})[d.modo]+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"";aviso((c.mismo?"Listo: seguís yendo a "+V.destino:"Listo: cambiamos el destino")+det+" y recalculamos el tiempo"+desde(d.origen)+".")}).catch(function(e){listo();if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso(e.fallo==="ubicacion_vieja"||e.fallo==="sin_ubicacion"?"No sabemos dónde estás ahora: permití la ubicación en el navegador o poné cuántos minutos tardás.":"No pudimos calcular el tiempo hasta ahí: poné cuántos minutos tardás.")}else aviso(errorDe(e))})};
+  var enviar=function(){aviso("");api(c).then(function(d){listo();pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";var det=d.minutos?" ("+d.minutos+" min "+({auto:"en auto",transporte:"en transporte público",caminando:"caminando"})[d.modo]+(d.km!==null&&d.km!==undefined?", "+String(d.km).replace(".",",")+" km":"")+")":"";aviso((c.mismo?"Listo: seguís yendo a "+V.destino:"Listo: cambiamos el destino")+det+" y recalculamos el tiempo"+desde(d.origen)+"."+(d.avisados>0?" Se les avisó a tus referentes.":""))}).catch(function(e){listo();if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso(e.fallo==="ubicacion_vieja"||e.fallo==="sin_ubicacion"?"No sabemos dónde estás ahora: permití la ubicación en el navegador o poné cuántos minutos tardás.":"No pudimos calcular el tiempo hasta ahí: poné cuántos minutos tardás.")}else aviso(errorDe(e))})};
   boton.disabled=true;boton.textContent="Buscando tu ubicación…";
   ubicar(function(o){if(o)c.origen={lat:o.lat,lng:o.lng,precision:o.precision};enviar()})};
 function refrescar(){api({accion:"estado"}).then(pintar).catch(function(e){if(e.codigo==="enlace_invalido"){$("vacio").style.display="block";$("viaje").style.display="none"}})}
@@ -1886,9 +1922,10 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Llegada</h2>
 <label>Margen de llegada: a qué distancia del destino se da por llegada al tocar Llegué (metros)</label><input id="gRadio" type="number" min="50" max="500">
 <small class="suave" style="display:block;margin-top:6px">Al tocar Llegué se comprueba con tu ubicación que estás a menos de esta distancia del destino; si no, el camino sigue abierto. Más chico es más estricto, pero si el GPS no es preciso puede no dejarte cerrar el camino.</small></div>
-<div class="tarjeta"><h2>Avisos a tus referentes si no llegás</h2>
-<label>Repetir el aviso cada (min)</label><input id="gEntre" type="number" min="5" max="60">
-<label>Cantidad máxima de avisos</label><input id="gMaxAv" type="number" min="1" max="5">
+<div class="tarjeta"><h2>Avisos a tus referentes</h2>
+<label>Si no llegás: repetir el aviso cada (min)</label><input id="gEntre" type="number" min="5" max="60">
+<label>Si no llegás: cantidad máxima de avisos</label><input id="gMaxAv" type="number" min="1" max="5">
+<label>Avisarles también si cambio el destino o cancelo el camino</label><select id="gCambios"><option value="1">Sí</option><option value="0">No</option></select>
 <small class="suave" style="display:block;margin-top:8px">El primer aviso sale cuando se pasa el tiempo y después se repite hasta ese máximo. Si tocás “Llegué”, dejan de salir.</small></div>
 <div class="botones"><button id="gGuardar">Guardar</button><button class="sec" id="gReset">Volver a los valores recomendados</button></div>
 <small class="suave" id="gRecomendado"></small>
@@ -2015,13 +2052,13 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdCfgPintar(c,enMarcha){
-  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;$("gAuto").value=c.autoAjusteMin;$("gRadio").value=c.radioLlegadaM;
+  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;$("gAuto").value=c.autoAjusteMin;$("gRadio").value=c.radioLlegadaM;$("gCambios").value=String(c.avisarCambios);
   $("gdCfgBloqueo").style.display=enMarcha?"block":"none";
-  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gAuto","gRadio","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
-  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces más tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+"), hasta "+GDDEF.autoAjusteMin+" min más por tránsito y llegada a menos de "+GDDEF.radioLlegadaM+" m.";
-  $("gdPie").textContent="Tenés "+c.margenMin+" minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Podés extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuración no se puede pedir más tiempo.")+(c.autoAjusteMin>0?" Si hay más tránsito y te venís acercando, el límite se acomoda solo (hasta "+c.autoAjusteMin+" min).":"")+" Al tocar Llegué comprobamos que estés a menos de "+c.radioLlegadaM+" m del destino."}
+  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gAuto","gRadio","gCambios","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
+  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces más tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+"), hasta "+GDDEF.autoAjusteMin+" min más por tránsito y llegada a menos de "+GDDEF.radioLlegadaM+" m"+(GDDEF.avisarCambios===1?" y aviso a tus referentes si cambiás el destino o cancelás.":".");
+  $("gdPie").textContent="Tenés "+c.margenMin+" minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Podés extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuración no se puede pedir más tiempo.")+(c.autoAjusteMin>0?" Si hay más tránsito y te venís acercando, el límite se acomoda solo (hasta "+c.autoAjusteMin+" min).":"")+" Al tocar Llegué comprobamos que estés a menos de "+c.radioLlegadaM+" m del destino."+(c.avisarCambios===1?" Si cambiás el destino o cancelás el camino, también se les avisa a tus referentes.":"")}
 function gdCfgRespuesta(x,ok){if(x.ok&&x.d.ok){aviso(ok);gdCfgPintar(x.d.config,false)}else aviso(({camino_en_marcha:"Hay un camino en marcha: cambialo cuando termine.",solo_administrador:"Esto lo completa el administrador de tu familia."})[x.d.error]||"No se pudo guardar.")}
-$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value,autoAjusteMin:$("gAuto").value,radioLlegadaM:$("gRadio").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
+$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value,autoAjusteMin:$("gAuto").value,radioLlegadaM:$("gRadio").value,avisarCambios:$("gCambios").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
 $("gReset").onclick=function(){if(!confirm("¿Volver los tiempos y avisos del Modo Guardián a los valores recomendados?"))return;gdPost({accion:"config",config:{restablecer:true}}).then(function(x){gdCfgRespuesta(x,"Valores recomendados restablecidos.")}).catch(function(){aviso("No se pudo guardar.")})};
 // accesibilidad: se guarda en este telefono y vale para todas las pantallas de Ojo Guard
 function accLeer(){try{return JSON.parse(localStorage.getItem("ogAcc")||"{}")||{}}catch(e){return{}}}

@@ -23,6 +23,7 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   // el reloj muestra mm:ss o "H h MM min": se lo pasa a minutos
   const minReloj = async () => { const t = await texto('#reloj'); const h = /(\d+) h (\d+) min/.exec(t); if (h) return Number(h[1]) * 60 + Number(h[2]); const m = /(\d+):(\d+)/.exec(t); return m ? Number(m[1]) + Number(m[2]) / 60 : NaN; };
   const marcado = () => pag.$eval('#cmModos button[aria-checked="true"]', (b) => b.textContent.trim());
+  const correosA = async (re) => (await (await fetch(B + '/__correos')).json()).filter((c) => c.to === 'mama@correo.com' && re.test(c.subject));
 
   // --- preparar: un referente que acepta y la clave de Google (el tiempo sale de los mapas: 13 min)
   await poner('/__clave', '1');
@@ -76,6 +77,9 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   console.log('   ' + await texto('#aviso'));
   console.log('   ' + await texto('#destino') + ' | ' + await texto('#detalle') + ' | reloj: ' + (await minReloj()).toFixed(1) + ' min | panel cerrado:', !(await pag.isVisible('#cambiarPanel')));
   await pag.screenshot({ path: 'e2e_camino_cambiado.png', fullPage: true });
+  const mCambio1 = await correosA(/cambió el destino/);
+  console.log('   mail a la referente por el cambio de destino:', mCambio1.map((c) => c.subject), '| dice la ultima ubicacion y a cuanto esta del nuevo destino:', /Última ubicación/.test(mCambio1[0]?.html || '') && /de Kansas/.test(mCambio1[0]?.html || ''), '| avisado en pantalla:', /Se les avisó a tus referentes/.test(await texto('#aviso')));
+  if (mCambio1.length !== 1) throw new Error('al cambiar de destino tiene que salir un mail a la referente');
 
   // --- seguir yendo al mismo lugar, pero ahora en transporte publico
   await poner('/__ruta', '1200');
@@ -88,6 +92,9 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('seguís yendo a'));
   console.log('   ' + await texto('#aviso'));
   console.log('   ' + await texto('#destino') + ' | ' + await texto('#detalle') + ' | reloj: ' + (await minReloj()).toFixed(1) + ' min');
+  const mCambio2 = await correosA(/cambió el destino/);
+  console.log('   seguir al mismo lugar en otro transporte no avisa: mails de cambio siguen en', mCambio2.length, '| sin aviso en pantalla:', !/Se les avisó/.test(await texto('#aviso')));
+  if (mCambio2.length !== 1) throw new Error('seguir yendo al mismo lugar no es un cambio de destino: no se avisa');
 
   // --- cambiar otra vez, sin clave de Google: pide los minutos
   await poner('/__clave', '0');
@@ -103,6 +110,7 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.click('#cmConfirmar');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('cambiamos el destino'));
   console.log('   ' + await texto('#destino') + ' | ' + await texto('#detalle') + ' | reloj: ' + (await minReloj()).toFixed(1) + ' min');
+  console.log('   mails de cambio a la referente:', (await correosA(/cambió el destino/)).map((c) => c.subject));
   await poner('/__clave', '1');
 
   // --- si el navegador no sabe donde esta y el telefono hace rato que no avisa, NO calcula desde un lugar viejo
@@ -200,7 +208,7 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   console.log('   en la puerta de Casa: ' + await texto('#aviso') + ' | ' + await texto('#estadoTxt'));
   await pag.screenshot({ path: 'e2e_camino_final.png', fullPage: true });
   const mailsFin = (await (await fetch(B + '/__correos')).json()).filter((c) => c.to === 'mama@correo.com' && /no llegó|está bien/.test(c.subject));
-  console.log('   mails a la referente en todo el recorrido (debe ser 0):', mailsFin.length);
+  console.log('   mails de alerta (no llego / esta bien) a la referente en todo el recorrido (debe ser 0):', mailsFin.length);
 
   // --- estricto: otro camino a Casa con el navegador lejos; volver a comprobar las veces que sea no lo cierra (los chicos dirian que llegaron a lo de un amigo y se quedarian en otro lado)
   await ctx.setGeolocation({ latitude: -34.505, longitude: -58.4 });
@@ -218,6 +226,11 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   console.log('   registro:', (reg2.registro || []).filter((x) => /Tocaste Llegué, pero|Tu ubicación lo confirmó/.test(x.detail)).map((x) => x.detail.slice(0, 150)));
   await pag.click('#bCancelar'); // se cancela para seguir con lo demas
   await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('cancelado'));
+  const mCancel = await correosA(/canceló el camino/);
+  console.log('   cancelar: ' + await texto('#aviso') + ' | mail a la referente:', mCancel.map((c) => c.subject), '| con la ultima ubicacion y a cuanto esta de Casa:', /Última ubicación/.test(mCancel[0]?.html || '') && /de Casa/.test(mCancel[0]?.html || ''));
+  if (mCancel.length !== 1) throw new Error('al cancelar el camino tiene que salir un mail a la referente');
+  if (!/Se les avisó a tus referentes/.test(await texto('#aviso'))) throw new Error('al cancelar, la pantalla tiene que decir que se les avisó a los referentes');
+  console.log('   registro:', ((await (await fetch(B + '/api/remote/por-las-dudas')).json()).registro || []).filter((x) => /Se le avisó a Mamá que/.test(x.detail)).map((x) => x.detail.slice(0, 120)));
 
   // --- el navegador no deja ver la ubicacion (la persona dijo que no) y la ultima del telefono es de hace 2 horas: no se puede comprobar; al dejarla ver, en la puerta de Casa, cierra como comprobado
   await poner('/__gd-ubicacion', { lat: -34.6, lng: -58.4, haceMin: 120 });
@@ -238,7 +251,8 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.goto(B + '/guardian#config-guardian');
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.waitForFunction(() => document.getElementById('gAuto').value !== '');
-  console.log('10) Configuracion > Modo Guardian: tope por transito:', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), 'm | recomendado:', await texto('#gRecomendado'));
+  console.log('10) Configuracion > Modo Guardian: tope por transito:', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), 'm | avisar si cambia o cancela:', await pag.inputValue('#gCambios'), '| recomendado:', await texto('#gRecomendado'));
+  if ((await pag.inputValue('#gCambios')) !== '1') throw new Error('avisar si cambia el destino o cancela viene prendido');
   if ((await pag.inputValue('#gRadio')) !== '150') throw new Error('el margen de llegada recomendado es de 150 m');
   await pag.fill('#gAuto', '0');
   await pag.click('#gGuardar');
@@ -253,18 +267,38 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.fill('#gAuto', '45');
   await pag.fill('#gRadio', '100');
+  await pag.selectOption('#gCambios', '0');
   await pag.click('#gGuardar');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('Cambios guardados'));
   await pag.goto(B + '/guardian#guardian');
   await pag.waitForFunction(() => document.getElementById('gdForm').style.display === 'block');
   console.log('    con 45 y 100 m:', await texto('#gdPie'));
   if (!(await texto('#gdPie')).includes('a menos de 100 m del destino')) throw new Error('el pie de Empezar camino tiene que decir el margen de llegada elegido');
+  // con "avisar si cambio el destino o cancelo" apagado: la pantalla del camino no promete avisos y al cancelar no sale ningun mail
+  const sinAvisos = await (await fetch(B + '/api/guardian', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'empezar', lugarId: 'pl1', modo: 'auto', origen: { lat: -34.505, lng: -58.4, precision: 20 } }) })).json();
+  await pag.goto(sinAvisos.viaje.enlace.replace(/^https?:\/\/[^/]+/, B));
+  await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
+  await pag.click('#bCambiar');
+  await pag.waitForSelector('#cambiarPanel', { state: 'visible' });
+  const notaApagada = await texto('#cmNota');
+  console.log('    con el aviso apagado, la nota del cambio de destino dice: ' + notaApagada);
+  if (/se les avisa/.test(notaApagada)) throw new Error('con el aviso apagado la pantalla no puede decir que se les avisa');
+  let pregunta = '';
+  pag.removeAllListeners('dialog');
+  pag.on('dialog', (d) => { pregunta = d.message(); d.accept(); });
+  await pag.click('#bCancelar');
+  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('cancelado'));
+  console.log('    cancelar con el aviso apagado: pregunta "' + pregunta + '" | arriba: ' + JSON.stringify(await texto('#aviso')) + ' | mails de "cancelo" a la referente (siguen en 1):', (await correosA(/canceló el camino/)).length);
+  if (!/No se les avisa/.test(pregunta) || (await correosA(/canceló el camino/)).length !== 1) throw new Error('con el aviso apagado no se les avisa a los referentes al cancelar');
+  pag.removeAllListeners('dialog');
+  pag.on('dialog', (d) => d.accept());
   await pag.goto(B + '/guardian#config-guardian');
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.screenshot({ path: 'e2e_camino_config.png', fullPage: true });
   await pag.click('#gReset');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('recomendados'));
-  console.log('    "Volver a los valores recomendados":', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), '|', await texto('#gRecomendado'));
+  console.log('    "Volver a los valores recomendados":', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), '| avisar si cambia o cancela:', await pag.inputValue('#gCambios'), '|', await texto('#gRecomendado'));
+  if ((await pag.inputValue('#gCambios')) !== '1') throw new Error('al volver a lo recomendado el aviso de cambios tiene que quedar prendido');
   if ((await pag.inputValue('#gRadio')) !== '150') throw new Error('al volver a lo recomendado el margen de llegada tiene que ser 150 m');
 
   const ancho = await pag.evaluate(() => document.documentElement.scrollWidth);
