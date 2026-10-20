@@ -1185,12 +1185,14 @@ Actualizado: 16/10/2026.
   persona aparecen solos en el mapa y en Ubicar / Sonar; la persona puede apagar el uso compartido de un equipo y la familia lo ve; se mantiene la autorización de cada equipo nuevo). (2) **Artículos:** atajo "Abrir Buscar" /
   "Abrir Find Hub" ahora (sin espejar datos) y rastreadores GPS propios con API más adelante.
 
+**Pedido de Luciano (20/10/2026): "arranquemos con lo de las builds y hay que programar el seguimiento Guardián".** Orden: primero los puntos 1 y 2 de la lista (para armar los parches se le pidió un comando de lectura de la app y del servidor: avisos, tareas en segundo plano, app.json y `sendExpoNotice`); en paralelo, la primera versión del Modo Guardián en el servidor (reloj en el servidor, extender 10/20/30 min hasta 3 veces, "No llegué bien" avisa como SOS).
+
 ### Lista de la próxima build de la app (juntada el 20/10/2026, falta armarla y probarla)
 
 1. Pantalla **"Estoy bien"** al tocar el aviso "¿Estás bien?" (no depender del mail).
 2. Que la app **despierte sola después de reiniciar** el teléfono (hoy no manda señales hasta abrirla una vez).
 3. **Configuración sin bloqueo de pantalla** para una persona cuidada (papá): hoy la app pide "Configurá un acceso seguro" y el PIN; elegida la opción B: no abrir esa pantalla en ese teléfono.
-4. **Sin foto al tocar mal el código** para personas mayores (no debe asustar ni sacar foto).
+4. ~~Sin foto al tocar mal el código para personas mayores~~ **Decidido por Luciano (20/10/2026): "con foto"**: se mantiene la foto al tocar mal el código, también en el teléfono de personas mayores. No se cambia.
 5. **Regla de menores y administrador en la app:** el menor solo ve su protección, el titular y los adultos de la familia la arman (ya está en el servidor y el panel).
 6. **Familia: todos los dispositivos de cada persona por defecto** (etapa 1 de arriba) y el atajo "Abrir Buscar" / "Abrir Find Hub".
 7. Título del iPhone alineado; pendientes sueltos de la lista de iPhone / Android más arriba (por ejemplo "Compartir de nuevo" cortado en Familia).
