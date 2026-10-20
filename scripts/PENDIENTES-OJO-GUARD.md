@@ -1192,6 +1192,11 @@ Actualizado: 16/10/2026.
 es el *direct boot* de Android** (hasta el primer desbloqueo la app no corre ni recibe FCM ni BOOT_COMPLETED), "confirmada, no resuelta": falta escribir un **modo mínimo nativo** (receptor `directBootAware` con `LOCKED_BOOT_COMPLETED`). Es código nativo y se prueba
 solo con una build en un teléfono real; antes de escribirlo se pidió leer el módulo y esas notas.
 
+**Punto 1 de la build, armado (20/10/2026, sin instalar):** `aplicar-aviso-con-enlace-app.ps1` (respaldo `.bak-avisoenlace`, solo `App.tsx`, solo JavaScript): al tocar un aviso con `data.tipo` = `pld-estoy-bien` o `guardian` (con la app abierta, en segundo plano o cerrada) se abre `data.url` en el navegador,
+solo si es de `https://ojo-guard-ms-api.bickluciano.workers.dev/` y el aviso es de las últimas 2 horas; el servidor ya manda ese `data` (en el código nuevo de Tu protección / Guardián, que se instala con `aplicar-guardian-camino-panel.ps1`, todavía sin armar).
+**Punto 2, lo que se leyó de la app:** la cadena de despertadas usa `AlarmManager` (módulo `exact-alarm`: `ExactAlarmReceiver` → `ExactAlarmTaskService` → tarea JS cada 15 min; `ExactAlarmBootReceiver` escucha `BOOT_COMPLETED` y `QUICKBOOT_POWERON`); las credenciales viven en `expo-secure-store` (`src/remoteStorage.ts`, clave `ENROLLMENT_KEY`),
+que antes del primer desbloqueo no se puede leer. El modo nativo de direct boot necesita: receptor `directBootAware` con `LOCKED_BOOT_COMPLETED`, una copia mínima de credenciales en `createDeviceProtectedStorageContext()` (con un token de arranque de alcance limitado, no el enrolamiento completo), un cliente HTTP en Kotlin, y del lado del servidor un endpoint de "latido de arranque". Falta decidir el alcance con Luciano.
+
 ### Lista de la próxima build de la app (juntada el 20/10/2026, falta armarla y probarla)
 
 1. Pantalla **"Estoy bien"** al tocar el aviso "¿Estás bien?" (no depender del mail).
