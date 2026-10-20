@@ -1,12 +1,12 @@
-﻿# aplicar-guardian-lugares-conexion-panel.ps1 - Modo Guardian: si se corta la conexion con Google ("Network connection lost") reintenta, y la pantalla dice que paso con cada intento.
-# Luciano (20/10/2026): al escribir "La panera rosa" salio "no hubo conexion con Google (Error: Network connection lost.)". Que cambia:
-#  - Todos los pedidos a Google (buscar lugares y calcular la ruta) se reintentan una vez si la conexion se corta, que es lo habitual entre Cloudflare y Google.
-#  - La busqueda de lugares tambien prueba pedidos mas simples (sin ubicacion, y por ultimo solo el texto) cuando se corta la conexion o Google rechaza el pedido (400), y la pantalla muestra el resultado
-#    de cada intento (por ejemplo [A:red B200]) y el mensaje exacto de Google.
+﻿# aplicar-guardian-lugares-clave-panel.ps1 - Modo Guardian: limpia la clave de Google (caracteres invisibles que se colaron al guardarla) y, si algo falla, muestra datos de la clave.
+# Luciano (20/10/2026): "La panera rosa" daba [A400 B400 C400] (Google contesta 400 sin mensaje hasta con el pedido mas simple) y antes "Network connection lost". Eso pasa cuando la clave guardada en el
+# servidor trae caracteres de control (por ejemplo los que agrega la consola al pegar): Google corta la conexion o rechaza el encabezado. Que cambia:
+#  - La clave GOOGLE_ROUTES_KEY se limpia antes de usarla: se toma solo la parte con forma de clave ("AIza" y 35 caracteres) o, si no la tiene, se quitan los caracteres que no sirven.
+#  - Si igual falla, la pantalla dice cuantos caracteres tiene la clave, con que empieza (4 letras) y cuantos caracteres raros se le quitaron. No muestra la clave.
 #  - Incluye todo lo de los parches anteriores de lugares. Este los reemplaza: se puede correr encima del anterior.
-#  - Sigue haciendo falta la "Places API (New)" habilitada en Google Cloud y agregada a las restricciones de la clave GOOGLE_ROUTES_KEY (junto a Routes API).
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las once versiones). No cambia tablas ni rutas.
-# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldlugares3. Al final publica el panel solo.
+#  - Sigue haciendo falta la "Places API (New)" habilitada en Google Cloud y agregada a las restricciones de la clave (junto a Routes API).
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las doce versiones). No cambia tablas ni rutas.
+# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldlugares4. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -32,12 +32,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'async function gdLlamarGoogle(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'function gdClave(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a")
+$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -51,9 +51,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldlugares3")) { Mal "Ya existe src\index.ts.bak-pldlugares3. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldlugares3")
-Ok "Respaldo creado: src\index.ts.bak-pldlugares3"
+if (Test-Path ($indice + ".bak-pldlugares4")) { Mal "Ya existe src\index.ts.bak-pldlugares4. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldlugares4")
+Ok "Respaldo creado: src\index.ts.bak-pldlugares4"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -1066,6 +1066,20 @@ async function gdCron(env: Env) {
   }
 }
 
+/** La clave de Google (GOOGLE_ROUTES_KEY), limpia. Si al guardarla en el servidor se colaron caracteres invisibles (por ejemplo al pegarla en la consola), Google corta la conexi\u00f3n o contesta 400 sin mensaje:
+ *  se usa solo la parte que tiene forma de clave ("AIza" y 35 caracteres) y se anota cu\u00e1ntos caracteres sobraban. */
+function gdClave(env: Env): { clave: string; sobran: number } {
+  const cruda = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const m = /AIza[0-9A-Za-z_-]{35}/.exec(cruda);
+  const clave = m ? m[0] : cruda.replace(/[^0-9A-Za-z_-]/g, "");
+  return { clave, sobran: cruda.length - clave.length };
+}
+
+/** Datos de la clave para mostrar cuando algo falla (sin mostrarla entera): cu\u00e1ntos caracteres tiene, con qu\u00e9 empieza y si hubo que quitarle caracteres raros. */
+function gdNotaClave(k: { clave: string; sobran: number }): string {
+  return `clave de ${k.clave.length} caracteres, empieza con ${k.clave.slice(0, 4)}${k.sobran > 0 ? `, se quitaron ${k.sobran} caracteres raros` : ""}`;
+}
+
 /** Llama a Google (POST) y lee la respuesta entera. A veces la conexi\u00f3n entre Cloudflare y Google se corta ("Network connection lost"): en ese caso se reintenta una vez. */
 async function gdLlamarGoogle(url: string, clave: string, cuerpo: unknown, mascara = ""): Promise<{ estado: number; texto: string } | { red: string }> {
   let ultimo = "";
@@ -1102,7 +1116,8 @@ type GdFalloMapas = { fallo: string; detalle: string };
 /** El tiempo del camino seg\u00fan Google Mapas, con el tr\u00e1nsito de ahora (auto), a pie o en transporte p\u00fablico. Hace falta la clave GOOGLE_ROUTES_KEY (con la Routes API habilitada).
  *  Si no se puede, devuelve el motivo (sin_clave, http_403, sin_ruta, red...) para poder decirle a la persona qu\u00e9 pas\u00f3: en ese caso se estima por la distancia o ella pone los minutos. */
 async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, destino: { lat: number; lng: number } | { texto: string } | { placeId: string }, modo: string): Promise<GdRutaMapas | GdFalloMapas> {
-  const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const k = gdClave(env);
+  const clave = k.clave;
   if (!clave) return { fallo: "sin_clave", detalle: "" };
   const punto = (p: { lat: number; lng: number }) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
   const cuerpo: Record<string, unknown> = {
@@ -1116,8 +1131,11 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
   if (modo === "auto") cuerpo.routingPreference = "TRAFFIC_AWARE";
   try {
     const g = await gdLlamarGoogle("https://routes.googleapis.com/directions/v2:computeRoutes", clave, cuerpo, "routes.duration,routes.distanceMeters,routes.legs.endLocation");
-    if ("red" in g) return { fallo: "red", detalle: g.red };
-    if (g.estado < 200 || g.estado > 299) return { fallo: `http_${g.estado}`, detalle: gdMotivoGoogle(g.texto) };
+    if ("red" in g) return { fallo: "red", detalle: `${g.red} (${gdNotaClave(k)})`.slice(0, 220) };
+    if (g.estado < 200 || g.estado > 299) {
+      const motivo = gdMotivoGoogle(g.texto);
+      return { fallo: `http_${g.estado}`, detalle: (motivo && k.sobran === 0 ? motivo : `${motivo} (${gdNotaClave(k)})`.trim()).slice(0, 220) };
+    }
     const d = JSON.parse(g.texto) as { routes?: Array<{ duration?: string; distanceMeters?: number; legs?: Array<{ endLocation?: { latLng?: { latitude?: number; longitude?: number } } }> }> };
     const ruta = d.routes?.[0];
     const segundos = Number(String(ruta?.duration ?? "").replace("s", ""));
@@ -1137,7 +1155,8 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
 /** Sugerencias mientras la persona escribe (Google Places, nuevo): direcciones y tambi\u00e9n nombres de lugares (restaurantes, locales, plazas...), cerca de donde est\u00e1, con el barrio, la ciudad
  *  y a cu\u00e1ntos km queda, para elegir el correcto. */
 async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
-  const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const k = gdClave(env);
+  const clave = k.clave;
   type Sugerencia = { placeId: string; principal: string; secundario: string; km: number | null };
   if (!clave) return { sugerencias: [] as Sugerencia[], fallo: "sin_clave", detalle: "" };
   const base: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
@@ -1161,7 +1180,7 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
       const motivo = gdMotivoGoogle(g.texto);
       if (!fallo) { fallo = `http_${g.estado}`; primero = motivo; }
       if (g.estado === 400 && !/api key|clave/i.test(motivo)) continue;
-      return { sugerencias: [] as Sugerencia[], fallo: `http_${g.estado}`, detalle: `[${marcas.join(" ")}] ${motivo}`.slice(0, 220) };
+      return { sugerencias: [] as Sugerencia[], fallo: `http_${g.estado}`, detalle: `[${marcas.join(" ")}] ${motivo}${k.sobran > 0 ? ` (${gdNotaClave(k)})` : ""}`.slice(0, 240) };
     }
     try {
       const d = JSON.parse(g.texto) as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
@@ -1176,7 +1195,7 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
       if (!fallo) { fallo = "http_200"; primero = "respuesta ilegible"; }
     }
   }
-  return { sugerencias: [] as Sugerencia[], fallo: fallo || "http_400", detalle: `[${marcas.join(" ")}] ${primero}`.slice(0, 220) };
+  return { sugerencias: [] as Sugerencia[], fallo: fallo || "http_400", detalle: `[${marcas.join(" ")}] ${primero} (${gdNotaClave(k)})`.slice(0, 240) };
 }
 
 type GdDestino = { destino: string; destLat: number | null; destLng: number | null; texto: string | null; placeId: string | null };
@@ -1561,7 +1580,7 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardi\u00e1n."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdDestinoCuerpo(c){if($("gdLugar").value){c.lugarId=$("gdLugar").value}else if(GDPLACE){c.placeId=GDPLACE;c.texto=GDETIQUETA}else{c.texto=$("gdTexto").value.trim()}return c}
-function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todav\u00eda",http_400:"Google rechaz\u00f3 el pedido",http_404:"Google no encontr\u00f3 ese lugar",sin_ruta:"Google no encontr\u00f3 una ruta",red:"no hubo conexi\u00f3n con Google",sin_ubicacion:"todav\u00eda no sabemos d\u00f3nde est\u00e1 tu tel\u00e9fono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,200)+")":"")}
+function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todav\u00eda",http_400:"Google rechaz\u00f3 el pedido",http_404:"Google no encontr\u00f3 ese lugar",sin_ruta:"Google no encontr\u00f3 una ruta",red:"no hubo conexi\u00f3n con Google",sin_ubicacion:"todav\u00eda no sabemos d\u00f3nde est\u00e1 tu tel\u00e9fono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
 function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
@@ -1659,10 +1678,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'async function gdLlamarGoogle(') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'function gdClave(') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldlugares3") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldlugares4") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -1672,5 +1691,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: los pedidos a Google se reintentan si se corta la conexion y la pantalla muestra que paso con cada intento. Abri /guardian con Ctrl+F5 y proba de nuevo."
+Ok "LISTO: la clave de Google se limpia antes de usarla y la pantalla muestra datos de la clave si algo falla. Abri /guardian con Ctrl+F5 y proba de nuevo."
 Write-Host ""

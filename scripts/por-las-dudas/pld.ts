@@ -1010,6 +1010,20 @@ async function gdCron(env: Env) {
   }
 }
 
+/** La clave de Google (GOOGLE_ROUTES_KEY), limpia. Si al guardarla en el servidor se colaron caracteres invisibles (por ejemplo al pegarla en la consola), Google corta la conexión o contesta 400 sin mensaje:
+ *  se usa solo la parte que tiene forma de clave ("AIza" y 35 caracteres) y se anota cuántos caracteres sobraban. */
+function gdClave(env: Env): { clave: string; sobran: number } {
+  const cruda = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const m = /AIza[0-9A-Za-z_-]{35}/.exec(cruda);
+  const clave = m ? m[0] : cruda.replace(/[^0-9A-Za-z_-]/g, "");
+  return { clave, sobran: cruda.length - clave.length };
+}
+
+/** Datos de la clave para mostrar cuando algo falla (sin mostrarla entera): cuántos caracteres tiene, con qué empieza y si hubo que quitarle caracteres raros. */
+function gdNotaClave(k: { clave: string; sobran: number }): string {
+  return `clave de ${k.clave.length} caracteres, empieza con ${k.clave.slice(0, 4)}${k.sobran > 0 ? `, se quitaron ${k.sobran} caracteres raros` : ""}`;
+}
+
 /** Llama a Google (POST) y lee la respuesta entera. A veces la conexión entre Cloudflare y Google se corta ("Network connection lost"): en ese caso se reintenta una vez. */
 async function gdLlamarGoogle(url: string, clave: string, cuerpo: unknown, mascara = ""): Promise<{ estado: number; texto: string } | { red: string }> {
   let ultimo = "";
@@ -1046,7 +1060,8 @@ type GdFalloMapas = { fallo: string; detalle: string };
 /** El tiempo del camino según Google Mapas, con el tránsito de ahora (auto), a pie o en transporte público. Hace falta la clave GOOGLE_ROUTES_KEY (con la Routes API habilitada).
  *  Si no se puede, devuelve el motivo (sin_clave, http_403, sin_ruta, red...) para poder decirle a la persona qué pasó: en ese caso se estima por la distancia o ella pone los minutos. */
 async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, destino: { lat: number; lng: number } | { texto: string } | { placeId: string }, modo: string): Promise<GdRutaMapas | GdFalloMapas> {
-  const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const k = gdClave(env);
+  const clave = k.clave;
   if (!clave) return { fallo: "sin_clave", detalle: "" };
   const punto = (p: { lat: number; lng: number }) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
   const cuerpo: Record<string, unknown> = {
@@ -1060,8 +1075,11 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
   if (modo === "auto") cuerpo.routingPreference = "TRAFFIC_AWARE";
   try {
     const g = await gdLlamarGoogle("https://routes.googleapis.com/directions/v2:computeRoutes", clave, cuerpo, "routes.duration,routes.distanceMeters,routes.legs.endLocation");
-    if ("red" in g) return { fallo: "red", detalle: g.red };
-    if (g.estado < 200 || g.estado > 299) return { fallo: `http_${g.estado}`, detalle: gdMotivoGoogle(g.texto) };
+    if ("red" in g) return { fallo: "red", detalle: `${g.red} (${gdNotaClave(k)})`.slice(0, 220) };
+    if (g.estado < 200 || g.estado > 299) {
+      const motivo = gdMotivoGoogle(g.texto);
+      return { fallo: `http_${g.estado}`, detalle: (motivo && k.sobran === 0 ? motivo : `${motivo} (${gdNotaClave(k)})`.trim()).slice(0, 220) };
+    }
     const d = JSON.parse(g.texto) as { routes?: Array<{ duration?: string; distanceMeters?: number; legs?: Array<{ endLocation?: { latLng?: { latitude?: number; longitude?: number } } }> }> };
     const ruta = d.routes?.[0];
     const segundos = Number(String(ruta?.duration ?? "").replace("s", ""));
@@ -1081,7 +1099,8 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
 /** Sugerencias mientras la persona escribe (Google Places, nuevo): direcciones y también nombres de lugares (restaurantes, locales, plazas...), cerca de donde está, con el barrio, la ciudad
  *  y a cuántos km queda, para elegir el correcto. */
 async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
-  const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
+  const k = gdClave(env);
+  const clave = k.clave;
   type Sugerencia = { placeId: string; principal: string; secundario: string; km: number | null };
   if (!clave) return { sugerencias: [] as Sugerencia[], fallo: "sin_clave", detalle: "" };
   const base: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
@@ -1105,7 +1124,7 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
       const motivo = gdMotivoGoogle(g.texto);
       if (!fallo) { fallo = `http_${g.estado}`; primero = motivo; }
       if (g.estado === 400 && !/api key|clave/i.test(motivo)) continue;
-      return { sugerencias: [] as Sugerencia[], fallo: `http_${g.estado}`, detalle: `[${marcas.join(" ")}] ${motivo}`.slice(0, 220) };
+      return { sugerencias: [] as Sugerencia[], fallo: `http_${g.estado}`, detalle: `[${marcas.join(" ")}] ${motivo}${k.sobran > 0 ? ` (${gdNotaClave(k)})` : ""}`.slice(0, 240) };
     }
     try {
       const d = JSON.parse(g.texto) as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
@@ -1120,7 +1139,7 @@ async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; l
       if (!fallo) { fallo = "http_200"; primero = "respuesta ilegible"; }
     }
   }
-  return { sugerencias: [] as Sugerencia[], fallo: fallo || "http_400", detalle: `[${marcas.join(" ")}] ${primero}`.slice(0, 220) };
+  return { sugerencias: [] as Sugerencia[], fallo: fallo || "http_400", detalle: `[${marcas.join(" ")}] ${primero} (${gdNotaClave(k)})`.slice(0, 240) };
 }
 
 type GdDestino = { destino: string; destLat: number | null; destLng: number | null; texto: string | null; placeId: string | null };
@@ -1505,7 +1524,7 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdDestinoCuerpo(c){if($("gdLugar").value){c.lugarId=$("gdLugar").value}else if(GDPLACE){c.placeId=GDPLACE;c.texto=GDETIQUETA}else{c.texto=$("gdTexto").value.trim()}return c}
-function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google rechazó el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,200)+")":"")}
+function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google rechazó el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,260)+")":"")}
 function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
