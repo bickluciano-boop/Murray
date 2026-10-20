@@ -321,7 +321,8 @@ async function pldPanorama(env: Env, email: string, persona: PldPersona, sesionE
   const cfg = await pldLeerConfig(env, email);
   if (!persona.propia && !cfg.displayName.trim() && persona.nombre) cfg.displayName = persona.nombre.slice(0, 60);
   const personas = persona.soloLectura ? { results: [] as Array<{ email: string; name: string }> }
-    : await env.DB.prepare("SELECT member_email AS email,name FROM family_members WHERE owner_email=? AND status='activo' AND role='menor' ORDER BY name ASC").bind(normalizeEmail(sesionEmail)).all<{ email: string; name: string }>();
+    : await env.DB.prepare("SELECT member_email AS email,name FROM family_members WHERE status='activo' AND role='menor' AND (owner_email=? OR owner_email IN (SELECT owner_email FROM family_members WHERE member_email=? AND status='activo' AND role='adulto')) ORDER BY name ASC")
+      .bind(normalizeEmail(sesionEmail), normalizeEmail(sesionEmail)).all<{ email: string; name: string }>();
   const referentes = await env.DB.prepare("SELECT id,name,email,status,created_at AS createdAt,accepted_at AS acceptedAt,muted_until AS mutedUntil FROM pld_referentes WHERE owner_email=? AND status<>'baja' ORDER BY created_at ASC").bind(email).all();
   const registro = await env.DB.prepare("SELECT l.kind,l.detail,l.created_at AS createdAt,r.name AS referente FROM pld_log l LEFT JOIN pld_referentes r ON r.id=l.referente_id WHERE l.owner_email=? ORDER BY l.created_at DESC LIMIT 25").bind(email).all();
   const hoy = await pldEvaluar(env, email, { ...cfg, enabled: true, pausedUntil: null }, false);
@@ -329,7 +330,7 @@ async function pldPanorama(env: Env, email: string, persona: PldPersona, sesionE
     ok: true,
     email,
     persona,
-    personas: personas.results ?? [],
+    personas: (personas.results ?? []).filter((x, i, todos) => todos.findIndex((y) => y.email === x.email) === i),
     config: cfg,
     referentes: referentes.results ?? [],
     registro: registro.results ?? [],
@@ -349,8 +350,8 @@ async function pldPanorama(env: Env, email: string, persona: PldPersona, sesionE
 
 type PldPersona = { email: string; nombre: string; propia: boolean; soloLectura: boolean };
 
-/** Para quién es la página. Un adulto arma la suya. Un MENOR solo puede mirar la suya, sin editar: la arma el titular de la familia,
- *  que también puede mirar y armar la de cada menor (con ?persona=correo). */
+/** Para quién es la página. Un adulto arma la suya. Un MENOR solo puede mirar la suya, sin editar: la arma el titular de la familia
+ *  (o un adulto de esa familia, por ejemplo un hermano mayor cuando el padre viaja), que también puede mirar y armar la de cada menor (con ?persona=correo). */
 async function pldResolverPersona(env: Env, sesionEmail: string, pedida: string): Promise<PldPersona | { error: string; status: number }> {
   const yo = normalizeEmail(sesionEmail);
   const otra = pedida ? normalizeEmail(pedida) : "";
@@ -360,7 +361,8 @@ async function pldResolverPersona(env: Env, sesionEmail: string, pedida: string)
     return { email: sesionEmail, nombre: String(soyMenor.name ?? ""), propia: true, soloLectura: true };
   }
   if (!otra || otra === yo) return { email: sesionEmail, nombre: "", propia: true, soloLectura: false };
-  const menor = await env.DB.prepare("SELECT name FROM family_members WHERE owner_email=? AND member_email=? AND status='activo' AND role='menor' LIMIT 1").bind(yo, otra).first<{ name: string }>();
+  const menor = await env.DB.prepare("SELECT name FROM family_members WHERE member_email=? AND status='activo' AND role='menor' AND (owner_email=? OR owner_email IN (SELECT owner_email FROM family_members WHERE member_email=? AND status='activo' AND role='adulto')) LIMIT 1")
+    .bind(otra, yo, yo).first<{ name: string }>();
   if (!menor) return { error: "no_autorizado", status: 403 };
   return { email: otra, nombre: String(menor.name ?? ""), propia: false, soloLectura: false };
 }
@@ -474,6 +476,10 @@ async function pldApiDuenio(request: Request, env: Env) {
     if (horas > 0) await pldCerrarEpisodio(env, email, cfg, `pausó los avisos por ${pldHorasTexto(horas)}`);
   } else {
     return json({ error: "accion_desconocida" }, 400);
+  }
+  if (!persona.propia) {
+    const hizo: Record<string, string> = { agregar: "agregó un referente", quitar: "quitó un referente", config: "cambió las condiciones o el encendido", pausa: "cambió la pausa", casa: "marcó la casa", reenviar: "reenvió un enlace" };
+    await pldRegistrar(env, email, null, "config", `${sesion.email} (administrador de la familia) ${hizo[accion] ?? "hizo un cambio"}.`);
   }
   return json({ ...(await pldPanorama(env, email, persona, sesion.email)), ...extra });
 }

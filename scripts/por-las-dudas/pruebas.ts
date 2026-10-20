@@ -558,10 +558,26 @@ console.log("== Menores: solo ven; el titular arma la proteccion de cada menor")
   ok((await apiDe(MENOR)).status === 403 && (await apiDe(MENOR, { accion: "pausa", horas: 8 })).status === 403, "alguien de otra familia no puede ver ni armar la de Tomi");
   pn = await (await api()).json();
   ok(pn.persona.soloLectura === false && pn.personas.length === 0, "y su propia pagina es normal");
+  // el padre viaja y el hermano mayor (adulto de la familia) cuida a Tomi
   setSesion({ email: ADULTO, method: "passkey" });
-  ok((await apiDe(MENOR)).status === 403, "un adulto de la familia que no es el titular tampoco arma la de Tomi");
   pn = await (await api()).json();
-  ok(pn.persona.soloLectura === false && (await api({ accion: "pausa", horas: 1 })).status === 200, "un adulto arma la suya sin restricciones");
+  ok(pn.persona.soloLectura === false && pn.personas.length === 1 && pn.personas[0].email === MENOR && (await api({ accion: "pausa", horas: 1 })).status === 200, "un adulto de la familia arma la suya y ve a Tomi en el selector");
+  pn = await (await apiDe(MENOR)).json();
+  ok(pn.persona.propia === false && pn.persona.soloLectura === false && pn.persona.nombre === "Tomi" && pn.referentes.length === 1, "el hermano mayor (adulto de la familia) ve la proteccion de Tomi");
+  rr = await apiDe(MENOR, { accion: "agregar", name: "Tia", email: "tia@correo.com" });
+  ok(rr.status === 200 && (await (await apiDe(MENOR)).json() as any).referentes.length === 2 && (await (await api()).json() as any).referentes.length === 0, "y puede elegir un referente para Tomi (sin tocar los suyos)");
+  rr = await (await apiDe(MENOR, { accion: "pausa", horas: 12 })).json();
+  ok(rr.registro.some((x: any) => x.detail === ADULTO + " (administrador de la familia) cambi\u00f3 la pausa."), "el registro de Tomi anota quien hizo el cambio (sin modo oculto)");
+  await apiDe(MENOR, { accion: "pausa", horas: 0 });
+  // un adulto de OTRA familia, o dado de baja, no
+  fam.run("fm4", AJENO, "otra@correo.com", "Otra", "Otro", "adulto", "activo");
+  fam.run("fm5", DUENIO, "exadulto@correo.com", "Ex", "Lucas", "adulto", "baja");
+  setSesion({ email: "otra@correo.com", method: "passkey" });
+  ok((await apiDe(MENOR)).status === 403 && (await (await api()).json() as any).personas.length === 0, "un adulto de otra familia no arma la de Tomi");
+  setSesion({ email: "exadulto@correo.com", method: "passkey" });
+  ok((await apiDe(MENOR)).status === 403, "un adulto dado de baja de la familia tampoco");
+  setSesion({ email: ADULTO, method: "passkey" });
+  ok((await apiDe(DUENIO)).status === 403 && (await apiDe("otra@correo.com")).status === 403, "un adulto no arma la de otro adulto (ni la del titular)");
   setSesion({ email: DUENIO, method: "passkey" });
   ok((await apiDe(ADULTO)).status === 403 && (await apiDe(BAJA)).status === 403 && (await apiDe("nadie@correo.com")).status === 403, "el titular no arma la de un adulto, ni de un menor dado de baja, ni de cualquiera");
   setSesion({ email: DUENIO, method: "emergency" });
@@ -571,7 +587,7 @@ console.log("== Menores: solo ven; el titular arma la proteccion de cada menor")
   // el SOS del menor avisa a los referentes de Tomi (con el Modo Cautela encendido o apagado)
   sqlite.exec("UPDATE pld_referentes SET status='aceptado' WHERE owner_email='" + MENOR + "'");
   const n = correos.length;
-  ok((await pldAvisarSos(env, MENOR, ubic)) === 1 && correos.length === n + 1 && correos[n].to === "mama@correo.com" && /Tomi/.test(correos[n].subject), "si Tomi aprieta el SOS, se le avisa a su referente");
+  ok((await pldAvisarSos(env, MENOR, ubic)) === 2 && correos.length === n + 2 && correos.slice(n).map((c) => c.to).sort().join() === "mama@correo.com,tia@correo.com" && /Tomi/.test(correos[n].subject), "si Tomi aprieta el SOS, se les avisa a sus referentes (los que eligio el titular y el hermano mayor)");
   const tp: string = await (pldPaginaDuenio() as any).text();
   ok(/function personaPantalla/.test(tp) && /Esto lo completa el administrador de tu familia/.test(tp) && /Est\u00e1s armando la protecci\u00f3n de/.test(tp) && /\?persona=/.test(tp), "la pagina avisa 'Esto lo completa el administrador de tu familia', arma la de otro y muestra el selector");
   ok(/Mientras est\u00e1 apagado no se manda ning\u00fan aviso autom\u00e1tico a tus referentes\. El SOS sigue avisando/.test(tp) && !/tampoco el del SOS/.test(tp), "la pagina dice que el SOS sigue avisando aunque este apagado");

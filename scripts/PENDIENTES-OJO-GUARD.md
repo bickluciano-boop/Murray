@@ -1065,6 +1065,11 @@ Actualizado: 16/10/2026.
   y arma la de cada **menor activo** de su familia (referentes aparte por persona; el mail al referente usa el nombre del menor); no puede armar la de un adulto, de otra familia ni dado de baja. Para la persona cuidada
   (papá) vale lo mismo si se le pone el rol **Menor** en Cuidados. Sin tocar tablas. Los textos de la página siguen en segunda persona ("tus referentes"); arriba aparece un cartel que explica de quién es. Pendiente a decidir: si los
   otros adultos de la familia (no solo el titular) también pueden armar la de un menor, y la pantalla equivalente en la app.
+  **Adultos de la familia como administradores (Luciano, 20/10/2026):** "puede pasar que el padre viaje y el hermano mayor lo cuide; mientras sea plan familiar, sí" → responde la pregunta abierta: **los otros adultos
+  de la familia también arman la protección de un menor** (no solo el titular). Armado, sin instalar: `aplicar-menores-adultos-panel.ps1` (respaldo `.bak-pldadultos`; incluye el de menores, acepta cualquiera de las
+  cinco versiones anteriores; 188 pruebas y navegador ok): un adulto activo de la familia ve a los menores en el selector y arma sus referentes / condiciones / pausa / encendido; no vale para adultos, otra familia ni dados de
+  baja; en el registro del menor queda **quién hizo cada cambio** ("hermano@correo.com (administrador de la familia) agregó un referente."). **Falta:** atarlo al **plan familiar** cuando existan planes (hoy el servidor no tiene
+  planes: vale para toda familia armada); y la pantalla equivalente en la app.
   **Tu protección: botones con aire y "Estado de tu teléfono" (fotos de Luciano del celular, 19/10/2026).** Instalada la versión corta (plegable); en las fotos se vio que el Modo Cautela quedó **APAGADO**
   ("Ahora: apagado") por las pruebas: hay que **encenderlo** (con apagado, tampoco avisa el SOS a los referentes). Críticas: "los botones muy juntos" (pausas y "Mandar enlace de nuevo" / "Quitar") y
   "Cómo estás hoy parece que se pregunta el ánimo; poco claro, mucha info, poco amigable". Armado, sin instalar: `aplicar-tu-proteccion-claro-panel.ps1` (respaldo `.bak-pldclaro`, solo servidor, 158 pruebas y navegador a

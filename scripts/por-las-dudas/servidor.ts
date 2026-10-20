@@ -3,6 +3,7 @@ const hace2 = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
 sqlite.prepare("INSERT INTO devices (id,name,owner_email,platform,battery,last_seen_at,last_location_json,last_location_at,push_token,approval_status,device_role) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
   .run("dev1", "Celu de Lucas", "lucas@correo.com", "android", 8, hace2(150), JSON.stringify({ latitude: -34.52, longitude: -58.4, address: "Av. Siempre Viva 742" }), hace2(150), "ExpoPushToken[abc]", "approved", "primary");
 sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fm1", "lucas@correo.com", "tomi@correo.com", "Tomi", "Lucas", "menor", "activo");
+sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fm2", "lucas@correo.com", "ana@correo.com", "Ana", "Lucas", "adulto", "activo");
 setSesion({ email: "lucas@correo.com", method: "passkey" });
 const servidor = createServer(async (req, res) => {
   const origen = "http://localhost:" + (servidor.address() as any).port;

@@ -41,6 +41,18 @@ const B = 'http://localhost:8799';
   await pag.click('#detCondiciones summary');
   console.log('menor: puede abrir Condiciones:', await pag.isVisible('#cDesde'), '| campo bloqueado:', await pag.isDisabled('#cDesde'));
   await pag.screenshot({ path: 'e2e_menor_solo_lectura.png', fullPage: true });
+  // --- el hermano mayor (adulto de la familia) cuida a Tomi mientras el padre viaja
+  await sesion('ana@correo.com');
+  await pag.goto(B + '/por-las-dudas');
+  await pag.waitForFunction(() => document.getElementById('paraQuien').style.display === 'block');
+  console.log('hermano mayor: selector:', await pag.$$eval('#persona option', (o) => o.map((x) => x.textContent)), '| solo lectura:', await pag.isVisible('#soloLectura'));
+  await pag.selectOption('#persona', 'tomi@correo.com');
+  await pag.waitForFunction(() => document.getElementById('titulo').textContent.includes('Tomi') && document.getElementById('referentes').textContent.includes('Mamá de Tomi'));
+  await pag.fill('#rNombre', 'Tía'); await pag.fill('#rCorreo', 'tia@correo.com'); await pag.click('#rAgregar');
+  await pag.waitForFunction(() => document.getElementById('referentes').textContent.includes('Tía'));
+  await pag.click('#detRegistro summary');
+  console.log('hermano mayor arma a Tomi; registro:', (await pag.textContent('#registro')).replace(/\s+/g, ' ').slice(0, 170));
+  await sesion('tomi@correo.com');
   // intento por la API directa
   const r = await fetch(B + '/api/remote/por-las-dudas', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'pausa', horas: 8 }) });
   console.log('menor: pausa por la API ->', r.status, JSON.stringify(await r.json()));
