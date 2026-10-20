@@ -1187,6 +1187,11 @@ Actualizado: 16/10/2026.
 
 **Pedido de Luciano (20/10/2026): "arranquemos con lo de las builds y hay que programar el seguimiento Guardián".** Orden: primero los puntos 1 y 2 de la lista (para armar los parches se le pidió un comando de lectura de la app y del servidor: avisos, tareas en segundo plano, app.json y `sendExpoNotice`); en paralelo, la primera versión del Modo Guardián en el servidor (reloj en el servidor, extender 10/20/30 min hasta 3 veces, "No llegué bien" avisa como SOS).
 
+**Hallazgos de la lectura de la app (20/10/2026):** (a) el servidor ya puede mandar datos dentro del aviso (`sendExpoNotice(token, título, texto, { data })`): el "¿Estás bien?" y los avisos del Guardián pueden llevar su enlace para que la app lo abra al tocarlos;
+(b) la app usa `expo-background-task`, `expo-task-manager`, `expo-location`, `expo-notifications` y un módulo propio `modules/exact-alarm` (con `ExactAlarmBootReceiver.kt`); (c) las notas de la app dicen que la **causa raíz de que la app no despierte tras reiniciar
+es el *direct boot* de Android** (hasta el primer desbloqueo la app no corre ni recibe FCM ni BOOT_COMPLETED), "confirmada, no resuelta": falta escribir un **modo mínimo nativo** (receptor `directBootAware` con `LOCKED_BOOT_COMPLETED`). Es código nativo y se prueba
+solo con una build en un teléfono real; antes de escribirlo se pidió leer el módulo y esas notas.
+
 ### Lista de la próxima build de la app (juntada el 20/10/2026, falta armarla y probarla)
 
 1. Pantalla **"Estoy bien"** al tocar el aviso "¿Estás bien?" (no depender del mail).
