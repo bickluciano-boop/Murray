@@ -409,10 +409,10 @@ console.log("== SOS: tambien se les avisa a los referentes");
   const antesLog = sqlite.prepare("SELECT COUNT(*) AS n FROM pld_log WHERE kind='sos'").get().n;
   ok((await pldAvisarSos(env, DUENIO, ubic)) === 0 && sqlite.prepare("SELECT COUNT(*) AS n FROM pld_log WHERE kind='sos'").get().n === antesLog, "si los mails fallan no se registra como avisado");
   setCorreoOk(true);
-  // apagado: no avisa y no cuenta como destinatario
+  // con el Modo Cautela apagado, el SOS avisa igual (es algo que la persona aprieta a proposito)
   await api({ accion: "config", config: { enabled: false } });
   n = correos.length;
-  ok((await pldAvisarSos(env, DUENIO, ubic)) === 0 && correos.length === n && (await pldTieneGuardianes(env, DUENIO)) === false, "con Por las dudas apagado no avisa ni cuenta como destinatario");
+  ok((await pldAvisarSos(env, DUENIO, ubic)) === 2 && correos.length === n + 2 && (await pldTieneGuardianes(env, DUENIO)) === true, "con el Modo Cautela apagado el SOS avisa igual y los referentes cuentan como destinatarios");
   await api({ accion: "config", config: { enabled: true } });
   // nadie acepto
   sqlite.exec("UPDATE pld_referentes SET status='pendiente'");
@@ -514,6 +514,70 @@ console.log("== Pausar o apagar con un aviso en marcha");
   ok(episodio() === undefined && correos.length === n, "si ya dijo 'Estoy bien', tampoco se les manda nada");
 }
 
+console.log("== Menores: solo ven; el titular arma la proteccion de cada menor");
+{
+  limpiar();
+  sqlite.exec("DELETE FROM family_members");
+  const MENOR = "tomi@correo.com", ADULTO = "ana@correo.com", AJENO = "otro@correo.com", BAJA = "viejo@correo.com";
+  const fam = sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)");
+  fam.run("fm1", DUENIO, MENOR, "Tomi", "Lucas", "menor", "activo");
+  fam.run("fm2", DUENIO, ADULTO, "Ana", "Lucas", "adulto", "activo");
+  fam.run("fm3", DUENIO, BAJA, "Viejo", "Lucas", "menor", "baja");
+  const apiDe = (persona: string, cuerpo?: unknown) => pldApiDuenio(pedido(ORIGEN + "/api/remote/por-las-dudas?persona=" + encodeURIComponent(persona), cuerpo === undefined ? "GET" : "POST", cuerpo), env);
+  const ubic = { latitude: -34.6, longitude: -58.4, address: "Av. Siempre Viva 742" };
+
+  setSesion({ email: DUENIO, method: "passkey" });
+  await api({ accion: "pausa", horas: 0 });
+  let pn: any = await (await api()).json();
+  ok(pn.persona.propia === true && pn.persona.soloLectura === false && pn.personas.length === 1 && pn.personas[0].email === MENOR && pn.personas[0].name === "Tomi", "el titular ve su pagina y la lista de sus menores (solo los activos con rol Menor)");
+
+  let rr: any = await apiDe(MENOR, { accion: "agregar", name: "Mama de Tomi", email: "mama@correo.com" });
+  ok(rr.status === 200, "el titular elige un referente para el menor");
+  const mailMama = correos.filter((c) => c.to === "mama@correo.com").pop()!;
+  ok(/Tomi/.test(mailMama.subject + mailMama.html), "el mail al referente habla de Tomi (el nombre sale de la familia)");
+  pn = await (await apiDe(MENOR)).json();
+  ok(pn.persona.propia === false && pn.persona.nombre === "Tomi" && pn.referentes.length === 1 && pn.config.displayName === "Tomi", "la pagina de Tomi muestra sus referentes y su nombre");
+  pn = await (await api()).json();
+  ok(pn.referentes.length === 0, "los referentes de Tomi no se mezclan con los del titular");
+  ok((await (await apiDe(MENOR, { accion: "pausa", horas: 8 })).json() as any).config.pausedUntil !== null && (await (await api()).json() as any).config.pausedUntil === null, "el titular puede pausar el Modo Cautela de Tomi sin tocar el suyo");
+  ok((await apiDe(MENOR, { accion: "config", config: { farKm: 7 } })).status === 200 && (await pldLeerConfig(env, MENOR)).farKm === 7 && (await pldLeerConfig(env, DUENIO)).farKm !== 7, "y cambiar sus condiciones");
+
+  // el menor ve, pero no edita
+  setSesion({ email: MENOR, method: "passkey" });
+  pn = await (await api()).json();
+  ok(pn.persona.soloLectura === true && pn.persona.propia === true && pn.referentes.length === 1 && pn.personas.length === 0, "el menor ve su protecci\u00f3n armada, en modo solo lectura");
+  for (const [nombre, cuerpo] of [["agregar", { accion: "agregar", name: "X", email: "x@y.com" }], ["quitar", { accion: "quitar", id: pn.referentes[0].id }], ["config", { accion: "config", config: { enabled: false } }], ["pausa", { accion: "pausa", horas: 8 }], ["casa", { accion: "casa" }], ["reenviar", { accion: "reenviar", id: pn.referentes[0].id }]] as Array<[string, unknown]>) {
+    const rx = await api(cuerpo);
+    ok(rx.status === 403 && (await rx.json() as any).error === "solo_administrador", `el menor no puede: ${nombre}`);
+  }
+  ok((await pldLeerConfig(env, MENOR)).enabled === true && (await pldLeerConfig(env, MENOR)).farKm === 7, "y no se cambio nada");
+  ok((await apiDe(DUENIO)).status === 403 && (await apiDe(ADULTO)).status === 403, "el menor tampoco puede mirar ni armar la proteccion de otros");
+
+  // los demas
+  setSesion({ email: AJENO, method: "passkey" });
+  ok((await apiDe(MENOR)).status === 403 && (await apiDe(MENOR, { accion: "pausa", horas: 8 })).status === 403, "alguien de otra familia no puede ver ni armar la de Tomi");
+  pn = await (await api()).json();
+  ok(pn.persona.soloLectura === false && pn.personas.length === 0, "y su propia pagina es normal");
+  setSesion({ email: ADULTO, method: "passkey" });
+  ok((await apiDe(MENOR)).status === 403, "un adulto de la familia que no es el titular tampoco arma la de Tomi");
+  pn = await (await api()).json();
+  ok(pn.persona.soloLectura === false && (await api({ accion: "pausa", horas: 1 })).status === 200, "un adulto arma la suya sin restricciones");
+  setSesion({ email: DUENIO, method: "passkey" });
+  ok((await apiDe(ADULTO)).status === 403 && (await apiDe(BAJA)).status === 403 && (await apiDe("nadie@correo.com")).status === 403, "el titular no arma la de un adulto, ni de un menor dado de baja, ni de cualquiera");
+  setSesion({ email: DUENIO, method: "emergency" });
+  ok((await apiDe(MENOR)).status === 403, "con una sesion de emergencia no se entra a ninguna");
+  setSesion({ email: DUENIO, method: "passkey" });
+
+  // el SOS del menor avisa a los referentes de Tomi (con el Modo Cautela encendido o apagado)
+  sqlite.exec("UPDATE pld_referentes SET status='aceptado' WHERE owner_email='" + MENOR + "'");
+  const n = correos.length;
+  ok((await pldAvisarSos(env, MENOR, ubic)) === 1 && correos.length === n + 1 && correos[n].to === "mama@correo.com" && /Tomi/.test(correos[n].subject), "si Tomi aprieta el SOS, se le avisa a su referente");
+  const tp: string = await (pldPaginaDuenio() as any).text();
+  ok(/function personaPantalla/.test(tp) && /Esto lo completa el administrador de tu familia/.test(tp) && /Est\u00e1s armando la protecci\u00f3n de/.test(tp) && /\?persona=/.test(tp), "la pagina avisa 'Esto lo completa el administrador de tu familia', arma la de otro y muestra el selector");
+  ok(/Mientras est\u00e1 apagado no se manda ning\u00fan aviso autom\u00e1tico a tus referentes\. El SOS sigue avisando/.test(tp) && !/tampoco el del SOS/.test(tp), "la pagina dice que el SOS sigue avisando aunque este apagado");
+  sqlite.exec("DELETE FROM family_members");
+}
+
 console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
 {
   const tp: string = await (pldPaginaDuenio() as any).text();
@@ -524,7 +588,7 @@ console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
   ok(/id="detCondiciones">.*?id="cGuardar".*?<\/details>/s.test(tp) && /id="detRegistro">.*?id="registro".*?<\/details>/s.test(tp) && /id="detHoy">.*?id="hoy".*?<\/details>/s.test(tp), "los campos estan dentro de su tarjeta plegable");
   ok(!/<div class="tarjeta"><p>Te acompa\u00f1a en el camino\./.test(tp) && /Modo Guardi\u00e1n <span class="pill">Pr\u00f3ximamente<\/span><\/h2>\s*<p class="suave"[^>]*>Te acompa\u00f1a en el camino de vuelta/.test(tp), "Modo Guardian es una sola linea");
   ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /Encender Modo Cautela|Apagar Modo Cautela/.test(tp) && /Por las dudas: si dejo de responder/.test(tp), "el interruptor y el subtitulo usan el nombre nuevo");
-  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro"];
+  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
   ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && />12 horas<\/button>/.test(tp) && />24 horas<\/button>/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar por 8, 12 y 24 horas, otro tiempo y quitar la pausa");
   ok(!/C\u00f3mo est\u00e1s hoy/.test(tp) && /Estado de tu tel\u00e9fono/.test(tp), "la tarjeta ya no se llama 'Como estas hoy' (parecia una pregunta de animo): se llama 'Estado de tu telefono'");

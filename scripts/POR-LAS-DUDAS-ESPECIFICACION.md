@@ -114,3 +114,10 @@ señales de riesgo), detección de arrebato, SOS que también avise a los refere
 - Si los avisos van solo por mail o también por SMS/WhatsApp.
 - Cómo se verifica que el referente es quien dice (enlace personal + código por mail).
 - Revisión legal.
+
+## Menores y administrador de la familia (decidido el 20/10/2026)
+
+- Los datos del Modo Cautela (referentes, condiciones, pausa, apagar y encender) los completa una persona adulta. **Un usuario menor solo puede ver, no editar**: la página le muestra su protección con los campos bloqueados y el servidor rechaza cualquier cambio (403 `solo_administrador`).
+- **El administrador de la familia (el titular)** arma la protección de cada menor desde la misma página (`/guardian?persona=<correo del menor>`), con un selector "Estás viendo la protección de". Cada persona tiene sus propios referentes. No vale para adultos, ni para otra familia, ni para un menor dado de baja.
+- **El SOS avisa siempre a los referentes**, esté el Modo Cautela encendido, apagado o en pausa.
+- Pendiente de decidir: si los otros adultos de la familia también pueden armar la de un menor, y la pantalla equivalente dentro de la app.

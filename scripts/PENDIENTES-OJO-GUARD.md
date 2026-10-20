@@ -1058,6 +1058,13 @@ Actualizado: 16/10/2026.
   Modo noche / Cerrar acceso, y más importante**; menú negro **más ancho** para que no quede una palabra sola abajo. Armado, sin instalar: `aplicar-og-importante-panel.ps1` (respaldo `.bak-og3`, solo panel,
   dos archivos): OG dorado macizo con sombra (abierto se invierte), a la izquierda de la segunda fila; menú de todo el ancho en el celular (hasta 380 px en compu); texto de Modo Cautela acortado
   ("Si dejo de responder, mis referentes se enteran."). Ojo: en el panel real la regla `.ghost` pisaba los colores del OG (se veía gris, no dorado); por eso el estilo nuevo es más específico y usa `!important`.
+  **Decisiones de Luciano (20/10/2026):** (1) **el SOS avisa a los referentes SIEMPRE**, aunque el Modo Cautela esté apagado ("sí" a la pregunta abierta); (2) **un usuario menor solo puede ver, no editar**
+  ("con usuario de mayor de edad sí; si es menor no podría tocar, solo para ver sin editar"): los datos (referentes, condiciones, pausa, apagar) los completa el **administrador de la familia (el titular)**.
+  **Armado, sin instalar:** `aplicar-menores-solo-ver-panel.ps1` (respaldo `.bak-pldmenores`, solo servidor, 183 pruebas y navegador ok): el menor ve su página en modo solo lectura (campos bloqueados, aviso "Esto lo completa
+  el administrador de tu familia" y el servidor responde 403 `solo_administrador` a cualquier cambio); un adulto arma la suya; el titular ve un selector "Estás viendo la protección de: Yo / Tomi" (`/guardian?persona=correo`)
+  y arma la de cada **menor activo** de su familia (referentes aparte por persona; el mail al referente usa el nombre del menor); no puede armar la de un adulto, de otra familia ni dado de baja. Para la persona cuidada
+  (papá) vale lo mismo si se le pone el rol **Menor** en Cuidados. Sin tocar tablas. Los textos de la página siguen en segunda persona ("tus referentes"); arriba aparece un cartel que explica de quién es. Pendiente a decidir: si los
+  otros adultos de la familia (no solo el titular) también pueden armar la de un menor, y la pantalla equivalente en la app.
   **Tu protección: botones con aire y "Estado de tu teléfono" (fotos de Luciano del celular, 19/10/2026).** Instalada la versión corta (plegable); en las fotos se vio que el Modo Cautela quedó **APAGADO**
   ("Ahora: apagado") por las pruebas: hay que **encenderlo** (con apagado, tampoco avisa el SOS a los referentes). Críticas: "los botones muy juntos" (pausas y "Mandar enlace de nuevo" / "Quitar") y
   "Cómo estás hoy parece que se pregunta el ánimo; poco claro, mucha info, poco amigable". Armado, sin instalar: `aplicar-tu-proteccion-claro-panel.ps1` (respaldo `.bak-pldclaro`, solo servidor, 158 pruebas y navegador a

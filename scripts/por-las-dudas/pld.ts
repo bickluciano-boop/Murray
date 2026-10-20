@@ -317,14 +317,19 @@ async function pldInvitar(env: Env, origen: string, duenio: string, cfg: PldConf
 }
 
 /** Lo que ve el dueño en su página: referentes, condiciones, cómo está hoy y el registro. */
-async function pldPanorama(env: Env, email: string) {
+async function pldPanorama(env: Env, email: string, persona: PldPersona, sesionEmail: string) {
   const cfg = await pldLeerConfig(env, email);
+  if (!persona.propia && !cfg.displayName.trim() && persona.nombre) cfg.displayName = persona.nombre.slice(0, 60);
+  const personas = persona.soloLectura ? { results: [] as Array<{ email: string; name: string }> }
+    : await env.DB.prepare("SELECT member_email AS email,name FROM family_members WHERE owner_email=? AND status='activo' AND role='menor' ORDER BY name ASC").bind(normalizeEmail(sesionEmail)).all<{ email: string; name: string }>();
   const referentes = await env.DB.prepare("SELECT id,name,email,status,created_at AS createdAt,accepted_at AS acceptedAt,muted_until AS mutedUntil FROM pld_referentes WHERE owner_email=? AND status<>'baja' ORDER BY created_at ASC").bind(email).all();
   const registro = await env.DB.prepare("SELECT l.kind,l.detail,l.created_at AS createdAt,r.name AS referente FROM pld_log l LEFT JOIN pld_referentes r ON r.id=l.referente_id WHERE l.owner_email=? ORDER BY l.created_at DESC LIMIT 25").bind(email).all();
   const hoy = await pldEvaluar(env, email, { ...cfg, enabled: true, pausedUntil: null }, false);
   return {
     ok: true,
     email,
+    persona,
+    personas: personas.results ?? [],
     config: cfg,
     referentes: referentes.results ?? [],
     registro: registro.results ?? [],
@@ -340,6 +345,24 @@ async function pldPanorama(env: Env, email: string) {
       motivo: hoy.motivo,
     },
   };
+}
+
+type PldPersona = { email: string; nombre: string; propia: boolean; soloLectura: boolean };
+
+/** Para quién es la página. Un adulto arma la suya. Un MENOR solo puede mirar la suya, sin editar: la arma el titular de la familia,
+ *  que también puede mirar y armar la de cada menor (con ?persona=correo). */
+async function pldResolverPersona(env: Env, sesionEmail: string, pedida: string): Promise<PldPersona | { error: string; status: number }> {
+  const yo = normalizeEmail(sesionEmail);
+  const otra = pedida ? normalizeEmail(pedida) : "";
+  const soyMenor = await env.DB.prepare("SELECT name FROM family_members WHERE member_email=? AND status='activo' AND role='menor' LIMIT 1").bind(yo).first<{ name: string }>();
+  if (soyMenor) {
+    if (otra && otra !== yo) return { error: "solo_administrador", status: 403 };
+    return { email: sesionEmail, nombre: String(soyMenor.name ?? ""), propia: true, soloLectura: true };
+  }
+  if (!otra || otra === yo) return { email: sesionEmail, nombre: "", propia: true, soloLectura: false };
+  const menor = await env.DB.prepare("SELECT name FROM family_members WHERE owner_email=? AND member_email=? AND status='activo' AND role='menor' LIMIT 1").bind(yo, otra).first<{ name: string }>();
+  if (!menor) return { error: "no_autorizado", status: 403 };
+  return { email: otra, nombre: String(menor.name ?? ""), propia: false, soloLectura: false };
 }
 
 function pldHorasTexto(horas: number) {
@@ -372,12 +395,19 @@ async function pldApiDuenio(request: Request, env: Env) {
   const sesion = await readSessionInfo(request, env.SESSION_SECRET);
   if (!sesion) return json({ error: "unauthorized" }, 401);
   if (sesion.method === "emergency") return json({ error: "not_allowed_in_emergency" }, 403);
-  const email = sesion.email;
-  if (request.method === "GET") return json(await pldPanorama(env, email));
+  const persona = await pldResolverPersona(env, sesion.email, new URL(request.url).searchParams.get("persona") ?? "");
+  if ("error" in persona) return json({ error: persona.error }, persona.status);
+  const email = persona.email;
+  if (request.method === "GET") return json(await pldPanorama(env, email, persona, sesion.email));
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  if (persona.soloLectura) return json({ error: "solo_administrador" }, 403);
   const cuerpo = await request.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
   const accion = String(cuerpo.accion ?? "");
-  const cfg = await pldLeerConfig(env, email);
+  let cfg = await pldLeerConfig(env, email);
+  if (!persona.propia && !cfg.displayName.trim() && persona.nombre) {
+    cfg = { ...cfg, displayName: persona.nombre.slice(0, 60) };
+    await pldGuardarConfig(env, email, cfg);
+  }
   const origen = new URL(request.url).origin;
   let extra: Record<string, unknown> = {};
 
@@ -445,7 +475,7 @@ async function pldApiDuenio(request: Request, env: Env) {
   } else {
     return json({ error: "accion_desconocida" }, 400);
   }
-  return json({ ...(await pldPanorama(env, email)), ...extra });
+  return json({ ...(await pldPanorama(env, email, persona, sesion.email)), ...extra });
 }
 
 /** Estado que ve el referente al abrir su enlace (sin sesión: el enlace es personal). */
@@ -692,17 +722,14 @@ async function pldCronPersona(env: Env, email: string) {
 // ---------------------------------------------------------------------------
 // SOS: cuando la persona aprieta el botón de ayuda (el de la app o un disparador del sistema), también se les avisa a sus referentes.
 // Lo llaman nativeFamilySos (al pedir y al cancelar) desde src/index.ts. Es una acción de la propia persona, así que no espera ni pregunta,
-// va con la ubicación del SOS y no depende de la pausa de avisos (sí de que el Modo Cautela esté encendido).
+// va con la ubicación del SOS y no depende de la pausa de avisos ni de que el Modo Cautela esté encendido o apagado.
 // ---------------------------------------------------------------------------
 async function pldTieneGuardianes(env: Env, email: string) {
-  const cfg = await pldLeerConfig(env, email);
-  if (!cfg.enabled) return false;
   return (await pldReferentesActivos(env, email)).length > 0;
 }
 
 async function pldAvisarSos(env: Env, email: string, ubicacion: Record<string, unknown> | null) {
   const cfg = await pldLeerConfig(env, email);
-  if (!cfg.enabled) return 0;
   const referentes = await pldReferentesActivos(env, email);
   if (!referentes.length) return 0;
   const quien = pldNombreDe(email, cfg);
@@ -775,12 +802,15 @@ function pldPagina(titulo: string, cuerpo: string) {
 /** Página del dueño (/guardian y /por-las-dudas): tus referentes y los modos. */
 function pldPaginaDuenio() {
   return pldPagina("Tu protección · Ojo Guard", `
-<h1>Tu protección</h1>
+<h1 id="titulo">Tu protección</h1>
 <p>Elegí una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los modos de más abajo.</p>
 <p class="suave">Esta función está en validación: ya la probamos de punta a punta con mails reales, pero todavía no en el día a día.</p>
 <div id="aviso"></div>
 <div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes tenés que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entrá, y después volvé a esta página.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entré, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
+<div id="paraQuien" class="tarjeta" style="display:none"><label style="margin-top:0">Estás viendo la protección de</label><select id="persona"></select></div>
+<div id="soloLectura" class="tarjeta" style="display:none"><p style="margin:0"><b>Esto lo completa el administrador de tu familia.</b> Acá podés ver cómo está armada tu protección, pero no cambiarla.</p></div>
+<div id="enNombreDe" class="tarjeta" style="display:none"></div>
 <div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
 <p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar. Si apretás el SOS, también se les avisa a ellos.</small>
@@ -792,7 +822,7 @@ function pldPaginaDuenio() {
 <label>Pausar por</label><div class="botones tres" style="margin-top:6px"><button class="sec" data-h="8">8 horas</button><button class="sec" data-h="12">12 horas</button><button class="sec" data-h="24">24 horas</button></div>
 <div class="dos"><div><label>Otro tiempo (horas, de 1 a 72)</label><input id="pHoras" type="number" min="1" max="72" placeholder="Ej.: 36"></div><div><label>&nbsp;</label><button class="sec" id="pOtro">Pausar ese tiempo</button></div></div>
 <p><button class="sec" data-h="0">Quitar pausa</button></p><div id="pausa" class="suave"></div>
-<p style="margin-top:18px"><b>Apagar el Modo Cautela</b> hasta que vos lo vuelvas a prender. Mientras está apagado no se manda ningún aviso automático a tus referentes, tampoco el del SOS.</p>
+<p style="margin-top:18px"><b>Apagar el Modo Cautela</b> hasta que vos lo vuelvas a prender. Mientras está apagado no se manda ningún aviso automático a tus referentes. El SOS sigue avisando.</p>
 <p><button id="cEncender">Apagar Modo Cautela</button></p></div>
 <details class="tarjeta" id="detHoy"><summary><span><h2>Estado de tu teléfono</h2><small id="hoyResumen" class="suave" style="display:block;margin-top:2px"></small></span></summary><div id="hoy" class="suave">Cargando…</div></details>
 <details class="tarjeta" id="detCondiciones"><summary><h2>Condiciones</h2></summary><small class="suave">Un referente solo ve tu última señal si se cumplen al menos estas señales a la vez. Cuando se cumplen, te mandamos un “¿Estás bien?” (mail y aviso en el teléfono) y, si en unos 15 minutos no respondés, les avisamos a tus referentes por mail.</small>
@@ -810,8 +840,9 @@ function pldPaginaDuenio() {
 (function(){
 var $=function(i){return document.getElementById(i)};
 var encendido=true;
+var PERSONA=new URLSearchParams(location.search).get("persona")||"";
 function aviso(t){$("aviso").textContent=t||""}
-function api(cuerpo){return fetch("/api/remote/por-las-dudas",{method:cuerpo?"POST":"GET",headers:{"content-type":"application/json"},body:cuerpo?JSON.stringify(cuerpo):undefined,credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(r.status===401){var er=new Error("Entrá primero al panel de Ojo Guard MS con tu cuenta y volvé a abrir esta página.");er.sinSesion=true;throw er}if(!r.ok){throw new Error(({invalid_referente:"Revisá el nombre y el correo.",referente_es_vos:"El referente no puede ser vos.",demasiados_referentes:"Ya tenés 5 referentes.",referente_repetido:"Ese correo ya es referente.",sin_ubicacion:"Todavía no hay una ubicación de tu teléfono."})[d.error]||"No se pudo. Probá de nuevo.")}return d})})}
+function api(cuerpo){return fetch("/api/remote/por-las-dudas"+(PERSONA?"?persona="+encodeURIComponent(PERSONA):""),{method:cuerpo?"POST":"GET",headers:{"content-type":"application/json"},body:cuerpo?JSON.stringify(cuerpo):undefined,credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(r.status===401){var er=new Error("Entrá primero al panel de Ojo Guard MS con tu cuenta y volvé a abrir esta página.");er.sinSesion=true;throw er}if(!r.ok){throw new Error(({invalid_referente:"Revisá el nombre y el correo.",referente_es_vos:"El referente no puede ser vos.",demasiados_referentes:"Ya tenés 5 referentes.",referente_repetido:"Ese correo ya es referente.",sin_ubicacion:"Todavía no hay una ubicación de tu teléfono.",solo_administrador:"Esto lo completa el administrador de tu familia.",no_autorizado:"No tenés permiso para armar la protección de esa persona."})[d.error]||"No se pudo. Probá de nuevo.")}return d})})}
 function fecha(s){if(!s)return"";try{return new Date(s).toLocaleString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return s}}
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 function texto(n,t){n.appendChild(document.createTextNode(t))}
@@ -843,6 +874,21 @@ function pintar(d){
   $("cEncender").className=c.enabled?"sec":"";
   var g=$("registro");limpiar(g);if(!d.registro.length){texto(g,"Todavía no hay nada.")}
   d.registro.forEach(function(x){var f=document.createElement("div");f.className="fila";var t=document.createElement("span");t.textContent=x.detail;var w=document.createElement("small");w.textContent=fecha(x.createdAt);w.className="suave";f.appendChild(t);f.appendChild(w);g.appendChild(f)});
+  personaPantalla(d);
+}
+function personaPantalla(d){
+  var pe=d.persona||{};var nom=pe.nombre||"esta persona";
+  var sel=$("persona");limpiar(sel);
+  if(d.personas&&d.personas.length){
+    var o0=document.createElement("option");o0.value="";o0.textContent="Yo";sel.appendChild(o0);
+    d.personas.forEach(function(x){var o=document.createElement("option");o.value=x.email;o.textContent=x.name||x.email;sel.appendChild(o)});
+    sel.value=PERSONA;$("paraQuien").style.display="block";
+  }else{$("paraQuien").style.display="none"}
+  var nd=$("enNombreDe");
+  if(pe.propia===false){nd.style.display="block";nd.textContent="Estás armando la protección de "+nom+". Los referentes que elijas son los de "+nom+": a cada uno le llega un mail para aceptar, y si "+nom+" aprieta el SOS también les avisamos.";$("titulo").textContent="Protección de "+nom;$("cCasa").textContent="La casa de "+nom+" es donde está su teléfono ahora"}
+  else{nd.style.display="none";$("titulo").textContent="Tu protección";$("cCasa").textContent="Mi casa es donde está mi teléfono ahora"}
+  var ro=!!pe.soloLectura;$("soloLectura").style.display=ro?"block":"none";
+  if(ro){Array.prototype.forEach.call(document.querySelectorAll("#contenido input,#contenido select,#contenido button"),function(e){e.disabled=true})}
 }
 function mostrarInvitacion(i){
   var c=$("invitacion");limpiar(c);if(!i)return;
@@ -861,10 +907,11 @@ function mostrarInvitacion(i){
 function accion(cuerpo,ok){aviso("");return api(cuerpo).then(function(d){pintar(d);mostrarInvitacion(d.invitacion);if(d.invitacion&&!d.invitacion.enviado)aviso("No pudimos mandar el mail. Usá el enlace de abajo.");else if(ok)aviso(ok)}).catch(function(e){aviso(e.message)})}
 $("rAgregar").onclick=function(){var cc=$("rCorreo").value.trim();if(cc&&!confirm("Le vamos a mandar el mail a esta dirección: ["+cc+"]. Fijate letra por letra: si está mal escrito, le llega a otra persona. ¿Está bien escrito?"))return;accion({accion:"agregar",name:$("rNombre").value,email:$("rCorreo").value},"Listo: le mandamos el mail a tu referente.").then(function(){$("rNombre").value="";$("rCorreo").value=""})};
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value}},"Condiciones guardadas.")};
+$("persona").onchange=function(){location.search=this.value?"?persona="+encodeURIComponent(this.value):""};
 $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});
 $("pOtro").onclick=function(){var h=Number($("pHoras").value);if(!(h>=1&&h<=72)){aviso("Poné un número de horas entre 1 y 72.");return}accion({accion:"pausa",horas:h},"Pausa puesta por "+h+(h===1?" hora.":" horas."))};
-$("cEncender").onclick=function(){if(encendido&&!confirm("¿Apagar el Modo Cautela? Mientras esté apagado no se manda ningún aviso automático a tus referentes, tampoco el del SOS. Si es por un rato, mejor usá la pausa."))return;accion({accion:"config",config:{enabled:!encendido}},encendido?"Modo Cautela apagado.":"Modo Cautela encendido.")};
+$("cEncender").onclick=function(){if(encendido&&!confirm("¿Apagar el Modo Cautela? Mientras esté apagado no se manda ningún aviso automático a tus referentes. El SOS sigue avisando. Si es por un rato, mejor usá la pausa."))return;accion({accion:"config",config:{enabled:!encendido}},encendido?"Modo Cautela apagado.":"Modo Cautela encendido.")};
 api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d)}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});
 })();
 </script>`);
