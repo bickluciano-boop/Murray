@@ -1070,6 +1070,8 @@ Actualizado: 16/10/2026.
   cinco versiones anteriores; 188 pruebas y navegador ok): un adulto activo de la familia ve a los menores en el selector y arma sus referentes / condiciones / pausa / encendido; no vale para adultos, otra familia ni dados de
   baja; en el registro del menor queda **quién hizo cada cambio** ("hermano@correo.com (administrador de la familia) agregó un referente."). **Falta:** atarlo al **plan familiar** cuando existan planes (hoy el servidor no tiene
   planes: vale para toda familia armada); y la pantalla equivalente en la app.
+  **Instalados y publicados por Luciano el 20/10/2026:** `aplicar-menores-solo-ver-panel.ps1` (versión ff75e6cd) y `aplicar-menores-adultos-panel.ps1` (versión ce55568d, código reconocido de 78585 caracteres). Falta probarlo en vivo con una persona con rol Menor
+  (por ejemplo el papá en Cuidados) y que **encienda el Modo Cautela** (quedó apagado por las pruebas).
   **Tu protección: botones con aire y "Estado de tu teléfono" (fotos de Luciano del celular, 19/10/2026).** Instalada la versión corta (plegable); en las fotos se vio que el Modo Cautela quedó **APAGADO**
   ("Ahora: apagado") por las pruebas: hay que **encenderlo** (con apagado, tampoco avisa el SOS a los referentes). Críticas: "los botones muy juntos" (pausas y "Mandar enlace de nuevo" / "Quitar") y
   "Cómo estás hoy parece que se pregunta el ánimo; poco claro, mucha info, poco amigable". Armado, sin instalar: `aplicar-tu-proteccion-claro-panel.ps1` (respaldo `.bak-pldclaro`, solo servidor, 158 pruebas y navegador a
