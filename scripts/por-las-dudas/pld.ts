@@ -1010,6 +1010,19 @@ async function gdCron(env: Env) {
   }
 }
 
+/** Lee por qué Google rechazó un pedido: el mensaje que devuelve (o, si no hay, el estado o el principio de la respuesta) para poder mostrarlo en pantalla. */
+async function gdErrorGoogle(r: Response): Promise<string> {
+  const crudo = await r.text().catch(() => "");
+  try {
+    const e = JSON.parse(crudo) as { error?: { message?: string; status?: string; details?: Array<{ reason?: string }> } };
+    const m = String(e?.error?.message ?? "").trim();
+    if (m) return m.slice(0, 160);
+    return String(e?.error?.details?.[0]?.reason ?? e?.error?.status ?? crudo).slice(0, 160);
+  } catch {
+    return crudo.replace(/\s+/g, " ").trim().slice(0, 160);
+  }
+}
+
 type GdRutaMapas = { minutos: number; km: number; destLat: number | null; destLng: number | null };
 type GdFalloMapas = { fallo: string; detalle: string };
 
@@ -1034,10 +1047,7 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
       headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.legs.endLocation" },
       body: JSON.stringify(cuerpo),
     });
-    if (!r.ok) {
-      const e = await r.json().catch(() => null) as { error?: { message?: string } } | null;
-      return { fallo: `http_${r.status}`, detalle: String(e?.error?.message ?? "").slice(0, 160) };
-    }
+    if (!r.ok) return { fallo: `http_${r.status}`, detalle: await gdErrorGoogle(r) };
     const d = await r.json() as { routes?: Array<{ duration?: string; distanceMeters?: number; legs?: Array<{ endLocation?: { latLng?: { latitude?: number; longitude?: number } } }> }> };
     const ruta = d.routes?.[0];
     const segundos = Number(String(ruta?.duration ?? "").replace("s", ""));
@@ -1058,33 +1068,43 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
  *  y a cuántos km queda, para elegir el correcto. */
 async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
   const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
-  if (!clave) return { sugerencias: [] as Array<{ placeId: string; principal: string; secundario: string; km: number | null }>, fallo: "sin_clave", detalle: "" };
-  const cuerpo: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
-  if (origen) {
-    cuerpo.locationBias = { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } };
-    cuerpo.origin = { latitude: origen.lat, longitude: origen.lng };
-  }
-  try {
-    const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
-      method: "POST",
-      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters" },
-      body: JSON.stringify(cuerpo),
-    });
-    if (!r.ok) {
-      const e = await r.json().catch(() => null) as { error?: { message?: string } } | null;
-      return { sugerencias: [], fallo: `http_${r.status}`, detalle: String(e?.error?.message ?? "").slice(0, 160) };
+  type Sugerencia = { placeId: string; principal: string; secundario: string; km: number | null };
+  if (!clave) return { sugerencias: [] as Sugerencia[], fallo: "sin_clave", detalle: "" };
+  const base: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
+  const conUbicacion: Record<string, unknown> = origen
+    ? { ...base, locationBias: { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } }, origin: { latitude: origen.lat, longitude: origen.lng } }
+    : base;
+  // Si Google rechaza el pedido completo (400), se prueba con uno mas simple: asi una opcion que Google no acepte no deja a la persona sin sugerencias.
+  const intentos: Array<[string, Record<string, unknown>]> = [["A", conUbicacion], ["B", base], ["C", { input: texto }]];
+  let primero = "";
+  const marcas: string[] = [];
+  for (const [letra, cuerpo] of intentos) {
+    try {
+      const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+        method: "POST",
+        headers: { "content-type": "application/json", "X-Goog-Api-Key": clave },
+        body: JSON.stringify(cuerpo),
+      });
+      marcas.push(`${letra}${r.status}`);
+      if (!r.ok) {
+        const motivo = await gdErrorGoogle(r);
+        if (!primero) primero = motivo;
+        if (r.status === 400 && !/api key|clave/i.test(motivo)) continue;
+        return { sugerencias: [] as Sugerencia[], fallo: `http_${r.status}`, detalle: `[${marcas.join(" ")}] ${motivo}`.slice(0, 220) };
+      }
+      const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
+      const sugerencias: Sugerencia[] = (d.suggestions ?? []).map((x) => x.placePrediction).filter((p) => p && p.placeId).slice(0, 6).map((p) => ({
+        placeId: String(p!.placeId),
+        principal: String(p!.structuredFormat?.mainText?.text ?? p!.text?.text ?? "").slice(0, 120),
+        secundario: String(p!.structuredFormat?.secondaryText?.text ?? "").slice(0, 120),
+        km: Number.isFinite(Number(p!.distanceMeters)) && Number(p!.distanceMeters) >= 0 ? Math.round(Number(p!.distanceMeters) / 100) / 10 : null,
+      })).filter((x) => x.principal);
+      return { sugerencias };
+    } catch (error) {
+      return { sugerencias: [] as Sugerencia[], fallo: "red", detalle: String(error).slice(0, 100) };
     }
-    const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
-    const sugerencias = (d.suggestions ?? []).map((x) => x.placePrediction).filter((p) => p && p.placeId).slice(0, 6).map((p) => ({
-      placeId: String(p!.placeId),
-      principal: String(p!.structuredFormat?.mainText?.text ?? p!.text?.text ?? "").slice(0, 120),
-      secundario: String(p!.structuredFormat?.secondaryText?.text ?? "").slice(0, 120),
-      km: Number.isFinite(Number(p!.distanceMeters)) && Number(p!.distanceMeters) >= 0 ? Math.round(Number(p!.distanceMeters) / 100) / 10 : null,
-    })).filter((x) => x.principal);
-    return { sugerencias };
-  } catch (error) {
-    return { sugerencias: [], fallo: "red", detalle: String(error).slice(0, 100) };
   }
+  return { sugerencias: [] as Sugerencia[], fallo: "http_400", detalle: `[${marcas.join(" ")}] ${primero}`.slice(0, 220) };
 }
 
 type GdDestino = { destino: string; destLat: number | null; destLng: number | null; texto: string | null; placeId: string | null };
@@ -1469,7 +1489,7 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdDestinoCuerpo(c){if($("gdLugar").value){c.lugarId=$("gdLugar").value}else if(GDPLACE){c.placeId=GDPLACE;c.texto=GDETIQUETA}else{c.texto=$("gdTexto").value.trim()}return c}
-function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google no entendió el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,110)+")":"")}
+function gdFalloTexto(d){var m=({http_403:"Google no deja usar esta clave todavía",http_400:"Google rechazó el pedido",http_404:"Google no encontró ese lugar",sin_ruta:"Google no encontró una ruta",red:"no hubo conexión con Google",sin_ubicacion:"todavía no sabemos dónde está tu teléfono"})[d.fallo]||"Google no pudo calcularlo";return m+(d.detalle?" ("+d.detalle.slice(0,200)+")":"")}
 function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
