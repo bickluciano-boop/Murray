@@ -9,10 +9,11 @@ const B = 'http://localhost:8799';
     const r = await fetch(req.url().replace('https://panel.test', B), { method: req.method(), headers: { 'content-type': 'application/json' }, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postData() });
     await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') || 'text/plain' }, body: Buffer.from(await r.arrayBuffer()) });
   });
-  // un AudioContext de mentira que cuenta los pitidos (1000 Hz: corto, 660 Hz: el largo del final)
+  // un AudioContext de mentira que cuenta los pitidos (1000 Hz: corto, 660 Hz: el largo del final). Como en un navegador de verdad, queda suspendido hasta que la persona toca la pantalla
   await ctx.addInitScript(() => {
-    window.__pitidos = [];
-    window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; } resume() { return Promise.resolve(); } createGain() { return { gain: { value: 0 }, connect() {} }; } createOscillator() { const o = { frequency: { value: 0 }, type: '', connect() {}, start() { window.__pitidos.push(o.frequency.value); }, stop() {} }; return o; } };
+    window.__pitidos = []; window.__gesto = false;
+    ['pointerdown', 'touchstart', 'keydown'].forEach((e) => window.addEventListener(e, () => { window.__gesto = true; }, true));
+    window.AudioContext = class { constructor() { this.state = window.__gesto ? 'running' : 'suspended'; this.currentTime = 0; this.destination = {}; } resume() { if (window.__gesto) this.state = 'running'; return Promise.resolve(); } createGain() { return { gain: { value: 0 }, connect() {} }; } createOscillator() { const o = { frequency: { value: 0 }, type: '', connect() {}, start() { window.__pitidos.push(o.frequency.value); }, stop() {} }; return o; } };
   });
   const pag = await ctx.newPage();
   const errores = [];
@@ -121,6 +122,10 @@ const B = 'http://localhost:8799';
   await pag.reload();
   await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
   console.log('boton de sonido:', await pag.textContent('#bSonido'), '|', (await pag.textContent('#sonidoTxt')).trim().slice(0, 70));
+  // sin tocar la pantalla el audio esta bloqueado: el aviso se ve desde que se abre la pantalla (faltan ~16 s), no solo al final
+  const bloqueado = await pag.evaluate(() => ({ aviso: getComputedStyle(document.getElementById('sonidoAviso')).display, texto: document.getElementById('sonidoAviso').textContent }));
+  console.log('sin tocar la pantalla: aviso de sonido:', bloqueado.aviso, '|', bloqueado.texto);
+  if (bloqueado.aviso !== 'block') throw new Error('el aviso de sonido sin activar tiene que verse desde que se abre la pantalla');
   // ultimos 15 segundos: el reloj parpadea en rojo y dice que hacer (no depende del sonido)
   await pag.waitForFunction(() => document.getElementById('reloj').className === 'urgente', null, { timeout: 15000 });
   const opacidades = [];
@@ -128,13 +133,26 @@ const B = 'http://localhost:8799';
   console.log('ultimos 15 segundos: clase del reloj:', await pag.getAttribute('#reloj', 'class'), '| color:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).color), '| parpadea (opacidades vistas):', [...new Set(opacidades)], '| texto:', await pag.textContent('#finalTxt'), '| borde de la tarjeta:', await pag.evaluate(() => getComputedStyle(document.getElementById('relojCard')).borderTopColor));
   await pag.screenshot({ path: 'e2e_guardian_parpadeo.png', fullPage: true });
   await pag.emulateMedia({ reducedMotion: 'reduce' });
-  console.log('con "reducir movimiento": animacion:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).animationName), '| sigue rojo:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).color));
+  const opReducido = [];
+  for (let i = 0; i < 8; i++) { opReducido.push(await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).opacity)); await pag.waitForTimeout(260); }
+  console.log('con "reducir movimiento": opacidades:', opReducido.join(' '));
+  if (!(opReducido.includes('1') && opReducido.some((o) => Number(o) < 0.3))) throw new Error('con reducir movimiento tambien tiene que parpadear');
+  console.log('con "reducir movimiento": sigue rojo:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).color));
   await pag.emulateMedia({ reducedMotion: 'no-preference' });
+  // la persona toca la pantalla recien cuando faltan unos 6 segundos: hasta ahi no suena nada (el navegador no deja), desde ahi si
+  await pag.waitForFunction(() => /^00:0[0-6]$/.test(document.getElementById('reloj').textContent.trim()), null, { timeout: 15000 });
+  const antesDelToque = await pag.evaluate(() => window.__pitidos.length);
+  await pag.mouse.click(10, 300);
+  await pag.waitForTimeout(2500);
+  const despuesDelToque = await pag.evaluate(() => window.__pitidos.length);
+  const avisoDespues = await pag.evaluate(() => getComputedStyle(document.getElementById('sonidoAviso')).display);
+  console.log('pitidos antes de tocar la pantalla (debe ser 0):', antesDelToque, '| 2,5 s despues de tocarla:', despuesDelToque, '| aviso de sonido:', avisoDespues);
+  if (antesDelToque !== 0 || despuesDelToque < 2 || avisoDespues !== 'none') throw new Error('el sonido tiene que arrancar al tocar la pantalla y el aviso tiene que desaparecer');
   await pag.waitForFunction(() => document.getElementById('reloj').textContent.includes('Se pasó el tiempo'), null, { timeout: 25000 });
   await pag.waitForTimeout(1500);
-  console.log('pasado el limite: clase del reloj:', await pag.getAttribute('#reloj', 'class'), '| animacion:', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).animationName), '| texto de los ultimos segundos oculto:', !(await pag.isVisible('#finalTxt')));
+  console.log('pasado el limite: clase del reloj:', await pag.getAttribute('#reloj', 'class'), '| opacidad (quieto, sin titilar):', await pag.evaluate(() => getComputedStyle(document.getElementById('reloj')).opacity), '| texto de los ultimos segundos oculto:', !(await pag.isVisible('#finalTxt')));
   const pits = await pag.evaluate(() => window.__pitidos);
-  console.log('pitidos cortos:', pits.filter((f) => f === 1000).length, '(esperados ~15) | largos:', pits.filter((f) => f === 660).length, '| reloj:', await pag.textContent('#reloj'));
+  console.log('pitidos cortos:', pits.filter((f) => f === 1000).length, '(los que quedaban despues de tocar a los ~6 s) | largos:', pits.filter((f) => f === 660).length, '| reloj:', await pag.textContent('#reloj'));
   await pag.click('#bSonido');
   console.log('boton de sonido tras tocarlo:', await pag.textContent('#bSonido'));
   await pag.click('#bSonido');

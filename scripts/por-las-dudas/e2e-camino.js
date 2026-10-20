@@ -189,7 +189,9 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.click('#bLlegue');
   await pag.waitForSelector('#lleguePanel', { state: 'visible' });
   console.log('9) llegue lejos del destino: ' + await texto('#llegueTxt'));
-  console.log('   botones:', await pag.$$eval('#lleguePanel button', (b) => b.map((x) => x.textContent.trim())), '| el boton Llegué vuelve a decir:', await texto('#bLlegue'), '| el camino sigue abierto:', await pag.isVisible('#acciones'), '|', (await texto('#estadoTxt')).slice(0, 50));
+  const botonesLlegue = await pag.$$eval('#lleguePanel button', (b) => b.map((x) => x.textContent.trim()));
+  if (botonesLlegue.length !== 1 || botonesLlegue[0] !== 'Volver a comprobar') throw new Error('lejos del destino solo se puede volver a comprobar (sin «Llegué igual»)');
+  console.log('   botones (solo volver a comprobar):', botonesLlegue, '| el boton Llegué vuelve a decir:', await texto('#bLlegue'), '| el camino sigue abierto:', await pag.isVisible('#acciones'), '|', (await texto('#estadoTxt')).slice(0, 50));
   await pag.screenshot({ path: 'e2e_camino_llegue_lejos.png', fullPage: true });
   // ahora el navegador esta en la puerta de Casa: "Volver a comprobar" cierra el camino como comprobado; el resumen cuenta los minutos por transito y de parada
   await ctx.setGeolocation({ latitude: -34.4902, longitude: -58.4 });
@@ -200,18 +202,22 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   const mailsFin = (await (await fetch(B + '/__correos')).json()).filter((c) => c.to === 'mama@correo.com' && /no llegó|está bien/.test(c.subject));
   console.log('   mails a la referente en todo el recorrido (debe ser 0):', mailsFin.length);
 
-  // --- otro camino a Casa, con el navegador lejos: "Llegué igual" lo cierra y queda anotado que no se pudo comprobar
+  // --- estricto: otro camino a Casa con el navegador lejos; volver a comprobar las veces que sea no lo cierra (los chicos dirian que llegaron a lo de un amigo y se quedarian en otro lado)
   await ctx.setGeolocation({ latitude: -34.505, longitude: -58.4 });
   const otro = await (await fetch(B + '/api/guardian', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'empezar', lugarId: 'pl1', modo: 'auto' }) })).json();
   await pag.goto(otro.viaje.enlace.replace(/^https?:\/\/[^/]+/, B));
   await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
   await pag.click('#bLlegue');
   await pag.waitForSelector('#lleguePanel', { state: 'visible' });
-  await pag.click('#bLlegueIgual');
-  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('No se pudo comprobar'));
-  console.log('9b) "Llegué igual": ' + await texto('#aviso') + ' | ' + await texto('#estadoTxt'));
+  await pag.click('#bLlegueDeNuevo');
+  await pag.waitForFunction(() => document.getElementById('bLlegue').textContent === 'Llegué' && document.getElementById('lleguePanel').style.display === 'block');
+  const sigue = await pag.isVisible('#acciones');
+  console.log('9b) estricto: tras volver a comprobar lejos, el camino sigue abierto:', sigue, '| ' + (await texto('#llegueTxt')).slice(0, 80));
+  if (!sigue) throw new Error('no se puede cerrar el camino lejos del destino');
   const reg2 = await (await fetch(B + '/api/remote/por-las-dudas')).json();
-  console.log('   registro:', (reg2.registro || []).filter((x) => /Cerraste el camino|Tocaste Llegué, pero|Tu ubicación lo confirmó/.test(x.detail)).map((x) => x.detail.slice(0, 150)));
+  console.log('   registro:', (reg2.registro || []).filter((x) => /Tocaste Llegué, pero|Tu ubicación lo confirmó/.test(x.detail)).map((x) => x.detail.slice(0, 150)));
+  await pag.click('#bCancelar'); // se cancela para seguir con lo demas
+  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('cancelado'));
 
   // --- el navegador no deja ver la ubicacion (la persona dijo que no) y la ultima del telefono es de hace 2 horas: no se puede comprobar; al dejarla ver, en la puerta de Casa, cierra como comprobado
   await poner('/__gd-ubicacion', { lat: -34.6, lng: -58.4, haceMin: 120 });
@@ -232,7 +238,8 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.goto(B + '/guardian#config-guardian');
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.waitForFunction(() => document.getElementById('gAuto').value !== '');
-  console.log('10) Configuracion > Modo Guardian: tope por transito:', await pag.inputValue('#gAuto'), '| recomendado:', await texto('#gRecomendado'));
+  console.log('10) Configuracion > Modo Guardian: tope por transito:', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), 'm | recomendado:', await texto('#gRecomendado'));
+  if ((await pag.inputValue('#gRadio')) !== '150') throw new Error('el margen de llegada recomendado es de 150 m');
   await pag.fill('#gAuto', '0');
   await pag.click('#gGuardar');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('Cambios guardados'));
@@ -245,17 +252,20 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   await pag.goto(B + '/guardian#config-guardian');
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.fill('#gAuto', '45');
+  await pag.fill('#gRadio', '100');
   await pag.click('#gGuardar');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('Cambios guardados'));
   await pag.goto(B + '/guardian#guardian');
   await pag.waitForFunction(() => document.getElementById('gdForm').style.display === 'block');
-  console.log('    con 45:', await texto('#gdPie'));
+  console.log('    con 45 y 100 m:', await texto('#gdPie'));
+  if (!(await texto('#gdPie')).includes('a menos de 100 m del destino')) throw new Error('el pie de Empezar camino tiene que decir el margen de llegada elegido');
   await pag.goto(B + '/guardian#config-guardian');
   await pag.waitForSelector('#vCfgGuard', { state: 'visible' });
   await pag.screenshot({ path: 'e2e_camino_config.png', fullPage: true });
   await pag.click('#gReset');
   await pag.waitForFunction(() => document.getElementById('aviso').textContent.includes('recomendados'));
-  console.log('    "Volver a los valores recomendados":', await pag.inputValue('#gAuto'), '|', await texto('#gRecomendado'));
+  console.log('    "Volver a los valores recomendados":', await pag.inputValue('#gAuto'), '| margen de llegada:', await pag.inputValue('#gRadio'), '|', await texto('#gRecomendado'));
+  if ((await pag.inputValue('#gRadio')) !== '150') throw new Error('al volver a lo recomendado el margen de llegada tiene que ser 150 m');
 
   const ancho = await pag.evaluate(() => document.documentElement.scrollWidth);
   console.log('ancho:', ancho, '| errores:', errores.length ? errores : 'ninguno');
