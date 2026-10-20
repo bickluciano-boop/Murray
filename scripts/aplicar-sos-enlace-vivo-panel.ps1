@@ -1,14 +1,12 @@
-﻿# aplicar-proteccion-volver-panel.ps1 - Tu proteccion: abierta desde la Configuracion de la consola, "atras" vuelve a esa Configuracion (antes solo dejaba ir al inicio).
-# Luciano (20/10/2026): "en Configuracion, en la parte de proteccion, no te deja ir atras como todos los demas que dice boton Configuracion. Si o si estas obligado a ir a inicio".
-# Que cambia (solo la pagina Tu proteccion del servidor del panel; no toca la base ni la consola):
-#  - Si la pagina se abre directo en su Configuracion (asi llega desde la consola: Configuracion > Tu proteccion), la pantalla se llama "Tu proteccion" (como la categoria que se toco) y arriba
-#    dice "<- Configuracion" y vuelve a la Configuracion de la consola (/#config), en vez de obligar a ir al inicio. Adentro de cada categoria (Referentes, Modo Cautela, Modo Guardian, Ajustes,
-#    Accesibilidad, Registro) arriba siguen "<- Ir al inicio" y "<- Tu proteccion" (vuelve a la lista).
-#  - Si se llega desde el inicio de Tu proteccion (el boton OG, o la tarjeta Configuracion) todo queda como estaba: se llama Configuracion y arriba dice "<- Ir al inicio" y "<- Tu proteccion".
-#  - Incluye todo lo de los parches anteriores de Guardian (avisos al cancelar o cambiar el destino, llegada estricta con margen de 150 m, cuenta regresiva que titila, pausa, recalculo por transito,
-#    lugares, Configuracion). Este los reemplaza: se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las diecisiete versiones que dejaron los parches desde
-# aplicar-guardian-mejoras-panel.ps1). No toca nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldvolver. Al final publica el panel solo.
+﻿# aplicar-sos-enlace-vivo-panel.ps1 - SOS: mientras la persona tiene un SOS en marcha, el enlace de sus referentes muestra su ultima senal sin condiciones.
+# Pendiente abierto desde el 20/10/2026 ("hacemos esos pendientes"): hasta ahora, despues del mail del SOS, el boton "No lo encuentro" del referente seguia pidiendo las condiciones del Modo Cautela.
+# Que cambia (solo el servidor del panel; no toca la base ni la app):
+#  - Desde que la persona aprieta el SOS (y se les avisa a sus referentes) hasta que lo cancela (como mucho 6 horas), el enlace personal del referente muestra la ultima ubicacion, la bateria y el mapa,
+#    con el cartel "SOS en marcha: pidio ayuda. Intenta comunicarte ya; si es grave, llama al 911". No se le manda un "Estas bien?" a quien pidio ayuda. A la persona se le cuenta que lo vieron.
+#  - Si todavia no hay ubicacion del telefono, lo dice y repite lo del 911. Cancelado el SOS, todo vuelve a ser como antes (con las condiciones del Modo Cautela).
+#  - El boton del SOS sigue en 3 segundos (no se toca). Incluye todo lo de los parches anteriores. Se puede correr encima de cualquiera de ellos.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciocho versiones desde
+# aplicar-guardian-mejoras-panel.ps1). Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldsos. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -34,12 +32,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'var DESDEPANEL=') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'async function pldSosActivo(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972", "a3eff07125cf5e97427a3f534e6e428a6f21ecc2fb0b126b7587ac74487e4b62")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -53,9 +51,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldvolver")) { Mal "Ya existe src\index.ts.bak-pldvolver. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldvolver")
-Ok "Respaldo creado: src\index.ts.bak-pldvolver"
+if (Test-Path ($indice + ".bak-pldsos")) { Mal "Ya existe src\index.ts.bak-pldsos. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldsos")
+Ok "Respaldo creado: src\index.ts.bak-pldsos"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -594,6 +592,13 @@ async function pldPedirEstasBien(env: Env, origen: string, email: string, estado
   }
 }
 
+/** \u00bfLa persona tiene un SOS en marcha? S\u00ed desde que lo aprieta (y se les avisa a sus referentes) hasta que lo cancela; como mucho 6 horas. */
+async function pldSosActivo(env: Env, email: string) {
+  const f = await env.DB.prepare("SELECT kind,MAX(created_at) AS at FROM pld_log WHERE owner_email=? AND kind IN (''sos'',''sos-fin'') AND created_at>? GROUP BY kind").bind(email, pldEnMinutos(-360)).all<{ kind: string; at: string }>();
+  const ult = (k: string) => (f.results ?? []).find((x) => x.kind === k)?.at ?? "";
+  return ult("sos") > ult("sos-fin");
+}
+
 /** El bot\u00f3n "No lo encuentro". */
 async function pldApiReferenteBuscar(request: Request, env: Env) {
   const cuerpo = await request.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
@@ -606,20 +611,22 @@ async function pldApiReferenteBuscar(request: Request, env: Env) {
   const quien = pldNombreDe(email, cfg);
   const emergencia = Boolean(cuerpo.emergencia);
   const estado = await pldEvaluar(env, email, cfg, emergencia);
+  // Con un SOS en marcha la persona pidi\u00f3 ayuda a prop\u00f3sito: el referente ve su \u00faltima se\u00f1al sin condiciones ni "\u00bfEst\u00e1s bien?" de por medio.
+  const sos = await pldSosActivo(env, email);
 
   // 1) "\u00bfEst\u00e1s bien?": se le avisa a la persona (mail con bot\u00f3n y aviso en el tel\u00e9fono). Como mucho una vez cada 10 minutos por referente.
   const reciente = await env.DB.prepare("SELECT id FROM pld_checkins WHERE referente_id=? AND created_at>? LIMIT 1").bind(r.id, pldEnMinutos(-10)).first<{ id: string }>();
-  if (!reciente && cfg.enabled) await pldPedirEstasBien(env, origen, email, estado, { id: r.id, name: r.name });
+  if (!sos && !reciente && cfg.enabled) await pldPedirEstasBien(env, origen, email, estado, { id: r.id, name: r.name });
 
   // 2) Si la persona ya dijo que est\u00e1 bien hace poco, no se muestra nada.
   const respondio = await env.DB.prepare("SELECT answered_at AS at FROM pld_checkins WHERE owner_email=? AND answered_at IS NOT NULL AND answered_at>? ORDER BY answered_at DESC LIMIT 1").bind(email, pldEnMinutos(-30)).first<{ at: string }>();
-  if (respondio) {
+  if (respondio && !sos) {
     await pldRegistrar(env, email, r.id, "busqueda", `${r.name} apret\u00f3 "No lo encuentro" y ya hab\u00edas dicho que estabas bien.`);
     return json({ ok: true, mostrar: false, estaBien: true, mensaje: `${quien} respondi\u00f3 que est\u00e1 bien.`, quien });
   }
 
   // 3) Condiciones: si no se cumplen, solo se le dice c\u00f3mo est\u00e1.
-  if (!estado.mostrar) {
+  if (!estado.mostrar && !sos) {
     await pldRegistrar(env, email, r.id, "busqueda", `${r.name} apret\u00f3 "No lo encuentro": no se cumpl\u00edan las condiciones, no vio la ubicaci\u00f3n.`);
     return json({
       ok: true, mostrar: false, quien,
@@ -628,14 +635,15 @@ async function pldApiReferenteBuscar(request: Request, env: Env) {
   }
 
   // 4) Se muestra la \u00faltima se\u00f1al y se le avisa a la persona.
-  const u = estado.ubicacion!;
-  await pldRegistrar(env, email, r.id, "consulta", `${r.name} vio tu \u00faltima se\u00f1al${emergencia ? " (marc\u00f3 emergencia)" : ""}.`);
+  const u = estado.ubicacion;
+  if (!u) return json({ ok: true, mostrar: false, sos, quien, mensaje: `Todav\u00eda no hay una ubicaci\u00f3n del tel\u00e9fono de ${quien}.${sos ? " Pidi\u00f3 ayuda (SOS): intent\u00e1 comunicarte ya y, si es grave, llam\u00e1 al 911." : ""}` });
+  await pldRegistrar(env, email, r.id, "consulta", `${r.name} vio tu \u00faltima se\u00f1al${sos ? " (SOS en marcha)" : emergencia ? " (marc\u00f3 emergencia)" : ""}.`);
   await pldCorreo(
     env, email, `${r.name} consult\u00f3 tu \u00faltima se\u00f1al`,
-    `<p style="font-size:18px;font-weight:700;margin:0 0 12px">${escapeHtml(r.name)} consult\u00f3 tu \u00faltima se\u00f1al.</p><p style="color:#d2d2ce;line-height:1.55">Pas\u00f3 porque se cumplieron las condiciones que vos permitiste${emergencia ? " (y marc\u00f3 que era una emergencia)" : ""}. Si est\u00e1s bien, avisale.</p>`,
+    `<p style="font-size:18px;font-weight:700;margin:0 0 12px">${escapeHtml(r.name)} consult\u00f3 tu \u00faltima se\u00f1al.</p><p style="color:#d2d2ce;line-height:1.55">${sos ? "Pas\u00f3 porque pediste ayuda con el SOS" : `Pas\u00f3 porque se cumplieron las condiciones que vos permitiste${emergencia ? " (y marc\u00f3 que era una emergencia)" : ""}`}. Si est\u00e1s bien, avisale.</p>`,
   );
   return json({
-    ok: true, mostrar: true, quien, telefono: estado.telefono,
+    ok: true, mostrar: true, sos, quien, telefono: estado.telefono,
     ubicacion: { lat: u.lat, lng: u.lng, address: u.address, en: u.en, mapa: `https://www.google.com/maps?q=${u.lat},${u.lng}` },
     bateria: estado.bateria, ultimaVez: estado.ultimaVez, minutosSinSenal: estado.minutosSinSenal,
     senales: estado.senales, apagadoEnMovimiento: estado.apagadoEnMovimiento,
@@ -2223,6 +2231,7 @@ function resultado(r,d){
   var t=document.createElement("div");t.className="tarjeta";
   if(!d.mostrar){t.appendChild(p(d.mensaje,d.estaBien?"ok":""));r.appendChild(t);return}
   var h=document.createElement("h2");h.textContent="\u00daltima se\u00f1al de "+d.quien;t.appendChild(h);
+  if(d.sos)t.appendChild(p("SOS en marcha: "+d.quien+" pidi\u00f3 ayuda. Intent\u00e1 comunicarte ya; si es grave, llam\u00e1 al 911.","ok"));
   t.appendChild(p((d.ubicacion.address||("Coordenadas "+Number(d.ubicacion.lat).toFixed(5)+", "+Number(d.ubicacion.lng).toFixed(5)))+(d.ubicacion.en?" \u00b7 "+fecha(d.ubicacion.en):"")));
   if(d.bateria!==null)t.appendChild(p("Bater\u00eda: "+Math.round(d.bateria)+" %"));
   var s=document.createElement("div");d.senales.forEach(function(x){var e=document.createElement("span");e.className="pill"+(x.cumple?" si":"");e.textContent=x.texto;s.appendChild(e)});t.appendChild(s);
@@ -2254,10 +2263,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function pldSosActivo(') -eq 1) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldvolver") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldsos") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2267,5 +2276,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: en la consola, Configuracion > Tu proteccion ahora tiene arriba el boton para volver a Configuracion. Abri la consola con Ctrl+F5 y proba."
+Ok "LISTO: con un SOS en marcha, el enlace del referente muestra la ultima senal. Probalo apretando el SOS y abriendo el enlace de un referente."
 Write-Host ""

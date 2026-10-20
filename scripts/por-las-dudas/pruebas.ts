@@ -393,6 +393,22 @@ console.log("== SOS: tambien se les avisa a los referentes");
   await pldAvisarSos(env, DUENIO, null);
   nuevos = mailsDesde(n);
   ok(nuevos.length === 2 && !/google\.com\/maps/.test(nuevos[0].html), "sin ubicacion igual avisa (sin el mapa)");
+  // con el SOS en marcha, el enlace del referente muestra la ultima senal aunque no se cumplan las condiciones; al cancelarlo vuelve a lo de siempre
+  const esp = () => new Promise((r) => setTimeout(r, 15));
+  sqlite.exec("DELETE FROM pld_log; DELETE FROM pld_checkins; DELETE FROM pld_episodios");
+  dispositivo({ seen: 2, bat: 80, lat: -34.6, lng: -58.4 });
+  let bs: any = await (await pldApiReferenteBuscar(pedido(ORIGEN + "/x", "POST", { t: t.mama }), env)).json();
+  ok(bs.ok && bs.mostrar === false && !bs.sos, "sin SOS y con el telefono normal el referente no ve la ubicacion");
+  await esp(); await pldAvisarSos(env, DUENIO, ubic); await esp();
+  n = correos.length;
+  bs = await (await pldApiReferenteBuscar(pedido(ORIGEN + "/x", "POST", { t: t.mama }), env)).json();
+  ok(bs.mostrar === true && bs.sos === true && bs.ubicacion.lat === -34.6 && !correos.slice(n).some((c) => /Est\u00e1s bien/.test(c.subject)), "con un SOS en marcha ve la ultima senal sin condiciones y sin mandarle un \u00bfEst\u00e1s bien? a quien pidio ayuda");
+  ok(correos.slice(n).some((c) => c.to === DUENIO && /pediste ayuda con el SOS/.test(c.html)), "y a la persona se le cuenta que lo vio");
+  await esp(); await pldAvisarSosCancelado(env, DUENIO, hace(1)); await esp();
+  bs = await (await pldApiReferenteBuscar(pedido(ORIGEN + "/x", "POST", { t: t.mama }), env)).json();
+  ok(bs.mostrar === false && !bs.sos, "cancelado el SOS vuelve a lo de siempre");
+  ok((await (pldPaginaReferente() as any).text()).includes("SOS en marcha: "), "la pagina del referente avisa SOS en marcha");
+  sqlite.exec("DELETE FROM pld_log; DELETE FROM pld_checkins");
   // la pausa no lo frena
   await api({ accion: "pausa", horas: 8 });
   n = correos.length;

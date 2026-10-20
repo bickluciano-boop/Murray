@@ -536,6 +536,13 @@ async function pldPedirEstasBien(env: Env, origen: string, email: string, estado
   }
 }
 
+/** ¿La persona tiene un SOS en marcha? Sí desde que lo aprieta (y se les avisa a sus referentes) hasta que lo cancela; como mucho 6 horas. */
+async function pldSosActivo(env: Env, email: string) {
+  const f = await env.DB.prepare("SELECT kind,MAX(created_at) AS at FROM pld_log WHERE owner_email=? AND kind IN ('sos','sos-fin') AND created_at>? GROUP BY kind").bind(email, pldEnMinutos(-360)).all<{ kind: string; at: string }>();
+  const ult = (k: string) => (f.results ?? []).find((x) => x.kind === k)?.at ?? "";
+  return ult("sos") > ult("sos-fin");
+}
+
 /** El botón "No lo encuentro". */
 async function pldApiReferenteBuscar(request: Request, env: Env) {
   const cuerpo = await request.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
@@ -548,20 +555,22 @@ async function pldApiReferenteBuscar(request: Request, env: Env) {
   const quien = pldNombreDe(email, cfg);
   const emergencia = Boolean(cuerpo.emergencia);
   const estado = await pldEvaluar(env, email, cfg, emergencia);
+  // Con un SOS en marcha la persona pidió ayuda a propósito: el referente ve su última señal sin condiciones ni "¿Estás bien?" de por medio.
+  const sos = await pldSosActivo(env, email);
 
   // 1) "¿Estás bien?": se le avisa a la persona (mail con botón y aviso en el teléfono). Como mucho una vez cada 10 minutos por referente.
   const reciente = await env.DB.prepare("SELECT id FROM pld_checkins WHERE referente_id=? AND created_at>? LIMIT 1").bind(r.id, pldEnMinutos(-10)).first<{ id: string }>();
-  if (!reciente && cfg.enabled) await pldPedirEstasBien(env, origen, email, estado, { id: r.id, name: r.name });
+  if (!sos && !reciente && cfg.enabled) await pldPedirEstasBien(env, origen, email, estado, { id: r.id, name: r.name });
 
   // 2) Si la persona ya dijo que está bien hace poco, no se muestra nada.
   const respondio = await env.DB.prepare("SELECT answered_at AS at FROM pld_checkins WHERE owner_email=? AND answered_at IS NOT NULL AND answered_at>? ORDER BY answered_at DESC LIMIT 1").bind(email, pldEnMinutos(-30)).first<{ at: string }>();
-  if (respondio) {
+  if (respondio && !sos) {
     await pldRegistrar(env, email, r.id, "busqueda", `${r.name} apretó "No lo encuentro" y ya habías dicho que estabas bien.`);
     return json({ ok: true, mostrar: false, estaBien: true, mensaje: `${quien} respondió que está bien.`, quien });
   }
 
   // 3) Condiciones: si no se cumplen, solo se le dice cómo está.
-  if (!estado.mostrar) {
+  if (!estado.mostrar && !sos) {
     await pldRegistrar(env, email, r.id, "busqueda", `${r.name} apretó "No lo encuentro": no se cumplían las condiciones, no vio la ubicación.`);
     return json({
       ok: true, mostrar: false, quien,
@@ -570,14 +579,15 @@ async function pldApiReferenteBuscar(request: Request, env: Env) {
   }
 
   // 4) Se muestra la última señal y se le avisa a la persona.
-  const u = estado.ubicacion!;
-  await pldRegistrar(env, email, r.id, "consulta", `${r.name} vio tu última señal${emergencia ? " (marcó emergencia)" : ""}.`);
+  const u = estado.ubicacion;
+  if (!u) return json({ ok: true, mostrar: false, sos, quien, mensaje: `Todavía no hay una ubicación del teléfono de ${quien}.${sos ? " Pidió ayuda (SOS): intentá comunicarte ya y, si es grave, llamá al 911." : ""}` });
+  await pldRegistrar(env, email, r.id, "consulta", `${r.name} vio tu última señal${sos ? " (SOS en marcha)" : emergencia ? " (marcó emergencia)" : ""}.`);
   await pldCorreo(
     env, email, `${r.name} consultó tu última señal`,
-    `<p style="font-size:18px;font-weight:700;margin:0 0 12px">${escapeHtml(r.name)} consultó tu última señal.</p><p style="color:#d2d2ce;line-height:1.55">Pasó porque se cumplieron las condiciones que vos permitiste${emergencia ? " (y marcó que era una emergencia)" : ""}. Si estás bien, avisale.</p>`,
+    `<p style="font-size:18px;font-weight:700;margin:0 0 12px">${escapeHtml(r.name)} consultó tu última señal.</p><p style="color:#d2d2ce;line-height:1.55">${sos ? "Pasó porque pediste ayuda con el SOS" : `Pasó porque se cumplieron las condiciones que vos permitiste${emergencia ? " (y marcó que era una emergencia)" : ""}`}. Si estás bien, avisale.</p>`,
   );
   return json({
-    ok: true, mostrar: true, quien, telefono: estado.telefono,
+    ok: true, mostrar: true, sos, quien, telefono: estado.telefono,
     ubicacion: { lat: u.lat, lng: u.lng, address: u.address, en: u.en, mapa: `https://www.google.com/maps?q=${u.lat},${u.lng}` },
     bateria: estado.bateria, ultimaVez: estado.ultimaVez, minutosSinSenal: estado.minutosSinSenal,
     senales: estado.senales, apagadoEnMovimiento: estado.apagadoEnMovimiento,
@@ -2165,6 +2175,7 @@ function resultado(r,d){
   var t=document.createElement("div");t.className="tarjeta";
   if(!d.mostrar){t.appendChild(p(d.mensaje,d.estaBien?"ok":""));r.appendChild(t);return}
   var h=document.createElement("h2");h.textContent="Última señal de "+d.quien;t.appendChild(h);
+  if(d.sos)t.appendChild(p("SOS en marcha: "+d.quien+" pidió ayuda. Intentá comunicarte ya; si es grave, llamá al 911.","ok"));
   t.appendChild(p((d.ubicacion.address||("Coordenadas "+Number(d.ubicacion.lat).toFixed(5)+", "+Number(d.ubicacion.lng).toFixed(5)))+(d.ubicacion.en?" · "+fecha(d.ubicacion.en):"")));
   if(d.bateria!==null)t.appendChild(p("Batería: "+Math.round(d.bateria)+" %"));
   var s=document.createElement("div");d.senales.forEach(function(x){var e=document.createElement("span");e.className="pill"+(x.cumple?" si":"");e.textContent=x.texto;s.appendChild(e)});t.appendChild(s);
