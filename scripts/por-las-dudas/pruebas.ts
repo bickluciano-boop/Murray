@@ -387,7 +387,7 @@ console.log("== SOS: tambien se les avisa a los referentes");
   nuevos = mailsDesde(n);
   ok(c1 === 2 && nuevos.every((c) => /cancel\u00f3 el SOS/.test(c.subject)), "si la persona cancela, se les cuenta a los 2 que habian recibido el aviso");
   n = correos.length;
-  ok((await pldAvisarSosCancelado(env, DUENIO, now())) === 0 && correos.length === n, "una cancelacion sin aviso previo no manda nada");
+  ok((await pldAvisarSosCancelado(env, DUENIO, new Date(Date.now() + 5000).toISOString())) === 0 && correos.length === n, "una cancelacion sin aviso previo no manda nada");
   // sin ubicacion
   n = correos.length;
   await pldAvisarSos(env, DUENIO, null);
@@ -1008,15 +1008,19 @@ console.log("== Modo Guardian: configuracion propia (margen, aviso previo, mas t
 
   console.log("-- valores recomendados");
   const c0: any = await (await gd({ accion: "estado" })).json();
-  ok(c0.config.margenMin === 2 && c0.config.avisoMin === 2 && c0.config.maxExtensiones === 3 && c0.config.entreAlertasMin === 10 && c0.config.maxAlertas === 3 && JSON.stringify(c0.config) === JSON.stringify(c0.defaults), "sin haber cambiado nada el Modo Guardian usa los valores recomendados (2 min de margen, preguntar 2 min antes, 3 veces mas tiempo, avisos cada 10 min hasta 3)");
+  ok(c0.config.margenMin === 2 && c0.config.avisoMin === 2 && c0.config.maxExtensiones === 3 && c0.config.entreAlertasMin === 10 && c0.config.maxAlertas === 3 && c0.config.autoAjusteMin === 60 && JSON.stringify(c0.config) === JSON.stringify(c0.defaults), "sin haber cambiado nada el Modo Guardian usa los valores recomendados (2 min de margen, preguntar 2 min antes, 3 veces mas tiempo, avisos cada 10 min hasta 3)");
 
   console.log("-- cambiar y guardar");
-  const nuevaCfg = { margenMin: 5, avisoMin: 4, maxExtensiones: 1, entreAlertasMin: 15, maxAlertas: 2 };
+  const nuevaCfg = { margenMin: 5, avisoMin: 4, maxExtensiones: 1, entreAlertasMin: 15, maxAlertas: 2, autoAjusteMin: 45 };
   let cf: any = await (await gd({ accion: "config", config: nuevaCfg })).json();
   ok(cf.ok && JSON.stringify(cf.config) === JSON.stringify(nuevaCfg) && JSON.stringify(cf.defaults) === JSON.stringify(c0.defaults), "se guardan los tiempos y avisos que la persona elige");
   ok(JSON.stringify((await (await gd({ accion: "estado" })).json() as any).config) === JSON.stringify(nuevaCfg), "y quedan guardados");
-  cf = await (await gd({ accion: "config", config: { margenMin: 99, avisoMin: 0, maxExtensiones: -3, entreAlertasMin: 1, maxAlertas: 99 } })).json();
-  ok(cf.config.margenMin === 15 && cf.config.avisoMin === 1 && cf.config.maxExtensiones === 0 && cf.config.entreAlertasMin === 5 && cf.config.maxAlertas === 5, "los numeros fuera de rango se acomodan a los limites (margen 1 a 15, aviso 1 a 10, mas tiempo 0 a 5, repetir 5 a 60, avisos 1 a 5)");
+  cf = await (await gd({ accion: "config", config: { margenMin: 99, avisoMin: 0, maxExtensiones: -3, entreAlertasMin: 1, maxAlertas: 99, autoAjusteMin: 999 } })).json();
+  ok(cf.config.margenMin === 15 && cf.config.avisoMin === 1 && cf.config.maxExtensiones === 0 && cf.config.entreAlertasMin === 5 && cf.config.maxAlertas === 5 && cf.config.autoAjusteMin === 180, "los numeros fuera de rango se acomodan a los limites (margen 1 a 15, aviso 1 a 10, mas tiempo 0 a 5, repetir 5 a 60, avisos 1 a 5, tiempo por transito 0 a 180)");
+  cf = await (await gd({ accion: "config", config: { autoAjusteMin: -5 } })).json();
+  ok(cf.config.autoAjusteMin === 0, "con 0 no se suma tiempo por transito (queda apagado)");
+  cf = await (await gd({ accion: "config", config: { margenMin: "", avisoMin: null } })).json();
+  ok(cf.config.margenMin === 15 && cf.config.avisoMin === 1, "un casillero vacio o sin dato deja el valor que estaba (no lo baja al minimo)");
   cf = await (await gd({ accion: "config", config: { margenMin: "abc", avisoMin: 7 } })).json();
   ok(cf.config.margenMin === 15 && cf.config.avisoMin === 7 && cf.config.maxAlertas === 5, "si un valor no es un numero o no viene, queda el que estaba");
   cf = await (await gd({ accion: "config", config: { restablecer: true } })).json();
@@ -1109,6 +1113,223 @@ console.log("== Modo Guardian: configuracion propia (margen, aviso previo, mas t
   await preparar();
 }
 
+console.log("== Modo Guardian: recalculo por transito, frenar un rato y cambiar de destino");
+{
+  const gd = async (cuerpo: unknown) => gdApi(pedido(ORIGEN + "/api/guardian", "POST", cuerpo), env);
+  const viaje = () => sqlite.prepare("SELECT * FROM gd_viajes WHERE owner_email=? ORDER BY started_at DESC LIMIT 1").get(DUENIO) as any;
+  const min = (n: number) => new Date(Date.now() + n * 60_000).toISOString();
+  const fijar = (campos: Record<string, unknown>) => { const ks = Object.keys(campos); sqlite.prepare(`UPDATE gd_viajes SET ${ks.map((k) => k + "=?").join(",")} WHERE id=?`).run(...ks.map((k) => campos[k] as any), viaje().id); };
+  const progreso = () => sqlite.prepare("SELECT * FROM gd_progreso WHERE viaje_id=?").get(viaje().id) as any;
+  const poner = (campos: Record<string, unknown>) => {
+    const ks = Object.keys(campos), id = viaje().id;
+    if (!progreso()) sqlite.prepare("INSERT INTO gd_progreso (viaje_id) VALUES (?)").run(id);
+    sqlite.prepare(`UPDATE gd_progreso SET ${ks.map((k) => k + "=?").join(",")} WHERE viaje_id=?`).run(...ks.map((k) => campos[k] as any), id);
+  };
+  const fetchReal = globalThis.fetch;
+  const llamadas: any[] = [];
+  let seg = 1200, estadoRuta = 200;
+  globalThis.fetch = (async (url: any, init: any) => {
+    if (String(url).includes("routes.googleapis.com")) { llamadas.push(JSON.parse(init.body)); return estadoRuta === 200 ? new Response(JSON.stringify({ routes: [{ duration: seg + "s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.57, longitude: -58.4 } } }] }] }), { status: 200 }) : new Response("{}", { status: estadoRuta }); }
+    if (String(url).includes("places.googleapis.com")) return new Response(JSON.stringify({ suggestions: [{ placePrediction: { placeId: "ChIJcambio00001", text: { text: "Kansas, Av. del Libertador" }, structuredFormat: { mainText: { text: "Kansas" }, secondaryText: { text: "Av. del Libertador, CABA" } } } }] }), { status: 200 });
+    return fetchReal(url, init);
+  }) as any;
+  (env as any).GOOGLE_ROUTES_KEY = "clave-de-prueba";
+  await preparar();
+  sqlite.exec("DELETE FROM gd_viajes; DELETE FROM family_places; DELETE FROM gd_config; DELETE FROM gd_progreso");
+  sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl1", DUENIO, "Casa", -34.57, -58.4, 150, now());
+  sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl2", DUENIO, "Oficina", -34.55, -58.45, 150, now());
+  setSesion({ email: DUENIO, method: "passkey" });
+  const lejos = () => dispositivo({ seen: 1, bat: 80, lat: -34.6, lng: -58.4 }); // a unos 3,3 km de Casa
+  lejos();
+  const rs: any = await (await gd({ accion: "empezar", lugarId: "pl1", modo: "auto" })).json();
+  let TOKEN = rs.viaje.enlace.split("t=")[1];
+  llamadas.length = 0; // la consulta de arriba fue la de empezar el camino
+  ok(rs.viaje.estimadoMin === 20 && rs.viaje.ajusteAutoMin === 0 && rs.viaje.puedeCambiar === true && rs.viaje.puedeParar === true && JSON.stringify(rs.viaje.opcionesParada) === "[15,30,60]", "el camino empieza sin tiempo sumado y se puede frenar y cambiar de destino");
+  const desvio = (n: number) => { llamadas.length = 0; return n; };
+
+  console.log("-- primera muestra: solo se guarda");
+  fijar({ deadline_at: min(9.5) });
+  await gdCron(env);
+  ok(llamadas.length === 0 && progreso() && Math.abs(progreso().ref_lat - -34.6) < 1e-9 && viaje().estado === "en_camino", "la primera vez solo se guarda donde esta el telefono (para ver despues si avanza); no se le pregunta nada a Google");
+
+  console.log("-- se acerca pero va a tardar mas: se suma solo");
+  desvio(0);
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  seg = 900; // desde aca, 15 minutos
+  const limite0 = Date.parse(viaje().deadline_at);
+  avisos.length = 0;
+  await gdCron(env);
+  ok(llamadas.length === 1 && llamadas[0].origin.location.latLng.latitude === -34.6 && llamadas[0].travelMode === "DRIVE" && llamadas[0].routingPreference === "TRAFFIC_AWARE", "como se acerco, se le pregunta a Google cuanto falta desde donde esta, con el transito de ahora");
+  const suma1 = Math.round((Date.parse(viaje().deadline_at) - limite0) / 60000);
+  ok(suma1 === 8 && viaje().estado === "en_camino" && progreso().auto_min === 8, "Google dice 15 min mas 2 de margen y faltaban 9,5: se suman 8 minutos solos");
+  ok(avisos.length === 1 && /Hay más tránsito/.test(avisos[0].title ?? avisos[0].titulo ?? JSON.stringify(avisos[0])) && /8 minutos/.test(JSON.stringify(avisos[0])), "y se le avisa en el telefono");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Hay más tránsito: se te sumaron 8 minutos/.test(x.detail)), "queda en el registro");
+  const estA: any = await (await gd({ t: TOKEN, accion: "estado" })).json();
+  ok(estA.viaje.ajusteAutoMin === 8 && estA.viaje.extensiones === 0, "la pagina del camino sabe cuanto se sumo por transito, y no cuenta como un pedido de mas tiempo");
+  llamadas.length = 0;
+  await gdCron(env);
+  ok(llamadas.length === 0, "no se vuelve a consultar enseguida (como minimo cada 4 minutos)");
+
+  console.log("-- si esta quieto, no se suma");
+  fijar({ deadline_at: min(9.5) });
+  poner({ ref_lat: -34.6, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 0 });
+  const limiteQ = Date.parse(viaje().deadline_at);
+  await gdCron(env);
+  ok(llamadas.length === 0 && Math.abs(Date.parse(viaje().deadline_at) - limiteQ) < 1000 && progreso().auto_min === 0, "si el telefono esta en el mismo lugar que hace unos minutos (freno), no se suma nada ni se le pregunta a Google");
+  poner({ ref_lat: -34.595, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 0 && Math.abs(Date.parse(viaje().deadline_at) - limiteQ) < 1000, "avanzar menos de 100 metros en 5 minutos tampoco cuenta (es el ruido del GPS)");
+  poner({ ref_lat: -34.59, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 0 && Math.abs(Date.parse(viaje().deadline_at) - limiteQ) < 1000, "y si se esta alejando, no se suma");
+
+  console.log("-- cuando no corresponde evaluar");
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  fijar({ deadline_at: min(40) });
+  await gdCron(env);
+  ok(llamadas.length === 0, "con mas de 20 minutos por delante no se gasta una consulta a Google");
+  fijar({ deadline_at: min(9.5) });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(2), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 0, "si la ubicacion de referencia es de hace menos de 3 minutos, todavia no se compara");
+  dispositivo({ seen: 15, bat: 80, lat: -34.6, lng: -58.4 });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(20), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 0, "con una ubicacion de hace 15 minutos no se decide nada");
+  lejos();
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 60 });
+  await gdCron(env);
+  ok(llamadas.length === 0, "con el tope de 60 minutos ya usado, no se suma mas");
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 0 });
+  estadoRuta = 500;
+  await gdCron(env);
+  ok(llamadas.length === 1 && viaje().estado === "en_camino" && progreso().auto_min === 0, "si Google no contesta, no se toca nada");
+  estadoRuta = 200; llamadas.length = 0;
+  seg = 600; // 10 min + 2 de margen: apenas 2,5 minutos mas de lo que faltaba
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 1 && progreso().auto_min === 3, "un atraso chico (de 2 minutos o mas) tambien se suma: aca 3 minutos");
+  fijar({ deadline_at: min(9.5) }); seg = 560; // 9,3 min -> 10 + 2 = 12... atraso menor a 2
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 0 });
+  seg = 480; llamadas.length = 0;
+  const limiteP = Date.parse(viaje().deadline_at);
+  await gdCron(env);
+  ok(llamadas.length === 1 && Math.abs(Date.parse(viaje().deadline_at) - limiteP) < 1000, "si Google dice que alcanza con el limite que ya hay, no se suma");
+  await gd({ accion: "estado" });
+  fijar({ dest_lat: null, dest_lng: null });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5) });
+  llamadas.length = 0; seg = 1500;
+  await gdCron(env);
+  ok(llamadas.length === 0, "si no se conoce el destino exacto, no se recalcula");
+  fijar({ dest_lat: -34.57, dest_lng: -58.4 });
+  fijar({ estado: "alerta", alertas: 1, last_alert_at: now() });
+  poner({ recalc_at: hace(5) });
+  await gdCron(env);
+  ok(llamadas.length === 0 && viaje().estado === "alerta", "una vez que se les aviso a los referentes, no se suma nada solo");
+  fijar({ estado: "aviso", aviso_at: now(), alertas: 0, last_alert_at: null, deadline_at: min(9.5) });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 0 });
+  seg = 1500;
+  await gdCron(env);
+  ok(viaje().estado === "en_camino" && viaje().aviso_at === null && progreso().auto_min > 0, "si ya se le habia preguntado si seguia en camino y se acerca, el aviso se retira (vuelve a en camino)");
+
+  console.log("-- tope y apagado en la configuracion");
+  await gd({ accion: "config", config: { autoAjusteMin: 10 } }).catch(() => null);
+  sqlite.exec("UPDATE gd_viajes SET estado='cancelado'"); // para poder cambiar la configuracion
+  await gd({ accion: "config", config: { autoAjusteMin: 10 } });
+  fijar({ estado: "en_camino", aviso_at: null, deadline_at: min(9.5) });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 7 });
+  const limiteT = Date.parse(viaje().deadline_at);
+  seg = 1500;
+  await gdCron(env);
+  ok(Math.round((Date.parse(viaje().deadline_at) - limiteT) / 60000) === 3 && progreso().auto_min === 10, "con un tope de 10 minutos y 7 ya sumados, solo se suman 3");
+  sqlite.exec("UPDATE gd_viajes SET estado='cancelado'");
+  await gd({ accion: "config", config: { autoAjusteMin: 0 } });
+  fijar({ estado: "en_camino", deadline_at: min(9.5) });
+  poner({ ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6), recalc_at: hace(5), auto_min: 0 });
+  llamadas.length = 0;
+  await gdCron(env);
+  ok(llamadas.length === 0, "con 0 minutos de tope el recalculo esta apagado y no se consulta nada");
+  await gd({ accion: "config", config: { restablecer: true } });
+
+  console.log("-- voy a frenar un rato");
+  fijar({ estado: "en_camino", deadline_at: min(5) });
+  let n = correos.length;
+  ok((await gd({ t: TOKEN, accion: "parada", minutos: 20 })).status === 400, "solo se puede frenar 15, 30 o 60 minutos");
+  const antesP = Date.parse(viaje().deadline_at);
+  let rp: any = await (await gd({ t: TOKEN, accion: "parada", minutos: 30 })).json();
+  ok(rp.ok && Math.abs(Date.parse(viaje().deadline_at) - (antesP + 30 * 60_000)) < 1000 && rp.viaje.paradas === 1 && rp.viaje.extensiones === 0 && mailsDesde(n).length === 0, "frenar 30 minutos corre el limite, no cuenta como pedido de mas tiempo y no les avisa a los referentes");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Vas a frenar un rato: 30 minutos más/.test(x.detail)), "queda en el registro");
+  await gd({ t: TOKEN, accion: "parada", minutos: 15 });
+  const rp3 = await gd({ t: TOKEN, accion: "parada", minutos: 15 });
+  ok(rp3.status === 409 && (await rp3.json() as any).error === "demasiadas_paradas" && (await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.puedeParar === false, "como maximo 2 paradas por camino");
+  fijar({ estado: "alerta", alertas: 1, last_alert_at: now() });
+  ok((await gd({ t: TOKEN, accion: "parada", minutos: 15 })).status === 409, "despues de avisarles a los referentes ya no se frena: se toca Llegue");
+  fijar({ estado: "en_camino", alertas: 0, last_alert_at: null, deadline_at: min(5) });
+  poner({ paradas: 0 });
+  await gd({ accion: "config", config: { maxExtensiones: 0 } }).catch(() => null);
+  sqlite.exec("UPDATE gd_viajes SET estado='cancelado'");
+  await gd({ accion: "config", config: { maxExtensiones: 0 } });
+  fijar({ estado: "en_camino" });
+  const rp0 = await gd({ t: TOKEN, accion: "parada", minutos: 15 });
+  ok(rp0.status === 409 && (await rp0.json() as any).error === "sin_extensiones" && (await (await gd({ t: TOKEN, accion: "estado" })).json() as any).viaje.puedeParar === false, "si en la configuracion no se puede pedir mas tiempo, tampoco se puede frenar");
+  await gd({ accion: "config", config: { restablecer: true } });
+
+  console.log("-- cambiar de destino");
+  const progAntes = { paradas: 0 };
+  poner({ paradas: 1, auto_min: 9, ref_lat: -34.61, ref_lng: -58.4, ref_at: hace(6) });
+  fijar({ estado: "aviso", aviso_at: now(), llegada_at: now(), started_at: hace(10), deadline_at: min(1.5) });
+  TOKEN = await gdToken(env, { id: viaje().id, startedAt: viaje().started_at }); // el enlace se firma con la hora de inicio
+  seg = 720; llamadas.length = 0;
+  n = correos.length;
+  let rc: any = await (await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl2" })).json();
+  ok(rc.ok && llamadas.length === 1 && llamadas[0].origin.location.latLng.latitude === -34.6 && llamadas[0].destination.location.latLng.latitude === -34.55, "cambiar de destino a un lugar guardado: se recalcula desde donde esta el telefono");
+  const v1 = viaje();
+  ok(v1.destino === "Oficina" && v1.dest_lat === -34.55 && v1.dest_lng === -58.45 && v1.estado === "en_camino" && v1.aviso_at === null && v1.llegada_at === null, "el camino pasa a ir a la Oficina, vuelve a en camino y se borra lo de la llegada anterior");
+  ok(Math.abs((Date.parse(v1.deadline_at) - Date.now()) / 60000 - 14) < 0.2 && v1.estimado_min === 22, "el limite es lo que falta (12 min) mas el margen (2) desde ahora; el tiempo estimado total suma lo ya recorrido (10 + 12)");
+  ok(progreso().auto_min === 0 && progreso().ref_lat === null && progreso().paradas === 1, "lo sumado por transito y la muestra de referencia empiezan de cero para el nuevo destino; las paradas ya hechas se cuentan igual");
+  ok((await (await api()).json() as any).registro.some((x: any) => /Cambiaste el destino a Oficina: 12 min \(calculado con mapas/.test(x.detail)) && mailsDesde(n).length === 0, "queda en el registro y no se les avisa a los referentes");
+  rc = await (await gd({ t: TOKEN, accion: "cambiar", placeId: "ChIJcambio00001", texto: "Kansas, Av. del Libertador, CABA" })).json();
+  ok(rc.ok && viaje().destino === "Kansas, Av. del Libertador, CABA" && llamadas[llamadas.length - 1].destination.placeId === "ChIJcambio00001" && viaje().dest_lat === -34.57, "tambien se puede cambiar a una sugerencia (placeId): se guarda el destino exacto que devuelve Google");
+  delete (env as any).GOOGLE_ROUTES_KEY;
+  const rc2 = await gd({ t: TOKEN, accion: "cambiar", texto: "Casa de Ana" });
+  ok(rc2.status === 400 && (await rc2.json() as any).error === "faltan_minutos", "sin Google y sin minutos, no se puede calcular el nuevo destino");
+  const rc3 = await gd({ t: TOKEN, accion: "cambiar", texto: "Casa de Ana", minutos: 25 });
+  ok(rc3.status === 200 && viaje().destino === "Casa de Ana" && viaje().dest_lat === null && (await (await api()).json() as any).registro.some((x: any) => /Casa de Ana: 25 min \(tiempo que pusiste vos\)/.test(x.detail)), "con los minutos que pone la persona se puede cambiar igual (sin saber el destino exacto, no se recalcula)");
+  (env as any).GOOGLE_ROUTES_KEY = "clave-de-prueba";
+  seg = 20 * 3600;
+  const rc4 = await gd({ t: TOKEN, accion: "cambiar", texto: "Kansas", minutos: 10 });
+  ok(rc4.status === 400 && (await rc4.json() as any).error === "destino_muy_lejos", "si el nuevo destino queda a mas de 5 horas, se rechaza");
+  seg = 720;
+  ok((await gd({ t: TOKEN, accion: "cambiar", lugarId: "no-existe" })).status === 400, "un lugar que no es suyo no sirve");
+  fijar({ estado: "alerta", alertas: 1, last_alert_at: now() });
+  const rc5 = await gd({ t: TOKEN, accion: "cambiar", lugarId: "pl1" });
+  ok(rc5.status === 409 && (await rc5.json() as any).error === "ya_se_aviso", "despues de avisarles a los referentes no se cambia el destino: se toca Llegue");
+
+  console.log("-- buscar y lugares con el enlace del camino");
+  fijar({ estado: "en_camino", alertas: 0, last_alert_at: null });
+  const bt: any = await (await gd({ t: TOKEN, accion: "buscar", texto: "kansas" })).json();
+  ok(bt.ok && bt.sugerencias.length === 1 && bt.sugerencias[0].placeId === "ChIJcambio00001" && bt.sugerencias[0].principal === "Kansas", "desde la pagina del camino se buscan lugares (por si cambia de destino)");
+  const lt: any = await (await gd({ t: TOKEN, accion: "lugares" })).json();
+  ok(lt.ok && lt.lugares.map((x: any) => x.name).join() === "Casa,Oficina", "y se ven sus propios lugares");
+  ok((await gd({ t: "gdvxxxx.yyyy", accion: "buscar", texto: "kansas" })).status === 404 && (await gd({ t: "gdvxxxx.yyyy", accion: "lugares" })).status === 404, "con un enlace inventado no se busca ni se ven lugares");
+  fijar({ estado: "llego", ended_at: now() });
+  const bt2 = await gd({ t: TOKEN, accion: "buscar", texto: "kansas" });
+  ok(bt2.status === 409 && (await bt2.json() as any).error === "camino_terminado", "terminado el camino, el enlace ya no sirve para buscar");
+
+  console.log("-- la pagina del camino: frenar un rato y cambiar de destino");
+  const pc2: string = await (gdPaginaCamino() as any).text();
+  ok(["bFrenar", "bCambiar", "frenarPanel", "frenarAyuda", "cambiarPanel", "cmLugar", "cmOtro", "cmTexto", "cmSugerencias", "cmAyuda", "cmMinBloque", "cmMin", "cmConfirmar"].every((i) => pc2.includes('id="' + i + '"')) && ["15", "30", "60"].every((m) => pc2.includes('data-f="' + m + '"')) && /Voy a frenar un rato/.test(pc2) && /Cambiar destino/.test(pc2) && /No les avisamos a tus referentes/.test(pc2), "la pagina del camino tiene 'Voy a frenar un rato' (15, 30 o 60 minutos, sin avisar a los referentes) y 'Cambiar destino'");
+  ok(/accion:"parada",minutos:n/.test(pc2) && /accion:"cambiar"/.test(pc2) && /accion:"buscar",texto:q/.test(pc2) && /accion:"lugares"/.test(pc2) && /e\.codigo==="faltan_minutos"/.test(pc2) && /navigator\.geolocation\.getCurrentPosition/.test(pc2) && /c\.lugarId=\$\("cmLugar"\)\.value/.test(pc2) && /c\.placeId=CMPLACE/.test(pc2), "cambiar de destino: lugares guardados u otro lugar con sugerencias, desde donde esta ahora, y si Google no calcula pide los minutos");
+  ok(/V\.puedeParar/.test(pc2) && /Ya frenaste "\+V\.paradasMax/.test(pc2) && /V\.puedeCambiar/.test(pc2) && /V\.paradasMax/.test(pc2) && /demasiadas_paradas/.test(pc2) && /destino_muy_lejos/.test(pc2), "los botones aparecen segun lo que permite el servidor (cantidad de paradas, camino activo)");
+  ok(/V\.ajusteAutoMin>0/.test(pc2) && /Sumamos "\+V\.ajusteAutoMin\+" minutos por tr\u00e1nsito/.test(pc2) && /f\.autoMin>0/.test(pc2) && /por tr\u00e1nsito/.test(pc2), "la pagina avisa cuando se sumaron minutos por transito y lo cuenta en el resumen final");
+  ok(!/innerHTML/.test(pc2), "la pagina del camino no arma nada con innerHTML (los lugares y las sugerencias se agregan como texto)");
+
+  globalThis.fetch = fetchReal;
+  delete (env as any).GOOGLE_ROUTES_KEY;
+  sqlite.exec("DELETE FROM gd_viajes");
+  await preparar();
+}
+
 console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
 {
   const tp: string = await (pldPaginaDuenio() as any).text();
@@ -1124,7 +1345,8 @@ console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
   ok(["config-referentes", "config-cautela", "config-guardian", "config-ajustes", "config-accesibilidad", "config-registro"].every((h) => vConf.includes('href="#' + h + '"')) && /<b>Referentes<\/b>/.test(vConf) && /<b>Ajustes<\/b>/.test(vConf) && /<b>Accesibilidad<\/b>/.test(vConf) && /<b>Registro<\/b>/.test(vConf) && !/id="rAgregar"|id="cDesde"|id="gMargen"/.test(vConf), "Configuracion es una lista de categorias (Referentes, Modo Cautela, Modo Guardian, Ajustes, Accesibilidad, Registro) y no un solo texto largo");
   ok(/id="rAgregar"/.test(vRef) && /id="referentes"/.test(vRef) && /No lo encuentro/.test(vRef) && !/Pausar|id="cDesde"|id="gdEmpezar"/.test(vRef), "Referentes tiene solo lo de los referentes");
   ok(["cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "cReset", "hoy"].every((i) => vCfgC.includes('id="' + i + '"')) && /Estado de tu tel\u00e9fono/.test(vCfgC) && !/id="cNombre"|id="gMargen"|id="pOtro"/.test(vCfgC), "las condiciones del Modo Cautela y el estado del telefono estan en su categoria de Configuracion");
-  ok(["gMargen", "gAviso", "gExt", "gEntre", "gMaxAv", "gGuardar", "gReset", "gdCfgBloqueo"].every((i) => vCfgG.includes('id="' + i + '"')) && /Margen extra/.test(vCfgG) && /Seguís en camino/.test(vCfgG) && /Avisos a tus referentes/.test(vCfgG) && !/id="gdEmpezar"|id="gdLugar"/.test(vCfgG), "el Modo Guardian tiene su categoria de Configuracion: margen extra, cuando preguntar si seguis en camino, veces de mas tiempo y avisos a referentes, con valores recomendados");
+  ok(["gMargen", "gAviso", "gExt", "gAuto", "gEntre", "gMaxAv", "gGuardar", "gReset", "gdCfgBloqueo"].every((i) => vCfgG.includes('id="' + i + '"')) && /Margen extra/.test(vCfgG) && /Seguís en camino/.test(vCfgG) && /Avisos a tus referentes/.test(vCfgG) && /Sumar tiempo si hay más tránsito/.test(vCfgG) && /Si estás frenado, no suma nada/.test(vCfgG) && !/id="gdEmpezar"|id="gdLugar"/.test(vCfgG), "el Modo Guardian tiene su categoria de Configuracion: margen extra, cuando preguntar si seguis en camino, veces de mas tiempo, sumar tiempo por transito y avisos a referentes, con valores recomendados");
+  ok(/autoAjusteMin:\$\("gAuto"\)\.value/.test(tp) && /\$\("gAuto"\)\.value=c\.autoAjusteMin/.test(tp) && /"gAuto","gGuardar","gReset"\]\.forEach/.test(tp) && /min m\u00e1s por tr\u00e1nsito/.test(tp), "la pagina guarda, muestra y bloquea con un camino en marcha el tope de minutos por transito");
   ok(/id="cNombre"/.test(vAju) && /id="cNombreGuardar"/.test(vAju) && /Acerca de Tu protecci\u00f3n/.test(vAju) && /en validaci\u00f3n/.test(vAju), "Ajustes tiene como te llaman tus referentes y lo de la validacion");
   ok(["aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz"].every((i) => vAcc.includes('id="' + i + '" role="switch"')) && /data-t="g"/.test(vAcc) && /data-t="x"/.test(vAcc) && /Tama\u00f1o del texto/.test(vAcc) && /se guardan en este tel\u00e9fono/.test(vAcc), "Accesibilidad: tamano del texto, alto contraste, botones grandes, sonido, vibracion y pantalla encendida (se guardan en el telefono)");
   ok(/id="registro"/.test(vReg) && !/id="rAgregar"/.test(vReg), "el Registro esta en su categoria de Configuracion");
@@ -1136,7 +1358,7 @@ console.log("== Tu proteccion: Modo Cautela y Modo Guardian");
   ok(/<a class="atras" id="aHub"/.test(tp) && /h\.textContent=p==="configuracion"\?"← Configuración":"← Tu protección"/.test(tp) && /NOMBREPERSONA/.test(tp), "dentro de cada pantalla aparece el enlace para volver (a Tu proteccion o a Configuracion) y el titulo dice de cual se trata");
   ok(!/Pr\u00f3ximamente/.test(tp) && /id="guardianCard"/.test(tp) && /id="gdEmpezar"/.test(tp) && /id="gdSeccion"/.test(tp), "el Modo Guardian ya no dice Proximamente: tiene su tarjeta para empezar un camino");
   ok(!/Por las dudas est\u00e1 encendido/.test(tp) && /id="cEncender" role="switch" aria-checked="true" aria-label="Modo Cautela"/.test(tp) && /Por las dudas: si dejo de responder/.test(tp) && /function alternarCautela/.test(tp) && /\$\("swCautelaInicio"\)\.onclick=alternarCautela/.test(tp), "el Modo Cautela se prende y se apaga con un interruptor, tanto en el inicio como en su pantalla");
-  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe", "gdSeccion", "guardianCard", "gdCarga", "gdActivo", "gdAbrir", "gdForm", "gdLugar", "gdOtro", "gdTexto", "gdModo", "gdMin", "gdEmpezar", "gdSinRef", "swCautelaInicio", "tCautela", "tGuardian", "tConfig", "avisoRef", "cfRef", "cNombreGuardar", "cReset", "gMargen", "gAviso", "gExt", "gEntre", "gMaxAv", "gGuardar", "gReset", "aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz", "gdPie"];
+  const ids = ["aviso", "sinSesion", "contenido", "hoy", "referentes", "rNombre", "rCorreo", "rAgregar", "invitacion", "dondeBoton", "cNombre", "cDesde", "cHasta", "cSilNoche", "cSilDia", "cKm", "cBat", "cMin", "cEmer", "cGuardar", "cCasa", "casa", "pausa", "estadoModo", "pHoras", "pOtro", "cEncender", "registro", "titulo", "paraQuien", "persona", "soloLectura", "enNombreDe", "gdSeccion", "guardianCard", "gdCarga", "gdActivo", "gdAbrir", "gdForm", "gdLugar", "gdOtro", "gdTexto", "gdModo", "gdMin", "gdEmpezar", "gdSinRef", "swCautelaInicio", "tCautela", "tGuardian", "tConfig", "avisoRef", "cfRef", "cNombreGuardar", "cReset", "gMargen", "gAviso", "gExt", "gAuto", "gEntre", "gMaxAv", "gGuardar", "gReset", "aaContraste", "aaBotones", "aaSonido", "aaVibra", "aaLuz", "gdPie"];
   ok(ids.every((i) => tp.includes('id="' + i + '"')), "todos los campos que usa la pagina siguen en su lugar");
   ok(['data-h="8"', 'data-h="12"', 'data-h="24"', 'data-h="0"'].every((x) => tp.includes(x)) && />12 horas<\/button>/.test(tp) && />24 horas<\/button>/.test(tp) && /Quitar pausa/.test(tp), "la pagina ofrece pausar por 8, 12 y 24 horas, otro tiempo y quitar la pausa");
   ok(!/C\u00f3mo est\u00e1s hoy/.test(tp) && /Estado de tu tel\u00e9fono/.test(tp), "la tarjeta ya no se llama 'Como estas hoy' (parecia una pregunta de animo): se llama 'Estado de tu telefono'");

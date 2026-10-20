@@ -6,10 +6,11 @@ sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,own
 sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fm2", "lucas@correo.com", "ana@correo.com", "Ana", "Lucas", "adulto", "activo");
 sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl1", "lucas@correo.com", "Casa", -34.49, -58.4, 150, new Date().toISOString());
 setSesion({ email: "lucas@correo.com", method: "passkey" });
-// Google Rutas de mentira (para ver la pantalla con el tiempo calculado por mapas): 13 minutos, termina en la Casa de prueba
+// Google Rutas de mentira (para ver la pantalla con el tiempo calculado por mapas): 13 minutos (o lo que diga /__ruta), termina en la Casa de prueba
 const fetchReal = globalThis.fetch;
+let rutaSegundos = 780;
 globalThis.fetch = (async (url: any, init: any) => String(url).includes("routes.googleapis.com")
-  ? new Response(JSON.stringify({ routes: [{ duration: "780s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.49, longitude: -58.4 } } }] }] }), { status: 200 })
+  ? new Response(JSON.stringify({ routes: [{ duration: rutaSegundos + "s", distanceMeters: 3000, legs: [{ endLocation: { latLng: { latitude: -34.49, longitude: -58.4 } } }] }] }), { status: 200 })
   : String(url).includes("places.googleapis.com") && String(JSON.parse(init.body).input).includes("zzzz")
     ? new Response("{}", { status: 200 })
     : String(url).includes("places.googleapis.com")
@@ -41,6 +42,9 @@ const servidor = createServer(async (req, res) => {
     else if (ruta === "POST /__clave") { (env as any).GOOGLE_ROUTES_KEY = cuerpo === "1" ? "clave-de-prueba" : ""; r = json({ ok: true }); }
     else if (ruta === "POST /__gd-cron") { await gdCron(env); r = json({ ok: true }); }
     else if (ruta === "POST /__gd-minutos") { sqlite.prepare("UPDATE gd_viajes SET deadline_at=? WHERE estado IN ('en_camino','aviso','alerta')").run(new Date(Date.now() + Number(cuerpo) * 60_000).toISOString()); r = json({ ok: true }); }
+    else if (ruta === "POST /__ruta") { rutaSegundos = Number(cuerpo); r = json({ ok: true }); }
+    else if (ruta === "POST /__gd-ubicacion") { const u = JSON.parse(cuerpo || "{}"); sqlite.prepare("UPDATE devices SET last_location_json=?,last_location_at=?,last_seen_at=? WHERE id='dev1'").run(JSON.stringify({ latitude: u.lat, longitude: u.lng, address: "Calle de prueba" }), hace2(0), hace2(0)); r = json({ ok: true }); }
+    else if (ruta === "POST /__gd-progreso") { const u = JSON.parse(cuerpo || "{}"); sqlite.prepare("UPDATE gd_progreso SET ref_at=?,recalc_at=?").run(hace2(u.refMinAtras ?? 6), hace2(u.recalcMinAtras ?? 6)); r = json({ ok: true, filas: sqlite.prepare("SELECT * FROM gd_progreso").all() }); }
     else if (ruta === "GET /__correos") r = json(correos);
     else if (ruta === "POST /__correo-falla") { setCorreoOk(cuerpo !== "1"); r = json({ ok: true }); }
     else if (ruta === "POST /__sesion") { setSesion(JSON.parse(cuerpo || "null")); r = json({ ok: true }); }

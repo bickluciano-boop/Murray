@@ -818,30 +818,40 @@ const GD_PING_CADA_MIN = 5;
 const GD_MAX_MINUTOS = 300;
 const GD_CIERRE_HORAS = 12;
 const GD_VELOCIDAD_KMH: Record<string, number> = { caminando: 4.5, transporte: 15, auto: 28 };
+const GD_PARADAS = [15, 30, 60];
+const GD_MAX_PARADAS = 2;
+const GD_AJUSTE_AUTO_MAX_MIN = 60;
+const GD_AJUSTE_CADA_MIN = 4;
+const GD_AJUSTE_DESDE_MIN = 20;
+const GD_AJUSTE_AVANCE_M = 100;
+const GD_AJUSTE_MIN_ATRASO = 2;
+const GD_UBICACION_RECIENTE_MIN = 10;
 const GD_MODOS: Record<string, string> = { auto: "en auto", transporte: "en transporte público", caminando: "caminando" };
 
 /** Lo que cada persona puede cambiar del Modo Guardián (Configuración). Los valores recomendados son las constantes de arriba; cada cambio queda en gd_config. */
-type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number };
-const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS };
-const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5] };
+type GdConfig = { margenMin: number; avisoMin: number; maxExtensiones: number; entreAlertasMin: number; maxAlertas: number; autoAjusteMin: number };
+const GD_POR_DEFECTO: GdConfig = { margenMin: GD_MARGEN_MIN, avisoMin: GD_AVISO_ANTES_MIN, maxExtensiones: GD_MAX_EXTENSIONES, entreAlertasMin: GD_ENTRE_ALERTAS_MIN, maxAlertas: GD_MAX_ALERTAS, autoAjusteMin: GD_AJUSTE_AUTO_MAX_MIN };
+const GD_LIMITES: Record<keyof GdConfig, [number, number]> = { margenMin: [1, 15], avisoMin: [1, 10], maxExtensiones: [0, 5], entreAlertasMin: [5, 60], maxAlertas: [1, 5], autoAjusteMin: [0, 180] };
 let gdTablaLista = false;
 
 /** La tabla se crea sola la primera vez que se usa (no hace falta tocar la base de datos al instalar). */
 async function gdAsegurarTabla(env: Env) {
   if (gdTablaLista) return;
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, updated_at TEXT)").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_config (owner_email TEXT PRIMARY KEY, margen_min INTEGER, aviso_min INTEGER, max_ext INTEGER, entre_alertas_min INTEGER, max_alertas INTEGER, auto_max_min INTEGER, updated_at TEXT)").run();
+  try { await env.DB.prepare("ALTER TABLE gd_config ADD COLUMN auto_max_min INTEGER").run(); } catch { /* ya estaba: la tabla se creo con esa columna */ }
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS gd_progreso (viaje_id TEXT PRIMARY KEY, ref_lat REAL, ref_lng REAL, ref_at TEXT, recalc_at TEXT, auto_min INTEGER NOT NULL DEFAULT 0, paradas INTEGER NOT NULL DEFAULT 0, updated_at TEXT)").run();
   gdTablaLista = true;
 }
 
 function gdConfigValida(c: Record<string, unknown>, base: GdConfig): GdConfig {
-  const n = (k: keyof GdConfig) => Math.round(pldNumero(c[k], GD_LIMITES[k][0], GD_LIMITES[k][1], base[k]));
-  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas") };
+  const n = (k: keyof GdConfig) => (c[k] === undefined || c[k] === null || c[k] === "" ? base[k] : Math.round(pldNumero(c[k], GD_LIMITES[k][0], GD_LIMITES[k][1], base[k])));
+  return { margenMin: n("margenMin"), avisoMin: n("avisoMin"), maxExtensiones: n("maxExtensiones"), entreAlertasMin: n("entreAlertasMin"), maxAlertas: n("maxAlertas"), autoAjusteMin: n("autoAjusteMin") };
 }
 
 async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
   try {
     await gdAsegurarTabla(env);
-    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
+    const f = await env.DB.prepare("SELECT margen_min AS margenMin,aviso_min AS avisoMin,max_ext AS maxExtensiones,entre_alertas_min AS entreAlertasMin,max_alertas AS maxAlertas,auto_max_min AS autoAjusteMin FROM gd_config WHERE owner_email=?").bind(email).first<Record<string, unknown>>();
     return f ? gdConfigValida(f, GD_POR_DEFECTO) : { ...GD_POR_DEFECTO };
   } catch {
     return { ...GD_POR_DEFECTO };
@@ -850,8 +860,30 @@ async function gdLeerConfig(env: Env, email: string): Promise<GdConfig> {
 
 async function gdGuardarConfig(env: Env, email: string, c: GdConfig) {
   await gdAsegurarTabla(env);
-  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,updated_at=excluded.updated_at")
-    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, now()).run();
+  await env.DB.prepare("INSERT INTO gd_config (owner_email,margen_min,aviso_min,max_ext,entre_alertas_min,max_alertas,auto_max_min,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(owner_email) DO UPDATE SET margen_min=excluded.margen_min,aviso_min=excluded.aviso_min,max_ext=excluded.max_ext,entre_alertas_min=excluded.entre_alertas_min,max_alertas=excluded.max_alertas,auto_max_min=excluded.auto_max_min,updated_at=excluded.updated_at")
+    .bind(email, c.margenMin, c.avisoMin, c.maxExtensiones, c.entreAlertasMin, c.maxAlertas, c.autoAjusteMin, now()).run();
+}
+
+/** Lo que se sabe de un camino mientras dura: la ultima muestra de ubicacion (para ver si se acerca), cuando se recalculo, cuantos minutos se sumaron solos por transito y cuantas paradas hizo. */
+type GdProgreso = { refLat: number | null; refLng: number | null; refAt: string | null; recalcAt: string | null; autoMin: number; paradas: number };
+const GD_PROGRESO_VACIO: GdProgreso = { refLat: null, refLng: null, refAt: null, recalcAt: null, autoMin: 0, paradas: 0 };
+
+async function gdLeerProgreso(env: Env, id: string): Promise<GdProgreso> {
+  try {
+    await gdAsegurarTabla(env);
+    const f = await env.DB.prepare("SELECT ref_lat AS refLat,ref_lng AS refLng,ref_at AS refAt,recalc_at AS recalcAt,auto_min AS autoMin,paradas FROM gd_progreso WHERE viaje_id=?").bind(id).first<Record<string, unknown>>();
+    if (!f) return { ...GD_PROGRESO_VACIO };
+    const num = (x: unknown) => (x === null || x === undefined ? null : Number.isFinite(Number(x)) ? Number(x) : null);
+    return { refLat: num(f.refLat), refLng: num(f.refLng), refAt: f.refAt ? String(f.refAt) : null, recalcAt: f.recalcAt ? String(f.recalcAt) : null, autoMin: Math.max(0, Math.round(Number(f.autoMin) || 0)), paradas: Math.max(0, Math.round(Number(f.paradas) || 0)) };
+  } catch {
+    return { ...GD_PROGRESO_VACIO };
+  }
+}
+
+async function gdGuardarProgreso(env: Env, id: string, p: GdProgreso) {
+  await gdAsegurarTabla(env);
+  await env.DB.prepare("INSERT INTO gd_progreso (viaje_id,ref_lat,ref_lng,ref_at,recalc_at,auto_min,paradas,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(viaje_id) DO UPDATE SET ref_lat=excluded.ref_lat,ref_lng=excluded.ref_lng,ref_at=excluded.ref_at,recalc_at=excluded.recalc_at,auto_min=excluded.auto_min,paradas=excluded.paradas,updated_at=excluded.updated_at")
+    .bind(id, p.refLat, p.refLng, p.refAt, p.recalcAt, p.autoMin, p.paradas, now()).run();
 }
 
 type GdViaje = {
@@ -903,13 +935,13 @@ function gdHora(iso: string | null) {
 }
 
 /** Cuándo terminó el camino respecto del límite: minutos antes (negativo) o después (positivo) de la hora prevista, y cuánto duró. */
-function gdFin(v: GdViaje, margenMin = GD_MARGEN_MIN) {
+function gdFin(v: GdViaje, margenMin = GD_MARGEN_MIN, autoMin = 0) {
   if (!v.endedAt) return null;
   const fin = Date.parse(v.endedAt), limite = Date.parse(v.deadlineAt), inicio = Date.parse(v.startedAt);
   const total = Math.round((limite - inicio) / 60000);
   return {
     hora: gdHora(v.endedAt), limiteHora: gdHora(v.deadlineAt), despuesMin: Math.round((fin - limite) / 60000),
-    duracionMin: Math.max(0, Math.round((fin - inicio) / 60000)), extraMin: Math.max(0, total - v.estimadoMin - margenMin),
+    duracionMin: Math.max(0, Math.round((fin - inicio) / 60000)), extraMin: Math.max(0, total - v.estimadoMin - margenMin - autoMin), autoMin,
   };
 }
 
@@ -921,11 +953,14 @@ function gdDemoraTexto(despuesMin: number, limiteHora: string) {
 
 async function gdPresentar(env: Env, v: GdViaje) {
   const g = await gdLeerConfig(env, v.ownerEmail);
+  const pr = await gdLeerProgreso(env, v.id);
+  const activo = v.estado === "en_camino" || v.estado === "aviso";
   return {
-    fin: gdFin(v, g.margenMin),
+    fin: gdFin(v, g.margenMin, pr.autoMin),
     id: v.id, destino: v.destino, modo: v.modo, modoTexto: GD_MODOS[v.modo] ?? v.modo, estado: v.estado, estimadoMin: v.estimadoMin, margenMin: g.margenMin,
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
-    puedeExtender: (v.estado === "en_camino" || v.estado === "aviso") && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
+    puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
+    ajusteAutoMin: pr.autoMin, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo,
     enlace: await gdEnlace(env, v),
   };
 }
@@ -994,6 +1029,38 @@ async function gdAvisarPersona(env: Env, v: GdViaje, asunto: string, titulo: str
   if (ub.pushToken) await sendExpoNotice(ub.pushToken, titulo, texto.replace(/<[^>]+>/g, ""), { data: { tipo: "guardian", url: enlace } }).catch(() => false);
 }
 
+/** Mientras el camino esta en marcha: si el telefono SE ESTA ACERCANDO al destino pero Google calcula que va a tardar mas de lo previsto (transito, un desvio), el limite se corre solo,
+ *  hasta un tope (autoAjusteMin). Si el telefono esta quieto (la persona freno) o se aleja, no se suma nada: sigue el aviso de siempre. Se evalua cada ~4 minutos con una ubicacion reciente
+ *  y solo se le pregunta a Google cuando faltan 20 minutos o menos. */
+async function gdAjustarPorTransito(env: Env, v: GdViaje, g: GdConfig, ub: Awaited<ReturnType<typeof gdUbicacion>>, ahora: number): Promise<GdViaje | null> {
+  if (g.autoAjusteMin <= 0 || (v.estado !== "en_camino" && v.estado !== "aviso")) return null;
+  if (v.destLat === null || v.destLng === null || !ub.ubicacion) return null;
+  const muestraEn = Date.parse(ub.ubicacion.en ?? "");
+  if (!Number.isFinite(muestraEn) || ahora - muestraEn > GD_UBICACION_RECIENTE_MIN * 60_000) return null;
+  const p = await gdLeerProgreso(env, v.id);
+  if (p.recalcAt && ahora - Date.parse(p.recalcAt) < GD_AJUSTE_CADA_MIN * 60_000) return null;
+  const aqui = { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng };
+  const nuevaRef: GdProgreso = { ...p, refLat: aqui.lat, refLng: aqui.lng, refAt: new Date(muestraEn).toISOString(), recalcAt: new Date(ahora).toISOString() };
+  if (p.refLat === null || p.refLng === null || !p.refAt) { await gdGuardarProgreso(env, v.id, nuevaRef); return null; }
+  if (muestraEn - Date.parse(p.refAt) < 3 * 60_000) return null; // todavia no hay una ubicacion mas nueva para comparar
+  const avanceM = (pldDistanciaKm(p.refLat, p.refLng, v.destLat, v.destLng) - pldDistanciaKm(aqui.lat, aqui.lng, v.destLat, v.destLng)) * 1000;
+  await gdGuardarProgreso(env, v.id, nuevaRef);
+  if (avanceM < GD_AJUSTE_AVANCE_M) return null;
+  if ((Date.parse(v.deadlineAt) - ahora) / 60_000 > GD_AJUSTE_DESDE_MIN || p.autoMin >= g.autoAjusteMin) return null;
+  const ruta = await gdRutaMapas(env, aqui, { lat: v.destLat, lng: v.destLng }, v.modo);
+  if ("fallo" in ruta) return null;
+  const atraso = (ahora + (ruta.minutos + g.margenMin) * 60_000 - Date.parse(v.deadlineAt)) / 60_000;
+  if (atraso < GD_AJUSTE_MIN_ATRASO) return null;
+  const suma = Math.min(Math.ceil(atraso), g.autoAjusteMin - p.autoMin);
+  if (suma < 1) return null;
+  const limite = new Date(Date.parse(v.deadlineAt) + suma * 60_000).toISOString();
+  await env.DB.prepare("UPDATE gd_viajes SET deadline_at=?,estado='en_camino',aviso_at=NULL WHERE id=? AND estado IN ('en_camino','aviso')").bind(limite, v.id).run();
+  await gdGuardarProgreso(env, v.id, { ...nuevaRef, autoMin: p.autoMin + suma });
+  await pldRegistrar(env, v.ownerEmail, null, "guardian", `Hay más tránsito: se te sumaron ${suma} minutos para llegar a ${v.destino} (hasta las ${gdHora(limite)}).`);
+  if (ub.pushToken) await sendExpoNotice(ub.pushToken, "Hay más tránsito", `Te dimos ${suma} minutos más para llegar a ${v.destino}. Tenés que llegar antes de las ${gdHora(limite)}.`, { data: { tipo: "guardian", url: await gdEnlace(env, v) } }).catch(() => false);
+  return { ...v, deadlineAt: limite, estado: "en_camino", avisoAt: null };
+}
+
 /** Un paso del reloj de un camino (lo llama el cron cada minuto). */
 async function gdAvanzar(env: Env, v: GdViaje) {
   const ahora = Date.now();
@@ -1015,6 +1082,10 @@ async function gdAvanzar(env: Env, v: GdViaje) {
     await env.DB.prepare("UPDATE gd_viajes SET llegada_at=? WHERE id=?").bind(now(), v.id).run();
     await gdAvisarPersona(env, { ...v, llegadaAt: now() }, "¿Llegaste bien?", "¿Llegaste bien?", `Parece que llegaste a <strong style="color:#fff">${escapeHtml(v.destino)}</strong>. Tocá <em>Llegué</em> para cerrar el camino. Si todavía no llegaste o necesitás más tiempo, también podés extenderlo ahí.`, "Llegué / Necesito más tiempo");
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Tu teléfono llegó a ${v.destino}: se te preguntó si llegaste bien.`);
+  }
+  if (v.estado === "en_camino" || v.estado === "aviso") {
+    const ajustado = await gdAjustarPorTransito(env, v, g, ub, ahora).catch((error) => { console.error("gd_ajuste_failed", error); return null; });
+    if (ajustado) return; // el limite se corrio: lo demas se evalua el proximo minuto
   }
   const falta = (Date.parse(v.deadlineAt) - ahora) / 60000;
   if (v.estado === "en_camino" && falta <= g.avisoMin && falta > 0) {
@@ -1219,6 +1290,17 @@ async function gdCalcular(env: Env, email: string, modo: string, d: GdDestino, o
   return { ruta: null, fallo: mapas.fallo, detalle: mapas.detalle };
 }
 
+/** Cuantos minutos vale el camino: lo que calcula Google Mapas; si no se pudo, los que puso la persona; y si tampoco, la estimacion por la distancia. */
+function gdElegirMinutos(ruta: { minutos: number; fuente: "mapas" | "distancia" } | null, propios: unknown): { minutos: number; fuente: string } | null {
+  const p = Number(propios);
+  let minutos: number, fuente: string;
+  if (ruta && ruta.fuente === "mapas") { minutos = ruta.minutos; fuente = "calculado con mapas y el tránsito de ahora"; }
+  else if (Number.isFinite(p) && p > 0) { minutos = p; fuente = "tiempo que pusiste vos"; }
+  else if (ruta) { minutos = ruta.minutos; fuente = "estimado por la distancia"; }
+  else return null;
+  return { minutos: Math.min(GD_MAX_MINUTOS, Math.max(1, Math.round(minutos))), fuente };
+}
+
 /** Empieza un camino. `cuerpo`: lugarId (de sus Lugares) o texto (otra dirección), modo y, si no se puede calcular, minutos. */
 async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown>) {
   const modo = String(cuerpo.modo ?? "");
@@ -1230,15 +1312,11 @@ async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown
   if ("error" in d) return d;
   const { ruta } = await gdCalcular(env, email, modo, d, cuerpo.origen);
   if (ruta && ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return { error: "destino_muy_lejos", status: 400 };
-  const propios = Number(cuerpo.minutos);
-  let minutos: number, fuente: string;
-  if (ruta && ruta.fuente === "mapas") { minutos = ruta.minutos; fuente = "calculado con mapas y el tránsito de ahora"; }
-  else if (Number.isFinite(propios) && propios > 0) { minutos = propios; fuente = "tiempo que pusiste vos"; }
-  else if (ruta) { minutos = ruta.minutos; fuente = "estimado por la distancia"; }
-  else return { error: "faltan_minutos", status: 400 };
+  const elegido = gdElegirMinutos(ruta, cuerpo.minutos);
+  if (!elegido) return { error: "faltan_minutos", status: 400 };
+  const { minutos, fuente } = elegido;
   const destino = d.destino;
   const destLat = d.destLat ?? ruta?.destLat ?? null, destLng = d.destLng ?? ruta?.destLng ?? null;
-  minutos = Math.min(GD_MAX_MINUTOS, Math.max(1, Math.round(minutos)));
   const id = `gdv${pldSecreto().slice(0, 14)}`;
   const inicio = now();
   const g = await gdLeerConfig(env, email);
@@ -1251,14 +1329,15 @@ async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown
 }
 
 /** Llegué / Extender / Necesito ayuda / Cancelar. */
-async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number) {
+async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, cuerpo: Record<string, unknown> = {}) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
   if (!activo) return { error: "camino_terminado", status: 409 };
   const g = await gdLeerConfig(env, v.ownerEmail);
+  const pr = await gdLeerProgreso(env, v.id);
   if (accion === "llegue" || (accion === "cancelar" && v.estado === "alerta")) {
     const fin = now();
     await env.DB.prepare("UPDATE gd_viajes SET estado='llego',ended_at=?,motivo_fin='llegue' WHERE id=?").bind(fin, v.id).run();
-    const f = gdFin({ ...v, endedAt: fin }, g.margenMin)!;
+    const f = gdFin({ ...v, endedAt: fin }, g.margenMin, pr.autoMin)!;
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}: tocaste Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
     await gdAvisarLlego(env, v, `llegó bien a ${v.destino}: tocó Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
     return { ok: true, estado: "llego" };
@@ -1279,6 +1358,36 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number) {
     await pldRegistrar(env, v.ownerEmail, null, "guardian", `Pediste ${minutos} minutos más para llegar a ${v.destino} (hasta las ${gdHora(limite)}).`);
     return { ok: true, estado: "en_camino" };
   }
+  if (accion === "parada") {
+    if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
+    if (!GD_PARADAS.includes(minutos)) return { error: "minutos_invalidos", status: 400 };
+    if (g.maxExtensiones === 0) return { error: "sin_extensiones", status: 409 };
+    if (pr.paradas >= GD_MAX_PARADAS) return { error: "demasiadas_paradas", status: 409 };
+    const base = Math.max(Date.parse(v.deadlineAt), Date.now());
+    const limite = new Date(base + minutos * 60_000).toISOString();
+    await env.DB.prepare("UPDATE gd_viajes SET deadline_at=?,estado='en_camino',aviso_at=NULL WHERE id=?").bind(limite, v.id).run();
+    await gdGuardarProgreso(env, v.id, { ...pr, paradas: pr.paradas + 1 });
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Vas a frenar un rato: ${minutos} minutos más para llegar a ${v.destino} (hasta las ${gdHora(limite)}). No se les avisó a tus referentes.`);
+    return { ok: true, estado: "en_camino" };
+  }
+  if (accion === "cambiar") {
+    if (v.estado === "alerta") return { error: "ya_se_aviso", status: 409 };
+    const d = await gdDestino(env, v.ownerEmail, cuerpo);
+    if ("error" in d) return d;
+    const { ruta } = await gdCalcular(env, v.ownerEmail, v.modo, d, cuerpo.origen);
+    if (ruta && ruta.fuente === "mapas" && ruta.minutos > GD_MAX_MINUTOS) return { error: "destino_muy_lejos", status: 400 };
+    const elegido = gdElegirMinutos(ruta, cuerpo.minutos);
+    if (!elegido) return { error: "faltan_minutos", status: 400 };
+    const ahora = Date.now();
+    const transcurrido = Math.max(0, Math.round((ahora - Date.parse(v.startedAt)) / 60000));
+    const limite = new Date(ahora + (elegido.minutos + g.margenMin) * 60_000).toISOString();
+    const destLat = d.destLat ?? ruta?.destLat ?? null, destLng = d.destLng ?? ruta?.destLng ?? null;
+    await env.DB.prepare("UPDATE gd_viajes SET destino=?,dest_lat=?,dest_lng=?,estimado_min=?,deadline_at=?,estado='en_camino',aviso_at=NULL,llegada_at=NULL WHERE id=?")
+      .bind(d.destino, destLat, destLng, transcurrido + elegido.minutos, limite, v.id).run();
+    await gdGuardarProgreso(env, v.id, { ...GD_PROGRESO_VACIO, paradas: pr.paradas });
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Cambiaste el destino a ${d.destino}: ${elegido.minutos} min (${elegido.fuente}) + ${g.margenMin} de margen (hasta las ${gdHora(limite)}).`);
+    return { ok: true, estado: "en_camino" };
+  }
   if (accion === "ayuda") {
     const ub = await gdUbicacion(env, v.ownerEmail);
     const enviados = await pldAvisarSos(env, v.ownerEmail, ub.ubicacion ? { latitude: ub.ubicacion.lat, longitude: ub.ubicacion.lng, address: ub.ubicacion.address } : null);
@@ -1287,6 +1396,18 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number) {
     return { ok: true, estado: "alerta", avisados: enviados };
   }
   return { error: "accion_desconocida", status: 400 };
+}
+
+/** Sugerencias de lugares (direcciones y nombres) cerca de donde esta el telefono. */
+async function gdBuscarApi(env: Env, email: string, cuerpo: Record<string, unknown>) {
+  const texto = String(cuerpo.texto ?? "").trim().slice(0, 100);
+  if (texto.length < 3) return json({ ok: true, sugerencias: [] });
+  const o = cuerpo.origen as { lat?: unknown; lng?: unknown } | null;
+  const ub = await gdUbicacion(env, email);
+  const origen = o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180
+    ? { lat: Number(o.lat), lng: Number(o.lng) }
+    : ub.ubicacion ? { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } : null;
+  return json({ ok: true, ...(await gdBuscarLugares(env, texto, origen)) });
 }
 
 /** API del Modo Guardián. Con `t` (el enlace de la persona) o con la sesión del panel. */
@@ -1309,16 +1430,7 @@ async function gdApi(request: Request, env: Env) {
       const r = await gdEmpezar(env, email, cuerpo);
       return json("error" in r ? { error: r.error, ...("viaje" in r ? { viaje: r.viaje } : {}) } : r, "error" in r ? r.status : 200);
     }
-    if (accion === "buscar") {
-      const texto = String(cuerpo.texto ?? "").trim().slice(0, 100);
-      if (texto.length < 3) return json({ ok: true, sugerencias: [] });
-      const o = cuerpo.origen as { lat?: unknown; lng?: unknown } | null;
-      const ub = await gdUbicacion(env, email);
-      const origen = o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180
-        ? { lat: Number(o.lat), lng: Number(o.lng) }
-        : ub.ubicacion ? { lat: ub.ubicacion.lat, lng: ub.ubicacion.lng } : null;
-      return json({ ok: true, ...(await gdBuscarLugares(env, texto, origen)) });
-    }
+    if (accion === "buscar") return gdBuscarApi(env, email, cuerpo);
     if (accion === "config") {
       const persona = await pldResolverPersona(env, email, "");
       if ("error" in persona) return json({ error: persona.error }, persona.status);
@@ -1346,14 +1458,22 @@ async function gdApi(request: Request, env: Env) {
     const lugares = cuerpo.t ? [] : ((await env.DB.prepare("SELECT id,name FROM family_places WHERE owner_email=? ORDER BY name ASC").bind(email).all<{ id: string; name: string }>()).results ?? []);
     return json({ ok: true, ahora: now(), viaje: viaje ? await gdPresentar(env, viaje) : null, lugares, referentes: (await pldReferentesActivos(env, email)).length, ...(cuerpo.t ? {} : { config: await gdLeerConfig(env, email), defaults: GD_POR_DEFECTO }) });
   }
+  if (accion === "lugares") {
+    const lugares = (await env.DB.prepare("SELECT id,name FROM family_places WHERE owner_email=? ORDER BY name ASC").bind(email).all<{ id: string; name: string }>()).results ?? [];
+    return json({ ok: true, lugares });
+  }
   if (!viaje) return json({ error: "no_hay_camino" }, 404);
-  const r = await gdAccion(env, viaje, accion, Number(cuerpo.minutos));
+  if (accion === "buscar") {
+    if (viaje.estado !== "en_camino" && viaje.estado !== "aviso" && viaje.estado !== "alerta") return json({ error: "camino_terminado" }, 409);
+    return gdBuscarApi(env, email, cuerpo);
+  }
+  const r = await gdAccion(env, viaje, accion, Number(cuerpo.minutos), cuerpo);
   if ("error" in r) return json({ error: r.error }, r.status);
   const nuevo = await gdPorId(env, viaje.id);
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
 
-const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.modo-sw{display:flex;align-items:center;justify-content:space-between;gap:14px}.modo-sw .modo-txt{display:block;flex:1;min-width:0;color:inherit;text-decoration:none}.modo-sw h2{margin:0 0 6px}.modo-sw p{margin:0 0 6px}button.sw{position:relative;flex:none;width:56px;height:32px;padding:0;border-radius:999px;border:1px solid #4a3f1f;background:#211d12;cursor:pointer}button.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#a29e92;transition:left .15s}button.sw[aria-checked="true"]{background:#d9b24c;border-color:#d9b24c}button.sw[aria-checked="true"]::after{left:27px;background:#111}.fila-sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid #2a2c31}.fila-sw:first-child{border-top:0}.fila-sw h2{margin:0 0 2px;font-size:1rem}.lista{background:#14151a;border:1px solid #2a2c31;border-radius:18px;overflow:hidden;margin:14px 0}.lista .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #2a2c31;color:inherit;text-decoration:none}.lista .item:first-child{border-top:0}.lista .item::after{content:"\\203A";color:#a29e92;font-size:1.5rem;line-height:1}.lista .item b{display:block}.lista .item small{display:block;margin-top:2px}.lista .item:hover,.lista .item:focus-visible{background:#1a1b21}.ac body{color:#fff}.ac p,.ac small,.ac .suave,.ac label{color:#f3f1ea}.ac .tarjeta,.ac .lista,.ac input,.ac select{border-color:#8a8d95}.ac button.sec,.ac .boton.sec,.ac .atras{border-color:#d9b24c}.ac .lista .item{border-color:#8a8d95}.ab button,.ab .boton,.ab .atras{padding:16px 22px;font-size:1.1rem}.ab button.sw{padding:0;font-size:1rem}.ab .lista .item{padding:18px 16px}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
+const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.subpanel{border:1px solid #2a2c31;border-radius:14px;padding:12px;margin:10px 0;background:#0f1013}.modo-sw{display:flex;align-items:center;justify-content:space-between;gap:14px}.modo-sw .modo-txt{display:block;flex:1;min-width:0;color:inherit;text-decoration:none}.modo-sw h2{margin:0 0 6px}.modo-sw p{margin:0 0 6px}button.sw{position:relative;flex:none;width:56px;height:32px;padding:0;border-radius:999px;border:1px solid #4a3f1f;background:#211d12;cursor:pointer}button.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#a29e92;transition:left .15s}button.sw[aria-checked="true"]{background:#d9b24c;border-color:#d9b24c}button.sw[aria-checked="true"]::after{left:27px;background:#111}.fila-sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid #2a2c31}.fila-sw:first-child{border-top:0}.fila-sw h2{margin:0 0 2px;font-size:1rem}.lista{background:#14151a;border:1px solid #2a2c31;border-radius:18px;overflow:hidden;margin:14px 0}.lista .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #2a2c31;color:inherit;text-decoration:none}.lista .item:first-child{border-top:0}.lista .item::after{content:"\\203A";color:#a29e92;font-size:1.5rem;line-height:1}.lista .item b{display:block}.lista .item small{display:block;margin-top:2px}.lista .item:hover,.lista .item:focus-visible{background:#1a1b21}.ac body{color:#fff}.ac p,.ac small,.ac .suave,.ac label{color:#f3f1ea}.ac .tarjeta,.ac .lista,.ac input,.ac select{border-color:#8a8d95}.ac button.sec,.ac .boton.sec,.ac .atras{border-color:#d9b24c}.ac .lista .item{border-color:#8a8d95}.ab button,.ab .boton,.ab .atras{padding:16px 22px;font-size:1.1rem}.ab button.sw{padding:0;font-size:1rem}.ab .lista .item{padding:18px 16px}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
 
 function pldPagina(titulo: string, cuerpo: string) {
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${titulo}</title>${PLD_ESTILO}<script>try{var q=JSON.parse(localStorage.getItem("ogAcc")||"{}")||{},r=document.documentElement;if(q.t==="g")r.style.fontSize="118%";if(q.t==="x")r.style.fontSize="136%";if(q.c)r.classList.add("ac");if(q.b)r.classList.add("ab")}catch(e){}</script></head><body><main><img class="logo" src="/marca/logo-correo.png" alt="ojo guard"><span class="etiqueta">NÚCLEO · EN VALIDACIÓN</span>${cuerpo}</main></body></html>`;
@@ -1374,6 +1494,12 @@ function gdPaginaCamino() {
 <button class="grande" id="bLlegue">Llegué</button>
 <div id="extBloque"><p class="suave" style="margin:16px 0 4px">¿Necesitás más tiempo?</p>
 <div class="botones tres" style="margin-top:6px"><button class="sec" data-m="10">+10 min</button><button class="sec" data-m="20">+20 min</button><button class="sec" data-m="30">+30 min</button></div></div>
+<div class="botones" style="margin-top:6px"><button class="sec" id="bFrenar">Voy a frenar un rato</button><button class="sec" id="bCambiar">Cambiar destino</button></div>
+<div id="frenarPanel" class="subpanel" style="display:none"><p class="suave" id="frenarAyuda" style="margin:0 0 6px">¿Cuánto vas a frenar? No les avisamos a tus referentes.</p><div class="botones tres" style="margin:6px 0 0"><button class="sec" data-f="15">15 min</button><button class="sec" data-f="30">30 min</button><button class="sec" data-f="60">1 hora</button></div></div>
+<div id="cambiarPanel" class="subpanel" style="display:none"><label style="margin-top:0">Nuevo destino</label><select id="cmLugar"></select>
+<div id="cmOtro" style="display:none"><label>Dirección o nombre del lugar</label><input id="cmTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="cmSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="cmAyuda" class="suave"></small></div>
+<div id="cmMinBloque" style="display:none"><label>Tiempo hasta ahí, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
+<div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde estás ahora.</small></div>
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo.</small>
 </div>
@@ -1408,10 +1534,14 @@ function pintar(d){
   $("despues").style.display=activo?"none":"block";
   var botones=document.querySelectorAll("button[data-m]");
   Array.prototype.forEach.call(botones,function(b){b.disabled=!V.puedeExtender});
+  $("bFrenar").style.display=V.paradasMax>0&&V.puedeCambiar?"inline-block":"none";$("bFrenar").disabled=!V.puedeParar;$("bFrenar").textContent=V.puedeParar?"Voy a frenar un rato":"Ya frenaste "+V.paradasMax+(V.paradasMax===1?" vez":" veces");
+  $("bCambiar").style.display=V.puedeCambiar?"inline-block":"none";
+  $("frenarAyuda").textContent="¿Cuánto vas a frenar? No les avisamos a tus referentes. Podés frenar "+(V.paradasMax===1?"1 vez":"hasta "+V.paradasMax+" veces")+(V.paradas>0?" (ya usaste "+V.paradas+")":"")+".";
+  if(!V.puedeCambiar){$("frenarPanel").style.display="none";$("cambiarPanel").style.display="none"}
   $("bCancelar").style.display=V.estado==="alerta"?"none":"inline-block";
-  var tx={en_camino:"Tenés que llegar antes de las "+hora(V.deadlineAt)+". Cuando llegues, tocá Llegué.",aviso:"¿Seguís en camino? Si no respondés, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Tocá Llegué cuando estés bien.",llego:"Llegaste bien. ¡Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerró solo."}[V.estado]||"";
+  var tx={en_camino:"Tenés que llegar antes de las "+hora(V.deadlineAt)+"."+(V.ajusteAutoMin>0?" Sumamos "+V.ajusteAutoMin+" minutos por tránsito.":"")+" Cuando llegues, tocá Llegué.",aviso:"¿Seguís en camino? Si no respondés, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Tocá Llegué cuando estés bien.",llego:"Llegaste bien. ¡Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerró solo."}[V.estado]||"";
   var f=V.fin;
-  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegué a las "+f.hora+": "+(f.despuesMin===0?"justo en el límite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"después")+" del límite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el cálculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+"."}
+  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegué a las "+f.hora+": "+(f.despuesMin===0?"justo en el límite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"después")+" del límite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el cálculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tránsito":"")+"."}
   $("estadoTxt").textContent=tx;$("estadoTxt").className=V.estado==="alerta"?"mal":(V.estado==="llego"?"ok":"suave");
   if(V.deadlineAt!==ultimoLimite){ultimoLimite=V.deadlineAt;ultimoPitido=0;sonoFinal=false}
   $("sonidoCard").style.display=(V.estado==="en_camino"||V.estado==="aviso")?"block":"none";
@@ -1430,13 +1560,36 @@ function tick(){
     else if(ms<=0&&!sonoFinal){sonoFinal=true;pitido(true)}
   }
 }
-function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",sin_extensiones:"En la configuración del Modo Guardián no se puede pedir más tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó."})[e.codigo]||"No se pudo. Probá de nuevo."}
+function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",demasiadas_paradas:"Ya frenaste el máximo de veces: tocá Llegué o pedí ayuda.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección.",lugar_invalido:"Ese lugar no existe.",destino_invalido:"Elegí de nuevo la dirección.",falta_destino:"Escribí a dónde vas.",sin_extensiones:"En la configuración del Modo Guardián no se puede pedir más tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó."})[e.codigo]||"No se pudo. Probá de nuevo."}
 function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
 $("bLlegue").onclick=function(){hacer({accion:"llegue"},"Listo: avisamos que llegaste bien.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: tenés "+b.getAttribute("data-m")+" minutos más.")}});
 $("bAyuda").onclick=function(){if(confirm("¿Pedir ayuda? Les avisamos ahora mismo a tus referentes, con tu última ubicación."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};
 $("bCancelar").onclick=function(){if(confirm("¿Cancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
+function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
+$("bFrenar").onclick=function(){$("cambiarPanel").style.display="none";$("frenarPanel").style.display=$("frenarPanel").style.display==="none"?"block":"none"};
+Array.prototype.forEach.call(document.querySelectorAll("button[data-f]"),function(b){b.onclick=function(){var n=Number(b.getAttribute("data-f"));$("frenarPanel").style.display="none";hacer({accion:"parada",minutos:n},"Listo: frenás "+(n===60?"1 hora":n+" minutos")+". No les avisamos a tus referentes.")}});
+var CMPLACE="",CMETIQUETA="",CMHAYSUG=false,CMTIMER=null,CMLUGARES=null;
+function cmCambio(){$("cmOtro").style.display=$("cmLugar").value?"none":"block"}
+function cmCargarLugares(){if(CMLUGARES)return;api({accion:"lugares"}).then(function(d){CMLUGARES=d.lugares||[];var s=$("cmLugar");limpiar(s);CMLUGARES.forEach(function(l){var o=document.createElement("option");o.value=l.id;o.textContent=l.name;s.appendChild(o)});var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar…";s.appendChild(o2);cmCambio()}).catch(function(){CMLUGARES=[];var s=$("cmLugar");limpiar(s);var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar…";s.appendChild(o2);cmCambio()})}
+$("bCambiar").onclick=function(){$("frenarPanel").style.display="none";var abrir=$("cambiarPanel").style.display==="none";$("cambiarPanel").style.display=abrir?"block":"none";if(abrir)cmCargarLugares()};
+$("cmLugar").onchange=cmCambio;
+function cmSugerir(){var q=$("cmTexto").value.trim();var caja=$("cmSugerencias");limpiar(caja);caja.style.display="none";$("cmAyuda").textContent="";if(q.length<3){CMHAYSUG=false;return}
+  $("cmAyuda").textContent="Buscando…";
+  api({accion:"buscar",texto:q}).then(function(d){if($("cmTexto").value.trim()!==q)return;var lista=d.sugerencias||[];CMHAYSUG=lista.length>0;
+    if(!lista.length){$("cmAyuda").textContent=d.fallo&&d.fallo!=="sin_clave"?"No pudimos buscar. Probá con otro nombre o escribí la dirección completa.":"";return}
+    lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" · "+sg.secundario:"")+(sg.km!==null&&sg.km!==undefined?" · a "+String(sg.km).replace(".",",")+" km":"");
+      b.onclick=function(){CMPLACE=sg.placeId;CMETIQUETA=(sg.principal+(sg.secundario?", "+sg.secundario:"")).slice(0,80);$("cmTexto").value=CMETIQUETA;limpiar(caja);caja.style.display="none";$("cmAyuda").textContent="Elegiste: "+CMETIQUETA};caja.appendChild(b)});
+    caja.style.display="flex";$("cmAyuda").textContent="Elegí el lugar correcto."}).catch(function(){})}
+$("cmTexto").oninput=function(){CMPLACE="";CMETIQUETA="";clearTimeout(CMTIMER);CMTIMER=setTimeout(cmSugerir,400)};
+$("cmConfirmar").onclick=function(){
+  var c={accion:"cambiar"};
+  if($("cmLugar").value){c.lugarId=$("cmLugar").value}else if(CMPLACE){c.placeId=CMPLACE;c.texto=CMETIQUETA}else{c.texto=$("cmTexto").value.trim();if(!c.texto){aviso("Elegí o escribí el nuevo destino.");return}if(CMHAYSUG){aviso("Elegí uno de los lugares que te sugerimos, así sabemos bien a dónde vas.");return}}
+  if($("cmMinBloque").style.display!=="none")c.minutos=Number($("cmMin").value)||0;
+  var enviar=function(){aviso("");api(c).then(function(d){pintar(d);$("cambiarPanel").style.display="none";$("cmMinBloque").style.display="none";aviso("Listo: cambiamos el destino y recalculamos el tiempo.")}).catch(function(e){if(e.codigo==="faltan_minutos"){$("cmMinBloque").style.display="block";aviso("No pudimos calcular el tiempo hasta ahí: poné cuántos minutos tardás.")}else aviso(errorDe(e))})};
+  var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
+  try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};
 function refrescar(){api({accion:"estado"}).then(pintar).catch(function(e){if(e.codigo==="enlace_invalido"){$("vacio").style.display="block";$("viaje").style.display="none"}})}
 refrescar();setInterval(refrescar,20000);setInterval(tick,1000);
 })();
@@ -1524,7 +1677,9 @@ function pldPaginaDuenio() {
 <div class="tarjeta"><h2>Tiempos</h2>
 <label>Margen extra: minutos que se suman a lo que tardás</label><input id="gMargen" type="number" min="1" max="15">
 <label>Preguntarme “¿Seguís en camino?” cuando falten (min)</label><input id="gAviso" type="number" min="1" max="10">
-<label>Veces que puedo pedir más tiempo (0 = ninguna)</label><input id="gExt" type="number" min="0" max="5"></div>
+<label>Veces que puedo pedir más tiempo (0 = ninguna)</label><input id="gExt" type="number" min="0" max="5">
+<label>Sumar tiempo si hay más tránsito, hasta (min; 0 = no sumar)</label><input id="gAuto" type="number" min="0" max="180">
+<small class="suave" style="display:block;margin-top:6px">Solo cuando te venís acercando y faltan pocos minutos: si el tránsito te hace tardar más, sumamos ese atraso al límite. Si estás frenado, no suma nada.</small></div>
 <div class="tarjeta"><h2>Avisos a tus referentes si no llegás</h2>
 <label>Repetir el aviso cada (min)</label><input id="gEntre" type="number" min="5" max="60">
 <label>Cantidad máxima de avisos</label><input id="gMaxAv" type="number" min="1" max="5">
@@ -1654,13 +1809,13 @@ function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
 }).catch(function(){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián."})}
 var GDPLACE="",GDETIQUETA="",GDHAYSUG=false,GDTIMER=null;
 function gdCfgPintar(c,enMarcha){
-  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;
+  $("gMargen").value=c.margenMin;$("gAviso").value=c.avisoMin;$("gExt").value=c.maxExtensiones;$("gEntre").value=c.entreAlertasMin;$("gMaxAv").value=c.maxAlertas;$("gAuto").value=c.autoAjusteMin;
   $("gdCfgBloqueo").style.display=enMarcha?"block":"none";
-  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
-  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces más tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+").";
-  $("gdPie").textContent="Tenés "+c.margenMin+" minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Podés extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuración no se puede pedir más tiempo.")}
+  ["gMargen","gAviso","gExt","gEntre","gMaxAv","gAuto","gGuardar","gReset"].forEach(function(i){$(i).disabled=enMarcha||!PROPIA||RO});
+  if(GDDEF)$("gRecomendado").textContent="Recomendado: margen de "+GDDEF.margenMin+" min, preguntar "+GDDEF.avisoMin+" min antes, "+GDDEF.maxExtensiones+" veces más tiempo, avisos cada "+GDDEF.entreAlertasMin+" min (hasta "+GDDEF.maxAlertas+") y hasta "+GDDEF.autoAjusteMin+" min más por tránsito.";
+  $("gdPie").textContent="Tenés "+c.margenMin+" minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. "+(c.maxExtensiones>0?"Podés extender 10, 20 o 30 minutos, hasta "+c.maxExtensiones+(c.maxExtensiones===1?" vez.":" veces."):"En tu configuración no se puede pedir más tiempo.")+(c.autoAjusteMin>0?" Si hay más tránsito y te venís acercando, el límite se acomoda solo (hasta "+c.autoAjusteMin+" min).":"")}
 function gdCfgRespuesta(x,ok){if(x.ok&&x.d.ok){aviso(ok);gdCfgPintar(x.d.config,false)}else aviso(({camino_en_marcha:"Hay un camino en marcha: cambialo cuando termine.",solo_administrador:"Esto lo completa el administrador de tu familia."})[x.d.error]||"No se pudo guardar.")}
-$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
+$("gGuardar").onclick=function(){gdPost({accion:"config",config:{margenMin:$("gMargen").value,avisoMin:$("gAviso").value,maxExtensiones:$("gExt").value,entreAlertasMin:$("gEntre").value,maxAlertas:$("gMaxAv").value,autoAjusteMin:$("gAuto").value}}).then(function(x){gdCfgRespuesta(x,"Cambios guardados.")}).catch(function(){aviso("No se pudo guardar.")})};
 $("gReset").onclick=function(){if(!confirm("¿Volver los tiempos y avisos del Modo Guardián a los valores recomendados?"))return;gdPost({accion:"config",config:{restablecer:true}}).then(function(x){gdCfgRespuesta(x,"Valores recomendados restablecidos.")}).catch(function(){aviso("No se pudo guardar.")})};
 // accesibilidad: se guarda en este telefono y vale para todas las pantallas de Ojo Guard
 function accLeer(){try{return JSON.parse(localStorage.getItem("ogAcc")||"{}")||{}}catch(e){return{}}}
