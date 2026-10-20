@@ -36,7 +36,7 @@ cambian de lugar. En pantalla ancha las tarjetas siguen en dos columnas.
 |---|---|---|
 | Cuenta y seguridad | Correo del titular, Protección de ingreso, Código de verificación, Pregunta de emergencia y Personas autorizadas | Cuenta (mismas tarjetas) |
 | Avisos | Avisos de seguridad: por correo, por SMS, "si el teléfono deja de responder" y Guardar | Cuenta (misma tarjeta) |
-| Tu protección | Enlace a `/guardian#configuracion` (referentes, Modo Cautela y Modo Guardián: tiempos y avisos) | Página Tu protección; el botón **OG** de arriba sigue para lo de todos los días |
+| Tu protección | Enlace a `/guardian#configuracion` (referentes, Modo Cautela y Modo Guardián: tiempos y avisos). Esa página se llama **Tu protección** y arriba dice **← Configuración**, que vuelve a esta lista (`/#config`) | Página Tu protección; el botón **OG** de arriba sigue para lo de todos los días |
 | Familia y lugares | Atajos: "Invitar a la familia" (abre el mapa con el cuadro de invitación) y "Abrir Mapa y Familia" (lugares, avisos de llegada y salida, roles) | Mapa (no se mueve: se llega desde acá) |
 | Equipos y pulseras | Atajos: "Agregar un equipo" (Mis Equipos con el cuadro abierto), "Ir a Mis Equipos" (quitar o autorizar) y "Ver presentación" de las pulseras | Mis Equipos (no se mueve) |
 | Reconocimiento facial | Búsquedas disponibles y compra (5 por USD 1, 10 por USD 1,50) | Cuenta (misma tarjeta) |
@@ -65,7 +65,7 @@ cambian de lugar. En pantalla ancha las tarjetas siguen en dos columnas.
 - [ ] **Cuenta y seguridad:** se ven el correo del titular, "Protección de ingreso", "Código de verificación" (con su botón), la pregunta de emergencia
   (guardar una de prueba) y Personas autorizadas.
 - [ ] **Avisos:** tildar "Por correo", "Por SMS" y "si el teléfono deja de responder", y **Guardar** (dice que se guardó).
-- [ ] **Tu protección:** abre la página de Tu protección, en su Configuración.
+- [ ] **Tu protección:** abre la página de Tu protección, en su Configuración (la pantalla se llama "Tu protección"). Arriba tiene que decir **← Configuración** y volver a la lista de la consola (hace falta `aplicar-proteccion-volver-panel.ps1`); adentro de cada categoría, "← Tu protección" vuelve a la lista de esa página.
 - [ ] **Familia y lugares:** "Invitar a la familia" abre el mapa con el cuadro de invitación; "Abrir Mapa y Familia" abre el mapa.
 - [ ] **Equipos y pulseras:** "Agregar un equipo" abre Mis Equipos con el cuadro de nuevo equipo; "Ir a Mis Equipos"; "Ver presentación" abre el video.
 - [ ] **Reconocimiento facial:** se ven las búsquedas y los dos botones de compra (no hace falta comprar).

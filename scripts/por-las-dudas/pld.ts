@@ -1964,8 +1964,9 @@ var TITULOS={"":"Tu protección",cautela:"Modo Cautela",guardian:"Modo Guardián
 var PADRES={cautela:"",guardian:"",configuracion:"","config-referentes":"configuracion","config-cautela":"configuracion","config-guardian":"configuracion","config-ajustes":"configuracion","config-accesibilidad":"configuracion","config-registro":"configuracion"};
 var PROPIA=true,RO=false,NOMBREPERSONA="",DEF=null,GDDEF=null;
 function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(h==="tus-referentes")h="config-referentes";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(!PROPIA&&h==="guardian")h="";if(!PROPIA&&h==="config-guardian")h="configuracion";return h}
-function titulo(){var v=vistaActual();var t=TITULOS[v];if(NOMBREPERSONA)t=v?t+" · "+NOMBREPERSONA:"Protección de "+NOMBREPERSONA;$("titulo").textContent=t}
-function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),p=PADRES[v];if(p===undefined){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"?"← Configuración":"← Tu protección"}titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
+var DESDEPANEL=vistaActual()==="configuracion"; // la página se abrió directo en Configuración (como desde la consola del panel): ahí "atrás" vuelve a la Configuración del panel, no al inicio
+function titulo(){var v=vistaActual();var t=DESDEPANEL&&v==="configuracion"?"Tu protección":TITULOS[v];if(NOMBREPERSONA)t=v?t+" · "+NOMBREPERSONA:"Protección de "+NOMBREPERSONA;$("titulo").textContent=t}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"← Configuración":"← Tu protección"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"← Configuración":"← Ir al inicio";titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
 window.addEventListener("hashchange",function(){mostrarVista(true)});
 function sw(b,on){b.setAttribute("aria-checked",on?"true":"false")}
 function pintar(d){

@@ -1,17 +1,14 @@
-﻿# aplicar-guardian-avisos-cambios-panel.ps1 - Modo Guardian: si la persona cancela el camino o cambia el destino, se les avisa a sus referentes (se puede apagar en Configuracion).
-# Luciano (20/10/2026): "si, avisar cuando cambia o cancela" (para que un chico no pueda cancelar el camino ni irse a otro lado sin que nadie se entere).
-# Que cambia (solo el servidor del panel; sin tocar la base: la tabla gd_config gana una columna sola):
-#  - Al cancelar el camino, cada referente que acepto recibe un mail: quien lo cancelo, a que hora, a donde iba, la ultima ubicacion del telefono (con el mapa y a cuanto estaba del destino)
-#    y "Si no lo esperabas, comunicate con ...". Nadie puede cancelar sin que se sepa.
-#  - Al cambiar el destino (a otro lugar), el mail dice a donde iba, a donde va ahora, como va, hasta que hora tiene y la ultima ubicacion. Si sigue yendo al mismo lugar y solo cambia como va
-#    (auto, transporte, caminando) o recalcula el tiempo, no se avisa. Frenar un rato tampoco avisa (eso ya era asi).
-#  - La pantalla del camino lo dice antes de hacerlo (en Cambiar destino: "Si cambias de destino, se les avisa a tus referentes."; al cancelar: "Se les avisa a tus referentes.") y despues lo confirma.
-#  - Configuracion > Modo Guardian > Avisos a tus referentes: "Avisarles tambien si cambio el destino o cancelo el camino" (viene en Si; con un menor lo cambia solo el administrador;
-#    con un camino en marcha no se cambia). Vuelve a Si con "Volver a los valores recomendados". La alerta de "no llego" y el aviso de "llego bien" no cambian.
-#  - Incluye todo lo de los parches anteriores de Guardian (llegada estricta con margen de 150 m, cuenta regresiva que titila, pausa, recalculo por transito, lugares, Configuracion). Este los reemplaza:
-#    se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciseis versiones que dejaron los parches desde
-# aplicar-guardian-mejoras-panel.ps1). No toca nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldcambios. Al final publica el panel solo.
+﻿# aplicar-proteccion-volver-panel.ps1 - Tu proteccion: abierta desde la Configuracion de la consola, "atras" vuelve a esa Configuracion (antes solo dejaba ir al inicio).
+# Luciano (20/10/2026): "en Configuracion, en la parte de proteccion, no te deja ir atras como todos los demas que dice boton Configuracion. Si o si estas obligado a ir a inicio".
+# Que cambia (solo la pagina Tu proteccion del servidor del panel; no toca la base ni la consola):
+#  - Si la pagina se abre directo en su Configuracion (asi llega desde la consola: Configuracion > Tu proteccion), la pantalla se llama "Tu proteccion" (como la categoria que se toco) y arriba
+#    dice "<- Configuracion" y vuelve a la Configuracion de la consola (/#config), en vez de obligar a ir al inicio. Adentro de cada categoria (Referentes, Modo Cautela, Modo Guardian, Ajustes,
+#    Accesibilidad, Registro) arriba siguen "<- Ir al inicio" y "<- Tu proteccion" (vuelve a la lista).
+#  - Si se llega desde el inicio de Tu proteccion (el boton OG, o la tarjeta Configuracion) todo queda como estaba: se llama Configuracion y arriba dice "<- Ir al inicio" y "<- Tu proteccion".
+#  - Incluye todo lo de los parches anteriores de Guardian (avisos al cancelar o cambiar el destino, llegada estricta con margen de 150 m, cuenta regresiva que titila, pausa, recalculo por transito,
+#    lugares, Configuracion). Este los reemplaza: se puede correr encima de cualquiera de ellos.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las diecisiete versiones que dejaron los parches desde
+# aplicar-guardian-mejoras-panel.ps1). No toca nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldvolver. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -37,12 +34,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'id="gCambios"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'var DESDEPANEL=') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -56,9 +53,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldcambios")) { Mal "Ya existe src\index.ts.bak-pldcambios. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldcambios")
-Ok "Respaldo creado: src\index.ts.bak-pldcambios"
+if (Test-Path ($indice + ".bak-pldvolver")) { Mal "Ya existe src\index.ts.bak-pldvolver. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldvolver")
+Ok "Respaldo creado: src\index.ts.bak-pldvolver"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -2025,8 +2022,9 @@ var TITULOS={"":"Tu protecci\u00f3n",cautela:"Modo Cautela",guardian:"Modo Guard
 var PADRES={cautela:"",guardian:"",configuracion:"","config-referentes":"configuracion","config-cautela":"configuracion","config-guardian":"configuracion","config-ajustes":"configuracion","config-accesibilidad":"configuracion","config-registro":"configuracion"};
 var PROPIA=true,RO=false,NOMBREPERSONA="",DEF=null,GDDEF=null;
 function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(h==="tus-referentes")h="config-referentes";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(!PROPIA&&h==="guardian")h="";if(!PROPIA&&h==="config-guardian")h="configuracion";return h}
-function titulo(){var v=vistaActual();var t=TITULOS[v];if(NOMBREPERSONA)t=v?t+" \u00b7 "+NOMBREPERSONA:"Protecci\u00f3n de "+NOMBREPERSONA;$("titulo").textContent=t}
-function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),p=PADRES[v];if(p===undefined){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"?"\u2190 Configuraci\u00f3n":"\u2190 Tu protecci\u00f3n"}titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
+var DESDEPANEL=vistaActual()==="configuracion"; // la p\u00e1gina se abri\u00f3 directo en Configuraci\u00f3n (como desde la consola del panel): ah\u00ed "atr\u00e1s" vuelve a la Configuraci\u00f3n del panel, no al inicio
+function titulo(){var v=vistaActual();var t=DESDEPANEL&&v==="configuracion"?"Tu protecci\u00f3n":TITULOS[v];if(NOMBREPERSONA)t=v?t+" \u00b7 "+NOMBREPERSONA:"Protecci\u00f3n de "+NOMBREPERSONA;$("titulo").textContent=t}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"\u2190 Configuraci\u00f3n":"\u2190 Tu protecci\u00f3n"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"\u2190 Configuraci\u00f3n":"\u2190 Ir al inicio";titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
 window.addEventListener("hashchange",function(){mostrarVista(true)});
 function sw(b,on){b.setAttribute("aria-checked",on?"true":"false")}
 function pintar(d){
@@ -2256,10 +2254,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldcambios") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldvolver") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2269,5 +2267,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: si cancelas el camino o cambias el destino, se les avisa a tus referentes (se apaga en Tu proteccion > Configuracion > Modo Guardian). Abri el camino con Ctrl+F5 y proba."
+Ok "LISTO: en la consola, Configuracion > Tu proteccion ahora tiene arriba el boton para volver a Configuracion. Abri la consola con Ctrl+F5 y proba."
 Write-Host ""

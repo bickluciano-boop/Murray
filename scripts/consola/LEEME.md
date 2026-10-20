@@ -15,6 +15,8 @@ tildar: `../FOTO-CONSOLA-20-10-2026.md`.
 - `e2e-consola.js`, `e2e-emergencia.js` y `e2e-og.js`: recorridos en navegador real (Playwright). El primero prueba Configuración completa (categorías,
   Atrás, tema, accesibilidad, atajos y que las otras pestañas sigan igual); el segundo, el modo de emergencia y la recarga en una pantalla, con la
   sesión simulada; el tercero, el botón OG en pantalla ancha (sin sesión, cerrado y con el menú abierto, sin recortes).
+- `e2e-a-proteccion.js`: el viaje de Configuración > Tu protección y de vuelta: la consola (`node servir.js nuevo 8801`, en modo demostración) y la página de Tu protección, que
+  la contesta el servidor de prueba del Modo Guardián (`../por-las-dudas/servidor.ts`, puerto 8799); comprueba que arriba dice "← Configuración" y que vuelve a `/#config`.
 
 Para repetirlo: poner los diez archivos en `orig/` (con sus nombres de `src`), `python3 hacer_consola.py`, `node servir.js nuevo 8802` y
 `node e2e-consola.js 8802`; después `CONSOLA_DIR=$PWD python3 <ruta>/generar_consola.py`. Además se corrió el instalador de verdad con PowerShell 7 en
