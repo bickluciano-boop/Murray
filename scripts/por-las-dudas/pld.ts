@@ -1301,7 +1301,7 @@ async function gdApi(request: Request, env: Env) {
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
 
-const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
+const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
 
 function pldPagina(titulo: string, cuerpo: string) {
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${titulo}</title>${PLD_ESTILO}</head><body><main><img class="logo" src="/marca/logo-correo.png" alt="ojo guard"><span class="etiqueta">NÚCLEO · EN VALIDACIÓN</span>${cuerpo}</main></body></html>`;
@@ -1314,7 +1314,7 @@ function gdPaginaCamino() {
 <div class="arriba"><a class="atras" id="atras" href="/guardian">← Volver a Tu protección</a><a class="atras" id="aInicio" href="/">Ir al inicio</a></div>
 <h1 id="titulo">Tu camino</h1>
 <div id="aviso"></div>
-<div id="vacio" class="tarjeta" style="display:none"><p style="margin:0 0 12px">Este enlace no sirve: está mal copiado o el camino ya no existe. Abrí el Modo Guardián desde tu panel para empezar uno nuevo.</p><div class="botones" style="margin:0"><a class="boton" href="/guardian#gdSeccion">Ir a Tu protección</a><a class="boton sec" href="/">Ir al inicio</a></div></div>
+<div id="vacio" class="tarjeta" style="display:none"><p style="margin:0 0 12px">Este enlace no sirve: está mal copiado o el camino ya no existe. Abrí el Modo Guardián desde tu panel para empezar uno nuevo.</p><div class="botones" style="margin:0"><a class="boton" href="/guardian#guardian">Ir a Tu protección</a><a class="boton sec" href="/">Ir al inicio</a></div></div>
 <div id="viaje" style="display:none">
 <div class="tarjeta"><div id="destino" style="font-weight:700;font-size:1.15rem"></div><div id="detalle" class="suave"></div>
 <div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="estadoTxt"></div></div>
@@ -1325,7 +1325,7 @@ function gdPaginaCamino() {
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo.</small>
 </div>
-<div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protección</a><a class="boton sec" id="bOtro" href="/guardian#gdSeccion">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
+<div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protección</a><a class="boton sec" id="bOtro" href="/guardian#guardian">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
 <div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button></div><small class="suave" id="sonidoTxt"></small></div>
 </div>
 <script>
@@ -1393,22 +1393,32 @@ refrescar();setInterval(refrescar,20000);setInterval(tick,1000);
 /** Página del dueño (/guardian y /por-las-dudas): tus referentes y los modos. */
 function pldPaginaDuenio() {
   return pldPagina("Tu protección · Ojo Guard", `
-<div class="arriba"><a class="atras" id="aInicio" href="/">← Ir al inicio</a></div>
+<div class="arriba"><a class="atras" id="aInicio" href="/">← Ir al inicio</a><a class="atras" id="aHub" href="#" style="display:none">← Tu protección</a></div>
 <h1 id="titulo">Tu protección</h1>
-<p>Elegí una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los modos de más abajo.</p>
-<p class="suave">Esta función está en validación: ya la probamos de punta a punta con mails reales, pero todavía no en el día a día.</p>
 <div id="aviso"></div>
 <div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes tenés que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entrá, y después volvé a esta página.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entré, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
 <div id="paraQuien" class="tarjeta" style="display:none"><label style="margin-top:0">Estás viendo la protección de</label><select id="persona"></select></div>
 <div id="soloLectura" class="tarjeta" style="display:none"><p style="margin:0"><b>Esto lo completa el administrador de tu familia.</b> Acá podés ver cómo está armada tu protección, pero no cambiarla.</p></div>
 <div id="enNombreDe" class="tarjeta" style="display:none"></div>
-<div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando…</div>
+<div id="vInicio">
+<p>Elegí qué querés ver o cambiar.</p>
+<a class="tarjeta modo" id="tReferentes" href="#tus-referentes"><h2>Tus referentes</h2><p>Las personas de confianza: se enteran si algo te pasa. Valen para el SOS y para los dos modos.</p><small id="tRefEstado" class="suave"></small></a>
+<a class="tarjeta modo" id="tCautela" href="#cautela"><h2>Modo Cautela</h2><p>Por las dudas: si dejo de responder, mis referentes se enteran.</p><small id="tCautelaEstado" class="suave"></small></a>
+<a class="tarjeta modo" id="tGuardian" href="#guardian"><h2>Modo Guardián</h2><p>Te acompaña en el camino: si no llegás a tiempo, les avisa a tus referentes.</p><small id="tGuardianEstado" class="suave"></small></a>
+<details class="tarjeta" id="detRegistro"><summary><h2>Registro</h2></summary><div id="registro" class="suave">Cargando…</div></details>
+<p class="suave"><small>Esta función está en validación: ya la probamos de punta a punta con mails reales, pero todavía no en el día a día.</small></p>
+</div>
+<div id="vReferentes" style="display:none">
+<p>Elegí una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los dos modos.</p>
+<div class="tarjeta"><div id="referentes" class="suave">Cargando…</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mamá"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
 <p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar. Si apretás el SOS, también se les avisa a ellos.</small>
 <p id="dondeBoton" class="suave"><b>¿Dónde está el botón “No lo encuentro”?</b> Lo ve solo tu referente, en su enlace personal, después de aceptar. Vos no tenés que apretar nada. Para probarlo, abrí su enlace en otro navegador (o en una ventana privada) y aceptá.</p></div>
-<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Cautela</h2>
+</div>
+<div id="vCautela" style="display:none">
 <p class="suave" style="margin:0 0 6px">Por las dudas: si dejo de responder, mis referentes se enteran. Funciona de fondo y solo ven tu <b>última señal</b> si se cumplen las condiciones que vos permitís acá.</p>
+<p class="suave" id="refLineaC" style="margin:0 0 6px"></p>
 <div class="tarjeta"><h2>Pausar o apagar</h2><div id="estadoModo" class="suave"></div>
 <p><b>Pausar los avisos</b> por un rato, por ejemplo si dormís en otro lado. Cuando termina el tiempo, el Modo Cautela se prende solo. El SOS sigue avisando a tus referentes.</p>
 <label>Pausar por</label><div class="botones tres" style="margin-top:6px"><button class="sec" data-h="8">8 horas</button><button class="sec" data-h="12">12 horas</button><button class="sec" data-h="24">24 horas</button></div>
@@ -1424,9 +1434,11 @@ function pldPaginaDuenio() {
 <div class="dos"><div><label>Lejos de casa (km)</label><input id="cKm" type="number" min="0.5" step="0.5"></div><div><label>Batería baja (%)</label><input id="cBat" type="number" min="1" max="50"></div></div>
 <div class="dos"><div><label>Señales necesarias (de 4)</label><select id="cMin"><option>2</option><option>3</option><option>4</option></select></div><div><label>Emergencia tras (horas)</label><input id="cEmer" type="number" min="1" max="48"></div></div>
 <div class="botones"><button id="cGuardar">Guardar condiciones</button><button class="sec" id="cCasa">Mi casa es donde está mi teléfono ahora</button></div><div id="casa" class="suave"></div></details>
+</div>
+<div id="vGuardian" style="display:none">
 <div id="gdSeccion">
-<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Guardián</h2>
 <p class="suave" style="margin:0 0 6px">Te acompaña en el camino: elegís a dónde vas y cuánto tardás, y si no llegás a tiempo les avisa a tus referentes con tu última ubicación.</p>
+<p class="suave" id="refLineaG" style="margin:0 0 6px"></p>
 <div class="tarjeta" id="guardianCard"><div id="gdCarga" class="suave">Cargando…</div>
 <div id="gdActivo" style="display:none"><p id="gdActivoTxt" style="margin-top:0"></p><div class="botones"><a class="boton" id="gdAbrir" href="#">Abrir mi camino</a></div></div>
 <div id="gdForm" style="display:none">
@@ -1437,10 +1449,9 @@ function pldPaginaDuenio() {
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
 <small class="suave">Tenés 2 minutos de margen. Si no llegás ni pedís más tiempo, les avisamos a tus referentes. Podés extender 10, 20 o 30 minutos, hasta 3 veces.</small>
 </div>
-<div id="gdSinRef" style="display:none"><p class="suave" style="margin:0">Para usar el Modo Guardián tenés que tener al menos un referente que haya aceptado. Elegilo arriba, en “Tus referentes”.</p></div>
+<div id="gdSinRef" style="display:none"><p class="suave" style="margin:0">Para usar el Modo Guardián tenés que tener al menos un referente que haya aceptado. Elegilo en <a href="#tus-referentes" style="color:#f0c75a">Tus referentes</a>.</p></div>
 </div>
 </div>
-<details class="tarjeta" id="detRegistro"><summary><h2>Registro</h2></summary><div id="registro" class="suave">Cargando…</div></details>
 </div>
 <script>
 (function(){
@@ -1452,6 +1463,13 @@ function api(cuerpo){return fetch("/api/remote/por-las-dudas"+(PERSONA?"?persona
 function fecha(s){if(!s)return"";try{return new Date(s).toLocaleString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return s}}
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 function texto(n,t){n.appendChild(document.createTextNode(t))}
+var VISTAS={"":"vInicio",cautela:"vCautela",guardian:"vGuardian","tus-referentes":"vReferentes"};
+var TITULOS={"":"Tu protección",cautela:"Modo Cautela",guardian:"Modo Guardián","tus-referentes":"Tus referentes"};
+var PROPIA=true,NOMBREPERSONA="";
+function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(h==="guardian"&&!PROPIA)h="";return h}
+function titulo(){var v=vistaActual();var t=TITULOS[v];if(NOMBREPERSONA)t=v?t+" · "+NOMBREPERSONA:"Protección de "+NOMBREPERSONA;$("titulo").textContent=t}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});$("aHub").style.display=v?"inline-block":"none";titulo();if(arriba)window.scrollTo(0,0)}
+window.addEventListener("hashchange",function(){mostrarVista(true)});
 function pintar(d){
   var h=$("hoy");limpiar(h);
   var rs=$("hoyResumen");rs.textContent=!d.hoy.hayDatos?"Sin datos todavía":(d.hoy.mostrar?"Con señales de alerta":"Todo tranquilo");rs.className=!d.hoy.hayDatos?"suave":(d.hoy.mostrar?"":"ok");rs.style.color=d.hoy.hayDatos&&d.hoy.mostrar?"#f0c75a":"";
@@ -1470,12 +1488,17 @@ function pintar(d){
     var dr=document.createElement("div");dr.className="botones";dr.style.margin="0";
     var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){accion({accion:"reenviar",id:x.id},ya?"Le mandamos su enlace de nuevo (es el mismo: el que ya tiene sigue sirviendo).":"Enlace reenviado.")};dr.appendChild(re);
     var qu=document.createElement("button");qu.className="sec chico";qu.textContent="Quitar";qu.onclick=function(){if(confirm("¿Quitar a "+x.name+"?"))accion({accion:"quitar",id:x.id},"Referente quitado.")};dr.appendChild(qu);f.appendChild(dr);r.appendChild(f)});
+  var nombres=d.referentes.map(function(x){return x.name+(x.status==="aceptado"?"":" (falta que acepte)")});
+  var ref1=$("tRefEstado");ref1.textContent=nombres.length?nombres.join(", "):"Todavía no elegiste a nadie.";ref1.className=d.referentes.some(function(x){return x.status==="aceptado"})?"ok":"suave";
+  ["refLineaC","refLineaG"].forEach(function(id){var n=$(id);limpiar(n);texto(n,nombres.length?"Se avisa a: "+nombres.join(", ")+". ":"Todavía no elegiste a nadie. ");var a=document.createElement("a");a.href="#tus-referentes";a.style.color="#f0c75a";a.textContent=nombres.length?"Cambiar":"Elegir referentes";n.appendChild(a)});
+  $("refLineaG").style.display=nombres.length?"block":"none";
   var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;encendido=!!c.enabled;
   $("casa").textContent=c.homeLat===null?"Todavía no marcaste dónde está tu casa: sin eso, la señal “lejos de casa” no cuenta.":"Casa marcada ("+Number(c.homeLat).toFixed(4)+", "+Number(c.homeLng).toFixed(4)+").";
   var enPausa=!!(c.pausedUntil&&c.pausedUntil>new Date().toISOString());
   $("pausa").textContent=enPausa?"En pausa hasta "+fecha(c.pausedUntil):"Sin pausa.";
   var em=$("estadoModo");em.className=!c.enabled?"mal":(enPausa?"suave":"ok");
   em.textContent=!c.enabled?"Ahora: apagado. No se manda ningún aviso automático.":(enPausa?"Ahora: encendido, pero en pausa hasta "+fecha(c.pausedUntil):"Ahora: encendido.");
+  var tc=$("tCautelaEstado");tc.className=!c.enabled?"mal":(enPausa?"suave":"ok");tc.textContent=!c.enabled?"Apagado":(enPausa?"Encendido, en pausa hasta "+fecha(c.pausedUntil):"Encendido");
   $("cEncender").textContent=c.enabled?"Apagar Modo Cautela":"Encender Modo Cautela";
   $("cEncender").className=c.enabled?"sec":"";
   var g=$("registro");limpiar(g);if(!d.registro.length){texto(g,"Todavía no hay nada.")}
@@ -1491,9 +1514,10 @@ function personaPantalla(d){
     sel.value=PERSONA;$("paraQuien").style.display="block";
   }else{$("paraQuien").style.display="none"}
   var nd=$("enNombreDe");
-  if(pe.propia===false){nd.style.display="block";nd.textContent="Estás armando la protección de "+nom+". Los referentes que elijas son los de "+nom+": a cada uno le llega un mail para aceptar, y si "+nom+" aprieta el SOS también les avisamos.";$("titulo").textContent="Protección de "+nom;$("cCasa").textContent="La casa de "+nom+" es donde está su teléfono ahora"}
-  else{nd.style.display="none";$("titulo").textContent="Tu protección";$("cCasa").textContent="Mi casa es donde está mi teléfono ahora"}
-  $("gdSeccion").style.display=pe.propia===false?"none":"block";
+  if(pe.propia===false){nd.style.display="block";nd.textContent="Estás armando la protección de "+nom+". Los referentes que elijas son los de "+nom+": a cada uno le llega un mail para aceptar, y si "+nom+" aprieta el SOS también les avisamos.";NOMBREPERSONA=nom;$("cCasa").textContent="La casa de "+nom+" es donde está su teléfono ahora"}
+  else{nd.style.display="none";NOMBREPERSONA="";$("cCasa").textContent="Mi casa es donde está mi teléfono ahora"}
+  PROPIA=pe.propia!==false;
+  $("gdSeccion").style.display=PROPIA?"block":"none";$("tGuardian").style.display=PROPIA?"block":"none";mostrarVista(false);
   var ro=!!pe.soloLectura;$("soloLectura").style.display=ro?"block":"none";
   if(ro){Array.prototype.forEach.call(document.querySelectorAll("#contenido input,#contenido select,#contenido button"),function(e){if(!$("gdSeccion").contains(e))e.disabled=true})}
 }
@@ -1516,12 +1540,12 @@ $("rAgregar").onclick=function(){var cc=$("rCorreo").value.trim();if(cc&&!confir
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value}},"Condiciones guardadas.")};
 function gdPost(c){return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}},function(){return{ok:false,d:{error:"respuesta_"+r.status}}})})}
 function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
-  var d=x.d;$("gdCarga").style.display="none";
-  if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián.";return}
-  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+".";$("gdAbrir").href=d.viaje.enlace;return}
+  var d=x.d;$("gdCarga").style.display="none";var tg=$("tGuardianEstado");
+  if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardián.";tg.textContent="";return}
+  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+".";$("gdAbrir").href=d.viaje.enlace;tg.className="ok";tg.textContent="Hay un camino en marcha: vas a "+d.viaje.destino;return}
   $("gdActivo").style.display="none";
-  if(!d.referentes){$("gdForm").style.display="none";$("gdSinRef").style.display="block";return}
-  $("gdSinRef").style.display="none";$("gdForm").style.display="block";
+  if(!d.referentes){$("gdForm").style.display="none";$("gdSinRef").style.display="block";tg.className="suave";tg.textContent="Primero elegí un referente que haya aceptado.";return}
+  $("gdSinRef").style.display="none";$("gdForm").style.display="block";tg.className="suave";tg.textContent="Sin camino en marcha.";
   var sel=$("gdLugar");limpiar(sel);
   d.lugares.forEach(function(l){var o=document.createElement("option");o.value=l.id;o.textContent=l.name;sel.appendChild(o)});
   var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar…";sel.appendChild(o2);
@@ -1569,6 +1593,7 @@ $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});
 $("pOtro").onclick=function(){var h=Number($("pHoras").value);if(!(h>=1&&h<=72)){aviso("Poné un número de horas entre 1 y 72.");return}accion({accion:"pausa",horas:h},"Pausa puesta por "+h+(h===1?" hora.":" horas."))};
 $("cEncender").onclick=function(){if(encendido&&!confirm("¿Apagar el Modo Cautela? Mientras esté apagado no se manda ningún aviso automático a tus referentes. El SOS sigue avisando. Si es por un rato, mejor usá la pausa."))return;accion({accion:"config",config:{enabled:!encendido}},encendido?"Modo Cautela apagado.":"Modo Cautela encendido.")};
+mostrarVista(false);
 api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d);gdCargar()}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});
 })();
 </script>`);

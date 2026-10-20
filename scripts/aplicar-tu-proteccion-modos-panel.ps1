@@ -1,13 +1,15 @@
-﻿# aplicar-guardian-navegacion-panel.ps1 - Modo Guardian: la pantalla "Tu camino" se puede dejar (volver a Tu proteccion o ir a la pagina de inicio) y, al terminar o cancelar, ofrece volver o empezar otro camino.
-# Luciano (20/10/2026), mirando "Tu camino" despues de cancelar: "ahora hay que poner que puedas volver para atras... o a la pagina de inicio". Que cambia:
-#  - Arriba de "Tu camino" hay dos enlaces: "Volver a Tu proteccion" e "Ir al inicio" (siempre, tambien con el camino en marcha: el camino sigue corriendo en el servidor).
-#  - Cuando el camino termino (llegaste, se cancelo o se cerro solo) aparece una tarjeta con tres botones: "Volver a Tu proteccion", "Empezar otro camino" (lleva directo a la tarjeta del Modo Guardian) e "Ir al inicio".
-#  - Si el enlace no sirve (camino que ya no existe) hay botones para ir a Tu proteccion o al inicio.
-#  - "Tu proteccion" tambien tiene arriba un enlace "Ir al inicio" (el inicio es la pagina principal del panel).
-#  - Al cancelar ya no se repite "Camino cancelado." arriba y adentro de la tarjeta: queda solo el de la tarjeta.
-#  - Incluye todo lo de los parches anteriores de lugares y Google (y el de "volver" si ya lo aplicaste). Este los reemplaza: se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las quince versiones). No cambia tablas ni rutas.
-# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldnavega. Al final publica el panel solo.
+﻿# aplicar-tu-proteccion-modos-panel.ps1 - Tu proteccion: cada modo tiene su propia pantalla (Modo Cautela, Modo Guardian, Tus referentes) y el boton OG abre directo el que se toca.
+# Luciano (20/10/2026): "cuando apretas Modo Guardian no te tiene que mostrar todo arriba lo de Modo Cautela, porque te muestra cualquier cantidad de palabras que no tienen nada que ver con ese modo.
+# Cuando uno aprieta Guardian o Cautela te tiene que mostrar el que va a esa configuracion, no mezclado." Que cambia:
+#  - Tu proteccion (/guardian) abre en una pantalla de inicio con tres tarjetas: Tus referentes, Modo Cautela y Modo Guardian (cada una con su estado: "Encendido", "Sin camino en marcha"...) y el registro.
+#  - Al tocar una tarjeta se ve SOLO esa configuracion: Modo Cautela (pausar o apagar, estado del telefono, condiciones), Modo Guardian (a donde vas, como vas, cuanto tardas) o Tus referentes.
+#    Arriba aparece "Tu proteccion" para volver, y cada modo dice a quien se avisa ("Se avisa a: Mama. Cambiar").
+#  - El boton OG de la barra del panel abre directo cada modo (/guardian#cautela y /guardian#guardian) y el texto del Modo Guardian ya no dice "Proximamente".
+#  - Los enlaces viejos siguen andando (/guardian muestra el inicio; el viejo #gdSeccion abre el Guardian). No se saca ninguna funcion: solo se ordena.
+#  - Incluye todo lo de los parches anteriores de Guardian y lugares. Este los reemplaza: se puede correr encima de cualquiera de ellos.
+# Toca dos archivos: el codigo de Modo Cautela dentro de src\index.ts (comprobando con una huella SHA-256 que es el que dejaron los parches anteriores: acepta las dieciseis versiones) y, si lo encuentra
+# como esperaba, las dos lineas del menu del boton OG en src\panel-index.html (si no lo encuentra, avisa y lo deja como esta). No cambia tablas ni rutas.
+# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldos .bak-pldmodos y .bak-ogmodos. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -33,12 +35,14 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'id="bInicio"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+$yaBloque = ((Contar $f.texto 'id="tCautela"') -ne 0)
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
+if ($yaBloque) { Avi "El codigo de Tu proteccion ya estaba actualizado en src\index.ts." }
+else {
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba")
+$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -52,9 +56,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldnavega")) { Mal "Ya existe src\index.ts.bak-pldnavega. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldnavega")
-Ok "Respaldo creado: src\index.ts.bak-pldnavega"
+if (Test-Path ($indice + ".bak-pldmodos")) { Mal "Ya existe src\index.ts.bak-pldmodos. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldmodos")
+Ok "Respaldo creado: src\index.ts.bak-pldmodos"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -1358,7 +1362,7 @@ async function gdApi(request: Request, env: Env) {
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
 
-const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
+const PLD_ESTILO = `<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b0c0e;color:#f3f1ea;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:22px 16px 60px}main{max-width:560px;margin:0 auto}img.logo{display:block;height:34px;margin:6px 0 18px}h1{font-size:1.5rem;margin:.2rem 0 .5rem}h2{font-size:1.05rem;margin:0 0 10px}p{color:#d2d2ce;line-height:1.55}small,.suave{color:#a29e92}.etiqueta{display:inline-block;font:700 .68rem/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#ffb400;border:1px solid #4a3f1f;border-radius:6px;padding:5px 8px;margin:0 0 12px}.tarjeta{background:#14151a;border:1px solid #2a2c31;border-radius:18px;padding:16px;margin:14px 0}label{display:block;margin:10px 0 4px;font-size:.88rem;color:#a29e92}input,select{width:100%;background:#0b0c0e;color:#f3f1ea;border:1px solid #2a2c31;border-radius:12px;padding:11px 12px;font:inherit}button,.boton{display:inline-block;background:#d9b24c;color:#111;border:0;border-radius:12px;padding:12px 18px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}button.sec,.boton.sec{background:#211d12;color:#f0c75a;border:1px solid #4a3f1f}a.modo{display:block;color:inherit;text-decoration:none}a.modo h2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px}a.modo h2::after{content:"Abrir";color:#f0c75a;font-size:.85rem;font-weight:600;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}a.modo p{margin:0 0 6px}a.modo:hover,a.modo:focus-visible{border-color:#4a3f1f}.arriba{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.arriba .atras{margin:0}.atras{display:inline-block;color:#f0c75a;text-decoration:none;border:1px solid #4a3f1f;background:#211d12;border-radius:999px;padding:8px 14px;font:600 .9rem system-ui;margin:0 0 10px}button.chico{padding:7px 12px;font-size:.85rem}button.grande{width:100%;padding:18px;font-size:1.2rem}button:disabled{opacity:.55;cursor:wait}.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #2a2c31}.botones{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.botones.tres button{flex:1 1 0;padding:12px 6px;font-size:.95rem}.fila:first-child{border-top:0}.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ok{color:#57d48a}.mal{color:#e0806a}.pill{display:inline-block;border:1px solid #2a2c31;border-radius:999px;padding:4px 10px;margin:3px 4px 0 0;font-size:.82rem}.pill.si{border-color:#4a3f1f;background:#211d12;color:#f0c75a}#aviso{min-height:1.2em;color:#f0c75a;margin:8px 0}details.tarjeta>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}details.tarjeta>summary::-webkit-details-marker{display:none}details.tarjeta>summary h2{margin:0;display:inline}details.tarjeta>summary::after{content:"Abrir";color:#f0c75a;font-size:.85rem;border:1px solid #4a3f1f;border-radius:999px;padding:4px 12px;white-space:nowrap}details.tarjeta[open]>summary::after{content:"Cerrar"}details.tarjeta[open]>summary{margin-bottom:10px}</style>`;
 
 function pldPagina(titulo: string, cuerpo: string) {
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${titulo}</title>${PLD_ESTILO}</head><body><main><img class="logo" src="/marca/logo-correo.png" alt="ojo guard"><span class="etiqueta">N\u00daCLEO \u00b7 EN VALIDACI\u00d3N</span>${cuerpo}</main></body></html>`;
@@ -1371,7 +1375,7 @@ function gdPaginaCamino() {
 <div class="arriba"><a class="atras" id="atras" href="/guardian">\u2190 Volver a Tu protecci\u00f3n</a><a class="atras" id="aInicio" href="/">Ir al inicio</a></div>
 <h1 id="titulo">Tu camino</h1>
 <div id="aviso"></div>
-<div id="vacio" class="tarjeta" style="display:none"><p style="margin:0 0 12px">Este enlace no sirve: est\u00e1 mal copiado o el camino ya no existe. Abr\u00ed el Modo Guardi\u00e1n desde tu panel para empezar uno nuevo.</p><div class="botones" style="margin:0"><a class="boton" href="/guardian#gdSeccion">Ir a Tu protecci\u00f3n</a><a class="boton sec" href="/">Ir al inicio</a></div></div>
+<div id="vacio" class="tarjeta" style="display:none"><p style="margin:0 0 12px">Este enlace no sirve: est\u00e1 mal copiado o el camino ya no existe. Abr\u00ed el Modo Guardi\u00e1n desde tu panel para empezar uno nuevo.</p><div class="botones" style="margin:0"><a class="boton" href="/guardian#guardian">Ir a Tu protecci\u00f3n</a><a class="boton sec" href="/">Ir al inicio</a></div></div>
 <div id="viaje" style="display:none">
 <div class="tarjeta"><div id="destino" style="font-weight:700;font-size:1.15rem"></div><div id="detalle" class="suave"></div>
 <div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="estadoTxt"></div></div>
@@ -1382,7 +1386,7 @@ function gdPaginaCamino() {
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
 <small class="suave">Si no lleg\u00e1s a tiempo y no ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes con tu \u00faltima ubicaci\u00f3n. \u201cNecesito ayuda\u201d les avisa ahora mismo.</small>
 </div>
-<div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protecci\u00f3n</a><a class="boton sec" id="bOtro" href="/guardian#gdSeccion">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
+<div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protecci\u00f3n</a><a class="boton sec" id="bOtro" href="/guardian#guardian">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
 <div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button></div><small class="suave" id="sonidoTxt"></small></div>
 </div>
 <script>
@@ -1450,22 +1454,32 @@ refrescar();setInterval(refrescar,20000);setInterval(tick,1000);
 /** P\u00e1gina del due\u00f1o (/guardian y /por-las-dudas): tus referentes y los modos. */
 function pldPaginaDuenio() {
   return pldPagina("Tu protecci\u00f3n \u00b7 Ojo Guard", `
-<div class="arriba"><a class="atras" id="aInicio" href="/">\u2190 Ir al inicio</a></div>
+<div class="arriba"><a class="atras" id="aInicio" href="/">\u2190 Ir al inicio</a><a class="atras" id="aHub" href="#" style="display:none">\u2190 Tu protecci\u00f3n</a></div>
 <h1 id="titulo">Tu protecci\u00f3n</h1>
-<p>Eleg\u00ed una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los modos de m\u00e1s abajo.</p>
-<p class="suave">Esta funci\u00f3n est\u00e1 en validaci\u00f3n: ya la probamos de punta a punta con mails reales, pero todav\u00eda no en el d\u00eda a d\u00eda.</p>
 <div id="aviso"></div>
 <div id="sinSesion" class="tarjeta" style="display:none"><h2>Falta entrar al panel</h2><p>Para ver y cambiar tus referentes ten\u00e9s que entrar al panel de Ojo Guard MS con tu cuenta, <b>en este mismo navegador</b>. Entr\u00e1, y despu\u00e9s volv\u00e9 a esta p\u00e1gina.</p><p><a class="boton" href="/acceso-v7">Entrar al panel</a> <button class="sec" onclick="location.reload()">Ya entr\u00e9, probar de nuevo</button></p></div>
 <div id="contenido" style="opacity:.4;pointer-events:none">
 <div id="paraQuien" class="tarjeta" style="display:none"><label style="margin-top:0">Est\u00e1s viendo la protecci\u00f3n de</label><select id="persona"></select></div>
 <div id="soloLectura" class="tarjeta" style="display:none"><p style="margin:0"><b>Esto lo completa el administrador de tu familia.</b> Ac\u00e1 pod\u00e9s ver c\u00f3mo est\u00e1 armada tu protecci\u00f3n, pero no cambiarla.</p></div>
 <div id="enNombreDe" class="tarjeta" style="display:none"></div>
-<div class="tarjeta"><h2>Tus referentes</h2><div id="referentes" class="suave">Cargando\u2026</div>
+<div id="vInicio">
+<p>Eleg\u00ed qu\u00e9 quer\u00e9s ver o cambiar.</p>
+<a class="tarjeta modo" id="tReferentes" href="#tus-referentes"><h2>Tus referentes</h2><p>Las personas de confianza: se enteran si algo te pasa. Valen para el SOS y para los dos modos.</p><small id="tRefEstado" class="suave"></small></a>
+<a class="tarjeta modo" id="tCautela" href="#cautela"><h2>Modo Cautela</h2><p>Por las dudas: si dejo de responder, mis referentes se enteran.</p><small id="tCautelaEstado" class="suave"></small></a>
+<a class="tarjeta modo" id="tGuardian" href="#guardian"><h2>Modo Guardi\u00e1n</h2><p>Te acompa\u00f1a en el camino: si no lleg\u00e1s a tiempo, les avisa a tus referentes.</p><small id="tGuardianEstado" class="suave"></small></a>
+<details class="tarjeta" id="detRegistro"><summary><h2>Registro</h2></summary><div id="registro" class="suave">Cargando\u2026</div></details>
+<p class="suave"><small>Esta funci\u00f3n est\u00e1 en validaci\u00f3n: ya la probamos de punta a punta con mails reales, pero todav\u00eda no en el d\u00eda a d\u00eda.</small></p>
+</div>
+<div id="vReferentes" style="display:none">
+<p>Eleg\u00ed una vez a las personas de confianza, tus <b>referentes</b>: se enteran si algo te pasa. Valen para el SOS y para los dos modos.</p>
+<div class="tarjeta"><div id="referentes" class="suave">Cargando\u2026</div>
 <label>Nombre</label><input id="rNombre" maxlength="60" placeholder="Mam\u00e1"><label>Correo</label><input id="rCorreo" type="email" placeholder="mama@correo.com">
 <p><button id="rAgregar">Elegir referente</button></p><div id="invitacion"></div><small class="suave">Hasta 5. Le llega un mail con su enlace personal y tiene que aceptar. Si apret\u00e1s el SOS, tambi\u00e9n se les avisa a ellos.</small>
 <p id="dondeBoton" class="suave"><b>\u00bfD\u00f3nde est\u00e1 el bot\u00f3n \u201cNo lo encuentro\u201d?</b> Lo ve solo tu referente, en su enlace personal, despu\u00e9s de aceptar. Vos no ten\u00e9s que apretar nada. Para probarlo, abr\u00ed su enlace en otro navegador (o en una ventana privada) y acept\u00e1.</p></div>
-<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Cautela</h2>
+</div>
+<div id="vCautela" style="display:none">
 <p class="suave" style="margin:0 0 6px">Por las dudas: si dejo de responder, mis referentes se enteran. Funciona de fondo y solo ven tu <b>\u00faltima se\u00f1al</b> si se cumplen las condiciones que vos permit\u00eds ac\u00e1.</p>
+<p class="suave" id="refLineaC" style="margin:0 0 6px"></p>
 <div class="tarjeta"><h2>Pausar o apagar</h2><div id="estadoModo" class="suave"></div>
 <p><b>Pausar los avisos</b> por un rato, por ejemplo si dorm\u00eds en otro lado. Cuando termina el tiempo, el Modo Cautela se prende solo. El SOS sigue avisando a tus referentes.</p>
 <label>Pausar por</label><div class="botones tres" style="margin-top:6px"><button class="sec" data-h="8">8 horas</button><button class="sec" data-h="12">12 horas</button><button class="sec" data-h="24">24 horas</button></div>
@@ -1481,9 +1495,11 @@ function pldPaginaDuenio() {
 <div class="dos"><div><label>Lejos de casa (km)</label><input id="cKm" type="number" min="0.5" step="0.5"></div><div><label>Bater\u00eda baja (%)</label><input id="cBat" type="number" min="1" max="50"></div></div>
 <div class="dos"><div><label>Se\u00f1ales necesarias (de 4)</label><select id="cMin"><option>2</option><option>3</option><option>4</option></select></div><div><label>Emergencia tras (horas)</label><input id="cEmer" type="number" min="1" max="48"></div></div>
 <div class="botones"><button id="cGuardar">Guardar condiciones</button><button class="sec" id="cCasa">Mi casa es donde est\u00e1 mi tel\u00e9fono ahora</button></div><div id="casa" class="suave"></div></details>
+</div>
+<div id="vGuardian" style="display:none">
 <div id="gdSeccion">
-<h2 style="margin:28px 0 2px;font-size:1.3rem">Modo Guardi\u00e1n</h2>
 <p class="suave" style="margin:0 0 6px">Te acompa\u00f1a en el camino: eleg\u00eds a d\u00f3nde vas y cu\u00e1nto tard\u00e1s, y si no lleg\u00e1s a tiempo les avisa a tus referentes con tu \u00faltima ubicaci\u00f3n.</p>
+<p class="suave" id="refLineaG" style="margin:0 0 6px"></p>
 <div class="tarjeta" id="guardianCard"><div id="gdCarga" class="suave">Cargando\u2026</div>
 <div id="gdActivo" style="display:none"><p id="gdActivoTxt" style="margin-top:0"></p><div class="botones"><a class="boton" id="gdAbrir" href="#">Abrir mi camino</a></div></div>
 <div id="gdForm" style="display:none">
@@ -1494,10 +1510,9 @@ function pldPaginaDuenio() {
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
 <small class="suave">Ten\u00e9s 2 minutos de margen. Si no lleg\u00e1s ni ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes. Pod\u00e9s extender 10, 20 o 30 minutos, hasta 3 veces.</small>
 </div>
-<div id="gdSinRef" style="display:none"><p class="suave" style="margin:0">Para usar el Modo Guardi\u00e1n ten\u00e9s que tener al menos un referente que haya aceptado. Elegilo arriba, en \u201cTus referentes\u201d.</p></div>
+<div id="gdSinRef" style="display:none"><p class="suave" style="margin:0">Para usar el Modo Guardi\u00e1n ten\u00e9s que tener al menos un referente que haya aceptado. Elegilo en <a href="#tus-referentes" style="color:#f0c75a">Tus referentes</a>.</p></div>
 </div>
 </div>
-<details class="tarjeta" id="detRegistro"><summary><h2>Registro</h2></summary><div id="registro" class="suave">Cargando\u2026</div></details>
 </div>
 <script>
 (function(){
@@ -1509,6 +1524,13 @@ function api(cuerpo){return fetch("/api/remote/por-las-dudas"+(PERSONA?"?persona
 function fecha(s){if(!s)return"";try{return new Date(s).toLocaleString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}catch(e){return s}}
 function limpiar(n){while(n.firstChild)n.removeChild(n.firstChild)}
 function texto(n,t){n.appendChild(document.createTextNode(t))}
+var VISTAS={"":"vInicio",cautela:"vCautela",guardian:"vGuardian","tus-referentes":"vReferentes"};
+var TITULOS={"":"Tu protecci\u00f3n",cautela:"Modo Cautela",guardian:"Modo Guardi\u00e1n","tus-referentes":"Tus referentes"};
+var PROPIA=true,NOMBREPERSONA="";
+function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(h==="guardian"&&!PROPIA)h="";return h}
+function titulo(){var v=vistaActual();var t=TITULOS[v];if(NOMBREPERSONA)t=v?t+" \u00b7 "+NOMBREPERSONA:"Protecci\u00f3n de "+NOMBREPERSONA;$("titulo").textContent=t}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});$("aHub").style.display=v?"inline-block":"none";titulo();if(arriba)window.scrollTo(0,0)}
+window.addEventListener("hashchange",function(){mostrarVista(true)});
 function pintar(d){
   var h=$("hoy");limpiar(h);
   var rs=$("hoyResumen");rs.textContent=!d.hoy.hayDatos?"Sin datos todav\u00eda":(d.hoy.mostrar?"Con se\u00f1ales de alerta":"Todo tranquilo");rs.className=!d.hoy.hayDatos?"suave":(d.hoy.mostrar?"":"ok");rs.style.color=d.hoy.hayDatos&&d.hoy.mostrar?"#f0c75a":"";
@@ -1527,12 +1549,17 @@ function pintar(d){
     var dr=document.createElement("div");dr.className="botones";dr.style.margin="0";
     var ya=x.status==="aceptado";var re=document.createElement("button");re.className="sec chico";re.textContent=ya?"Mandar enlace de nuevo":"Reenviar";re.onclick=function(){accion({accion:"reenviar",id:x.id},ya?"Le mandamos su enlace de nuevo (es el mismo: el que ya tiene sigue sirviendo).":"Enlace reenviado.")};dr.appendChild(re);
     var qu=document.createElement("button");qu.className="sec chico";qu.textContent="Quitar";qu.onclick=function(){if(confirm("\u00bfQuitar a "+x.name+"?"))accion({accion:"quitar",id:x.id},"Referente quitado.")};dr.appendChild(qu);f.appendChild(dr);r.appendChild(f)});
+  var nombres=d.referentes.map(function(x){return x.name+(x.status==="aceptado"?"":" (falta que acepte)")});
+  var ref1=$("tRefEstado");ref1.textContent=nombres.length?nombres.join(", "):"Todav\u00eda no elegiste a nadie.";ref1.className=d.referentes.some(function(x){return x.status==="aceptado"})?"ok":"suave";
+  ["refLineaC","refLineaG"].forEach(function(id){var n=$(id);limpiar(n);texto(n,nombres.length?"Se avisa a: "+nombres.join(", ")+". ":"Todav\u00eda no elegiste a nadie. ");var a=document.createElement("a");a.href="#tus-referentes";a.style.color="#f0c75a";a.textContent=nombres.length?"Cambiar":"Elegir referentes";n.appendChild(a)});
+  $("refLineaG").style.display=nombres.length?"block":"none";
   var c=d.config;$("cNombre").value=c.displayName||"";$("cDesde").value=c.nightFrom;$("cHasta").value=c.nightTo;$("cSilNoche").value=c.silenceNightMin;$("cSilDia").value=c.silenceDayMin;$("cKm").value=c.farKm;$("cBat").value=c.batteryPct;$("cMin").value=String(c.minSignals);$("cEmer").value=c.emergencyHours;encendido=!!c.enabled;
   $("casa").textContent=c.homeLat===null?"Todav\u00eda no marcaste d\u00f3nde est\u00e1 tu casa: sin eso, la se\u00f1al \u201clejos de casa\u201d no cuenta.":"Casa marcada ("+Number(c.homeLat).toFixed(4)+", "+Number(c.homeLng).toFixed(4)+").";
   var enPausa=!!(c.pausedUntil&&c.pausedUntil>new Date().toISOString());
   $("pausa").textContent=enPausa?"En pausa hasta "+fecha(c.pausedUntil):"Sin pausa.";
   var em=$("estadoModo");em.className=!c.enabled?"mal":(enPausa?"suave":"ok");
   em.textContent=!c.enabled?"Ahora: apagado. No se manda ning\u00fan aviso autom\u00e1tico.":(enPausa?"Ahora: encendido, pero en pausa hasta "+fecha(c.pausedUntil):"Ahora: encendido.");
+  var tc=$("tCautelaEstado");tc.className=!c.enabled?"mal":(enPausa?"suave":"ok");tc.textContent=!c.enabled?"Apagado":(enPausa?"Encendido, en pausa hasta "+fecha(c.pausedUntil):"Encendido");
   $("cEncender").textContent=c.enabled?"Apagar Modo Cautela":"Encender Modo Cautela";
   $("cEncender").className=c.enabled?"sec":"";
   var g=$("registro");limpiar(g);if(!d.registro.length){texto(g,"Todav\u00eda no hay nada.")}
@@ -1548,9 +1575,10 @@ function personaPantalla(d){
     sel.value=PERSONA;$("paraQuien").style.display="block";
   }else{$("paraQuien").style.display="none"}
   var nd=$("enNombreDe");
-  if(pe.propia===false){nd.style.display="block";nd.textContent="Est\u00e1s armando la protecci\u00f3n de "+nom+". Los referentes que elijas son los de "+nom+": a cada uno le llega un mail para aceptar, y si "+nom+" aprieta el SOS tambi\u00e9n les avisamos.";$("titulo").textContent="Protecci\u00f3n de "+nom;$("cCasa").textContent="La casa de "+nom+" es donde est\u00e1 su tel\u00e9fono ahora"}
-  else{nd.style.display="none";$("titulo").textContent="Tu protecci\u00f3n";$("cCasa").textContent="Mi casa es donde est\u00e1 mi tel\u00e9fono ahora"}
-  $("gdSeccion").style.display=pe.propia===false?"none":"block";
+  if(pe.propia===false){nd.style.display="block";nd.textContent="Est\u00e1s armando la protecci\u00f3n de "+nom+". Los referentes que elijas son los de "+nom+": a cada uno le llega un mail para aceptar, y si "+nom+" aprieta el SOS tambi\u00e9n les avisamos.";NOMBREPERSONA=nom;$("cCasa").textContent="La casa de "+nom+" es donde est\u00e1 su tel\u00e9fono ahora"}
+  else{nd.style.display="none";NOMBREPERSONA="";$("cCasa").textContent="Mi casa es donde est\u00e1 mi tel\u00e9fono ahora"}
+  PROPIA=pe.propia!==false;
+  $("gdSeccion").style.display=PROPIA?"block":"none";$("tGuardian").style.display=PROPIA?"block":"none";mostrarVista(false);
   var ro=!!pe.soloLectura;$("soloLectura").style.display=ro?"block":"none";
   if(ro){Array.prototype.forEach.call(document.querySelectorAll("#contenido input,#contenido select,#contenido button"),function(e){if(!$("gdSeccion").contains(e))e.disabled=true})}
 }
@@ -1573,12 +1601,12 @@ $("rAgregar").onclick=function(){var cc=$("rCorreo").value.trim();if(cc&&!confir
 $("cGuardar").onclick=function(){accion({accion:"config",config:{displayName:$("cNombre").value,nightFrom:$("cDesde").value,nightTo:$("cHasta").value,silenceNightMin:$("cSilNoche").value,silenceDayMin:$("cSilDia").value,farKm:$("cKm").value,batteryPct:$("cBat").value,minSignals:$("cMin").value,emergencyHours:$("cEmer").value}},"Condiciones guardadas.")};
 function gdPost(c){return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}},function(){return{ok:false,d:{error:"respuesta_"+r.status}}})})}
 function gdCargar(){return gdPost({accion:"estado"}).then(function(x){
-  var d=x.d;$("gdCarga").style.display="none";
-  if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardi\u00e1n.";return}
-  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+".";$("gdAbrir").href=d.viaje.enlace;return}
+  var d=x.d;$("gdCarga").style.display="none";var tg=$("tGuardianEstado");
+  if(!x.ok||!d.ok){$("gdCarga").style.display="block";$("gdCarga").textContent="No se pudo cargar el Modo Guardi\u00e1n.";tg.textContent="";return}
+  if(d.viaje){$("gdForm").style.display="none";$("gdSinRef").style.display="none";$("gdActivo").style.display="block";$("gdActivoTxt").textContent="Hay un camino en marcha: vas a "+d.viaje.destino+".";$("gdAbrir").href=d.viaje.enlace;tg.className="ok";tg.textContent="Hay un camino en marcha: vas a "+d.viaje.destino;return}
   $("gdActivo").style.display="none";
-  if(!d.referentes){$("gdForm").style.display="none";$("gdSinRef").style.display="block";return}
-  $("gdSinRef").style.display="none";$("gdForm").style.display="block";
+  if(!d.referentes){$("gdForm").style.display="none";$("gdSinRef").style.display="block";tg.className="suave";tg.textContent="Primero eleg\u00ed un referente que haya aceptado.";return}
+  $("gdSinRef").style.display="none";$("gdForm").style.display="block";tg.className="suave";tg.textContent="Sin camino en marcha.";
   var sel=$("gdLugar");limpiar(sel);
   d.lugares.forEach(function(l){var o=document.createElement("option");o.value=l.id;o.textContent=l.name;sel.appendChild(o)});
   var o2=document.createElement("option");o2.value="";o2.textContent="Otro lugar\u2026";sel.appendChild(o2);
@@ -1626,6 +1654,7 @@ $("cCasa").onclick=function(){accion({accion:"casa"},"Casa marcada.")};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-h]"),function(b){b.onclick=function(){accion({accion:"pausa",horas:Number(b.getAttribute("data-h"))},b.getAttribute("data-h")==="0"?"Pausa quitada.":"Pausa puesta por "+b.getAttribute("data-h")+" horas.")}});
 $("pOtro").onclick=function(){var h=Number($("pHoras").value);if(!(h>=1&&h<=72)){aviso("Pon\u00e9 un n\u00famero de horas entre 1 y 72.");return}accion({accion:"pausa",horas:h},"Pausa puesta por "+h+(h===1?" hora.":" horas."))};
 $("cEncender").onclick=function(){if(encendido&&!confirm("\u00bfApagar el Modo Cautela? Mientras est\u00e9 apagado no se manda ning\u00fan aviso autom\u00e1tico a tus referentes. El SOS sigue avisando. Si es por un rato, mejor us\u00e1 la pausa."))return;accion({accion:"config",config:{enabled:!encendido}},encendido?"Modo Cautela apagado.":"Modo Cautela encendido.")};
+mostrarVista(false);
 api().then(function(d){var c=$("contenido");c.style.opacity="";c.style.pointerEvents="";pintar(d);gdCargar()}).catch(function(e){if(e.sinSesion){aviso("");$("sinSesion").style.display="block";$("contenido").style.display="none"}else{aviso(e.message)}});
 })();
 </script>`);
@@ -1690,18 +1719,48 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="bInicio"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="tCautela"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldnavega") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldmodos") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
 Ok ("src\index.ts: largo " + $v.texto.Length + " (esperado " + $esperado + ")")
+}
+# --- Boton OG: que Modo Cautela y Modo Guardian abran directo su pantalla
+$html = Join-Path $raiz "src\panel-index.html"
+if (-not (Test-Path $html)) { Avi "No encuentro src\panel-index.html: el boton OG no se cambio (sigue abriendo la pantalla de inicio de Tu proteccion)." }
+else {
+    $h = Leer $html
+    $a1 = Ajustar '<a href="/guardian"><strong>Modo Cautela</strong>' $h.crlf
+    $n1 = Ajustar '<a href="/guardian#cautela"><strong>Modo Cautela</strong>' $h.crlf
+    $a2 = Ajustar '<a href="/guardian"><strong>Modo Guardi&#225;n</strong>' $h.crlf
+    $n2 = Ajustar '<a href="/guardian#guardian"><strong>Modo Guardi&#225;n</strong>' $h.crlf
+    $a3 = Ajustar 'Te acompa&#241;a en el camino. Pr&#243;ximamente.' $h.crlf
+    $n3 = Ajustar 'Te acompa&#241;a en el camino. Si no lleg&#225;s a tiempo, avisa.' $h.crlf
+    if ((Contar $h.texto $n1) -eq 1 -and (Contar $h.texto $n2) -eq 1) { Ok "El boton OG ya abria cada modo directo." }
+    elseif ((Contar $h.texto $a1) -ne 1 -or (Contar $h.texto $a2) -ne 1) { Avi "No encuentro el menu del boton OG como esperaba en src\panel-index.html: sigue abriendo la pantalla de inicio de Tu proteccion. No es grave; mandame esta pantalla si queres que lo ajuste." }
+    elseif (Test-Path ($html + ".bak-ogmodos")) { Avi "Ya existe src\panel-index.html.bak-ogmodos. No cambio el boton OG." }
+    else {
+        Copy-Item -LiteralPath $html -Destination ($html + ".bak-ogmodos")
+        $nuevoH = $h.texto.Replace($a1, $n1).Replace($a2, $n2)
+        $esperadoH = $h.texto.Length + ($n1.Length - $a1.Length) + ($n2.Length - $a2.Length)
+        if ((Contar $h.texto $a3) -eq 1) { $nuevoH = $nuevoH.Replace($a3, $n3); $esperadoH = $esperadoH + ($n3.Length - $a3.Length) }
+        [System.IO.File]::WriteAllText($html, $nuevoH, (New-Object System.Text.UTF8Encoding($h.bom)))
+        $hv = Leer $html
+        if (($hv.texto.Length -eq $esperadoH) -and ((Contar $hv.texto $n1) -eq 1) -and ((Contar $hv.texto $n2) -eq 1) -and ((Contar $hv.texto 'class="og-guardian"') -eq 1)) { Ok "Boton OG: Modo Cautela y Modo Guardian abren directo su pantalla." }
+        else {
+            Mal "El cambio del boton OG no salio bien. Restauro src\panel-index.html."
+            Copy-Item -LiteralPath ($html + ".bak-ogmodos") -Destination $html -Force
+            Avi "Restaurado. El boton OG sigue abriendo la pantalla de inicio de Tu proteccion."
+        }
+    }
+}
 Write-Host ""
 Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: la pantalla Tu camino ahora tiene Volver a Tu proteccion, Ir al inicio y, al terminar o cancelar, Empezar otro camino. Abri un camino y proba."
+Ok "LISTO: Tu proteccion ahora tiene una pantalla por modo (Cautela, Guardian, Referentes) y el boton OG abre directo cada una. Abri /guardian con Ctrl+F5 y proba."
 Write-Host ""

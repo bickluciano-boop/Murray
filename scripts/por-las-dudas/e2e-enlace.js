@@ -5,10 +5,12 @@ const B = 'http://localhost:8799';
   const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'es-AR' });
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: B });
   const pag = await ctx.newPage();
+  const vista = async (h) => { await pag.evaluate((x) => { location.hash = x; }, h); await pag.waitForSelector('#' + ({ '': 'vInicio', cautela: 'vCautela', guardian: 'vGuardian', 'tus-referentes': 'vReferentes' })[h], { state: 'visible' }); };
   const errores = []; pag.on('pageerror', (e) => errores.push(e.message)); pag.on('dialog', (d) => d.accept());
   await pag.goto(B + '/por-las-dudas');
   await pag.waitForFunction(() => document.getElementById('hoy').textContent.includes('señales'));
   // 1) el mail sale bien
+  await vista('tus-referentes');
   await pag.fill('#rNombre', 'Mamá'); await pag.fill('#rCorreo', 'mama@correo.com'); await pag.click('#rAgregar');
   await pag.waitForFunction(() => document.getElementById('invitacion').textContent.includes('Mamá'));
   const t1 = (await pag.textContent('#invitacion')).replace(/\s+/g, ' ');
