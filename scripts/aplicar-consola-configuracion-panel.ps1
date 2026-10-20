@@ -11,8 +11,8 @@
 #    el alto contraste y los botones mas grandes (se recuerdan en este dispositivo y valen tambien en Tu proteccion).
 #  - En el modo de emergencia, Configuracion sigue oculta, como antes lo estaba Cuenta.
 # Mapa y Familia, Mis Equipos y Evidencias no se tocan. No se saca nada: todo lo que habia sigue (mismos botones y mismos campos).
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\panel-index.html, src\panel-app.txt y src\panel-history.css, y solo si son los de la foto del 20/10/2026
-# (se comprueba con una huella SHA-256; si no, no toca nada). Respaldo .bak-cfgconsola. Al final publica el panel solo.
+# Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca src\panel-index.html y src\panel-app.txt, y solo si son los de la foto del 20/10/2026
+# (se comprueba con una huella SHA-256; si no, no toca nada). Los estilos nuevos van adentro de la pagina, asi llegan siempre juntos. Respaldo .bak-cfgconsola. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -35,7 +35,7 @@ function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPat
 
 if (-not (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta del PANEL (la que tiene wrangler.toml), no la de la app."; return }
 Ok "Carpeta correcta"
-foreach ($f in @("src\panel-index.html", "src\panel-app.txt", "src\panel-history.css")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta."); return } }
+foreach ($f in @("src\panel-index.html", "src\panel-app.txt")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta."); return } }
 if ((Contar (Leer (Join-Path $raiz "src\panel-index.html")).texto 'id="cfg-lista"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 function ShaTexto([string]$t) {
     $h = [System.Security.Cryptography.SHA256]::Create()
@@ -44,18 +44,16 @@ function ShaTexto([string]$t) {
 $originales = @{
     'src\panel-index.html' = 'b2d6abd6595e033dbc1bd57b4f28c7564633f850753009bc7f40375d14c51c8b'
     'src\panel-app.txt' = '3e290574f46ccec0249219ed53e966e8ca2148bdf4ad335715f4af3bc693416d'
-    'src\panel-history.css' = '49267ed43c6acfc39eed447cc0147ed103edd20e838172e16de6fab4ecbab5a7'
 }
 $finales = @{
-    'src\panel-index.html' = 'e92bcf41e92ce6842cb6dc640fbfc4a4103b3c5a35a47d5e72f3c8ed80ca43f0'
+    'src\panel-index.html' = '2bf2d1bc38ad184c3dfb097f9f40998c6480333426816ccce94f3b90470f8f37'
     'src\panel-app.txt' = 'a905fe8a37569102e6ad15516ba0c38230d9d2bf94fef559582d5b5752004607'
-    'src\panel-history.css' = '6fb529eef89e0951850bd921db01d88f7e257ac5449bf3059f7db1d57118e63d'
 }
 foreach ($k in $originales.Keys) {
     $huella = ShaTexto (Leer (Join-Path $raiz $k)).texto
     if ($huella -ne $originales[$k]) { Mal ($k + " no es el de la foto del 20/10/2026 (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 }
-Ok "Los tres archivos son los de la foto del 20/10/2026"
+Ok "Los dos archivos son los de la foto del 20/10/2026"
 $cambios = @(
     @('src\panel-index.html', 'acceso: se aplica la accesibilidad guardada antes de dibujar', '    <style>button.location-guide{display:flex', ('    <script>
       /* Accesibilidad compartida con Tu protecci' + [char]0x00f3 + 'n (misma clave "ogAcc" en este mismo sitio): tama' + [char]0x00f1 + 'o del texto, alto contraste y botones m' + [char]0x00e1 + 's grandes. */
@@ -71,8 +69,81 @@ $cambios = @(
     </script>
     <style>button.location-guide{display:flex')),
     @('src\panel-index.html', 'pestana Cuenta pasa a Configuracion', ('<button class="bottom-tab" data-view="account" type="button"><span class="tab-icon" aria-hidden="true">' + [char]0x25cb + '</span><span>Cuenta</span></button>'), ('<button class="bottom-tab" data-view="account" type="button"><span class="tab-icon" aria-hidden="true">&#9881;&#65038;</span><span>Configuraci' + [char]0x00f3 + 'n</span></button>')),
-    @('src\panel-index.html', 'version nueva de los estilos', '<link rel="stylesheet" href="/theme-gold-v2.css" />', '<link rel="stylesheet" href="/theme-gold-v2.css?v=cfg1" />'),
     @('src\panel-index.html', 'version nueva del programa', '<script type="module" src="/app-v9.js?v=7"></script>', '<script type="module" src="/app-v9.js?v=8"></script>'),
+    @('src\panel-index.html', 'estilos de Configuracion (adentro de la pagina)', '  </head>', ('    <style id="configuracion-v1">
+      /* configuracion-v1: Configuraci' + [char]0x00f3 + 'n de la consola (lista de categor' + [char]0x00ed + 'as y una pantalla por categor' + [char]0x00ed + 'a). Usa los mismos colores de siempre (variables), as' + [char]0x00ed + ' sirve en modo claro y modo noche. */
+      .cfg-lista { padding: 0; overflow: hidden; }
+      .cfg-item {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%;
+        padding: 18px 20px; text-align: left; background: transparent; color: inherit; border: 0; border-top: 1px solid var(--line);
+        border-radius: 0; font-weight: inherit; text-decoration: none; cursor: pointer; transform: none;
+      }
+      .cfg-item:first-child { border-top: 0; }
+      .cfg-item:hover, .cfg-item:focus-visible { background: var(--panel-2); filter: none; transform: none; }
+      .cfg-item::after { content: "\203A"; flex: none; color: var(--muted); font-size: 1.7rem; line-height: 1; }
+      .cfg-item strong { display: block; font-size: 1.04rem; color: inherit; }
+      .cfg-item small { display: block; margin-top: 4px; color: var(--muted); font-weight: 400; line-height: 1.4; }
+      .cfg-volver {
+        display: inline-flex; align-items: center; margin: 0 0 18px; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px;
+        color: var(--gold-text, var(--lime)); font-weight: 700; font-size: 0.9rem; text-decoration: none;
+      }
+      .cfg-volver:hover, .cfg-volver:focus-visible { background: var(--panel-2); }
+      #account > #cfg-lista { grid-column: 1 / -1; max-width: 760px; }
+      #account > .cfg-panel { grid-column: 1 / -1; }
+      .cfg-panel { display: grid; gap: 18px; align-items: start; }
+      .cfg-panel > .section-head { margin-bottom: 0; }
+      .cfg-panel > .account-card { margin: 0; padding: clamp(20px, 3vw, 30px); }
+      .cfg-panel .dashboard-section { margin: 18px 0 0; }
+      .cfg-panel .account-card button { justify-self: start; }
+      @media (min-width: 900px) {
+        .cfg-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .cfg-panel > .cfg-volver { justify-self: start; }
+        .cfg-panel > .cfg-volver, .cfg-panel > .section-head, .cfg-panel > .dashboard-section { grid-column: 1 / -1; }
+      }
+      /* La pesta' + [char]0x00f1 + 'a "Configuraci' + [char]0x00f3 + 'n" es m' + [char]0x00e1 + 's larga que "Cuenta": en el celular se achica un poco el espacio entre letras para que se lea entera. */
+      @media (max-width: 520px) {
+        .bottom-tab > span:not(.tab-icon) { letter-spacing: -0.015em; }
+      }
+      .cfg-rotulo { margin-top: 6px; font-size: 0.82rem; color: var(--muted); }
+      .cfg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .cfg-chips button { padding: 10px 16px; font-size: 0.9rem; }
+      :root .cfg-chips button[aria-pressed="true"] { background: var(--lime); color: var(--ink); border-color: var(--lime); }
+      /* La barra de arriba se queda con el bot' + [char]0x00f3 + 'n de tema solo en la pantalla de acceso; ya adentro, est' + [char]0x00e1 + ' en Configuraci' + [char]0x00f3 + 'n. */
+      .shell:has(#dashboard:not(.hidden)) #theme-toggle { display: none; }
+
+      /* Accesibilidad (misma clave y mismas ideas que en Tu protecci' + [char]0x00f3 + 'n) */
+      :root.ab button, :root.ab .map-button, :root.ab .app-link, :root.ab .cfg-volver, :root.ab .bottom-tab { min-height: 48px; }
+      :root.ab button, :root.ab .map-button, :root.ab .app-link { padding-top: 16px; padding-bottom: 16px; font-size: 1.05rem; }
+      :root.ab .bottom-tab { padding-top: 12px; padding-bottom: 12px; }
+      :root.ab .cfg-item { padding-top: 24px; padding-bottom: 24px; }
+      :root.ab input[type="checkbox"] { width: 22px; height: 22px; }
+      :root.ac { --muted: #e4e6df; --line: #8b9189; --ac-texto: #ffffff; }
+      :root.ac[data-theme="light"] { --muted: #262723; --line: #6c6b61; --ac-texto: #000000; }
+      :root.ac small, :root.ac p, :root.ac .section-copy, :root.ac .status-grid span, :root.ac .actions small, :root.ac label, :root.ac .cfg-rotulo,
+      :root.ac .account-card span, :root.ac .account-card small, :root.ac .device-meta, :root.ac .command-status, :root.ac .bottom-tab { color: var(--ac-texto) !important; }
+      :root.ac .card, :root.ac .cfg-item, :root.ac .cfg-volver, :root.ac input, :root.ac .ghost, :root.ac .bottom-tabs { border-color: var(--line) !important; }
+
+      /* El bot' + [char]0x00f3 + 'n OG ten' + [char]0x00ed + 'a estilo solo en el celular (las reglas quedaron adentro de "max-width: 520px"): ac' + [char]0x00e1 + ' se repiten para pantallas m' + [char]0x00e1 + 's anchas. */
+      @media (min-width: 521px) {
+        /* OG: entrada a Tu proteccion (Modo Cautela y Modo Guardian). Solo se ve con la sesion abierta (cuando "Cerrar acceso" se muestra). */
+        .og-guardian { display: none; position: relative; order: -1; margin-right: auto; }
+        #logout:not(.hidden) + .og-guardian { display: block; }
+        header.topbar .topbar-actions details.og-guardian > summary.ghost { list-style: none; cursor: pointer; padding: 10px 20px !important; font-size: 0.9rem !important; font-weight: 800 !important; letter-spacing: 0.12em; border-radius: 999px !important; border: 2px solid #b8932f !important; color: #1b1505 !important; background: #d9b24c !important; box-shadow: 0 3px 10px rgba(184, 147, 47, 0.45); user-select: none; white-space: nowrap; }
+        .og-guardian summary::-webkit-details-marker { display: none; }
+        header.topbar .topbar-actions details.og-guardian[open] > summary.ghost { background: #1b1505 !important; color: #f0c75a !important; border-color: #d9b24c !important; }
+        .og-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 80; width: min(380px, calc(100vw - 32px)); display: grid; gap: 6px; padding: 10px; border-radius: 16px; background: #14151a; color: #f3f1ea; border: 1px solid #4a3f1f; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45); }
+        .og-menu a { display: grid; gap: 2px; color: inherit; text-decoration: none; padding: 8px 10px; border-radius: 12px; }
+        .og-menu a:hover, .og-menu a:focus-visible { background: #211d12; }
+        .og-menu strong { color: #f0c75a; font-size: 0.9rem; }
+        .og-menu span { color: #a29e92; font-size: 0.78rem; line-height: 1.35; }
+        .og-menu .og-ir { color: #f0c75a; font-weight: 700; font-size: 0.82rem; text-align: right; }
+      }
+      /* En pantalla ancha (desde 1280 px) la franja de arriba recorta lo que se sale de ella; con el men' + [char]0x00fa + ' de OG abierto se la deja de recortar para que se vea entero. */
+      @media (min-width: 1280px) {
+        .shell:has(#dashboard:not(.hidden)) > .topbar:has(.og-guardian[open]) { clip-path: none !important; box-shadow: none !important; }
+      }
+    </style>
+  </head>')),
     @('src\panel-index.html', 'pantalla de Configuracion (las tarjetas de antes pasan intactas)', ('        <section id="account" class="dashboard-section" data-views="account"><div class="section-head"><div><p class="eyebrow">TU CUENTA</p><h2>Acceso y seguridad</h2><p class="section-copy">Tu correo identifica la cuenta y mantiene la misma informaci' + [char]0x00f3 + 'n en todos tus dispositivos.</p></div></div><article class="account-card card"><span>Correo del titular</span><strong id="account-email-copy">Correo no disponible</strong><small>Las acciones importantes generan un aviso de seguridad por correo.</small></article><article class="account-card card"><span>Protecci' + [char]0x00f3 + 'n de ingreso</span><strong id="account-security-state">Pendiente de configurar</strong><small id="account-security-copy">Cre' + [char]0x00e1 + ' el acceso seguro desde el tel' + [char]0x00e9 + 'fono principal.</small></article>
         <article class="account-card card" id="totp-card">
           <span>C' + [char]0x00f3 + 'digo de verificaci' + [char]0x00f3 + 'n</span>
@@ -329,66 +400,6 @@ $("#cfg-botones").addEventListener("change", (evento) => { const acc = cfgAccLee
 cfgPintarApariencia();
 // Si se recarga estando en una pantalla de Configuraci' + [char]0x00f3 + 'n, se vuelve a esa pantalla apenas se dibuja el panel (ah' + [char]0x00ed + ' ya se sabe si es modo de emergencia).
 if (location.hash) { if ($("#dashboard:not(.hidden)")) cfgDesdeHash(); else cfgEsperar("#dashboard:not(.hidden)", () => cfgDesdeHash()); }
-')),
-    @('src\panel-history.css', 'estilos de Configuracion', '.face-refund-note:empty {
-  display: none;
-}
-', ('.face-refund-note:empty {
-  display: none;
-}
-
-/* configuracion-v1: Configuraci' + [char]0x00f3 + 'n de la consola (lista de categor' + [char]0x00ed + 'as y una pantalla por categor' + [char]0x00ed + 'a). Usa los mismos colores de siempre (variables), as' + [char]0x00ed + ' sirve en modo claro y modo noche. */
-.cfg-lista { padding: 0; overflow: hidden; }
-.cfg-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%;
-  padding: 18px 20px; text-align: left; background: transparent; color: inherit; border: 0; border-top: 1px solid var(--line);
-  border-radius: 0; font-weight: inherit; text-decoration: none; cursor: pointer; transform: none;
-}
-.cfg-item:first-child { border-top: 0; }
-.cfg-item:hover, .cfg-item:focus-visible { background: var(--panel-2); filter: none; transform: none; }
-.cfg-item::after { content: "\203A"; flex: none; color: var(--muted); font-size: 1.7rem; line-height: 1; }
-.cfg-item strong { display: block; font-size: 1.04rem; color: inherit; }
-.cfg-item small { display: block; margin-top: 4px; color: var(--muted); font-weight: 400; line-height: 1.4; }
-.cfg-volver {
-  display: inline-flex; align-items: center; margin: 0 0 18px; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px;
-  color: var(--gold-text, var(--lime)); font-weight: 700; font-size: 0.9rem; text-decoration: none;
-}
-.cfg-volver:hover, .cfg-volver:focus-visible { background: var(--panel-2); }
-#account > #cfg-lista { grid-column: 1 / -1; max-width: 760px; }
-#account > .cfg-panel { grid-column: 1 / -1; }
-.cfg-panel { display: grid; gap: 18px; align-items: start; }
-.cfg-panel > .section-head { margin-bottom: 0; }
-.cfg-panel > .account-card { margin: 0; padding: clamp(20px, 3vw, 30px); }
-.cfg-panel .dashboard-section { margin: 18px 0 0; }
-.cfg-panel .account-card button { justify-self: start; }
-@media (min-width: 900px) {
-  .cfg-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cfg-panel > .cfg-volver { justify-self: start; }
-  .cfg-panel > .cfg-volver, .cfg-panel > .section-head, .cfg-panel > .dashboard-section { grid-column: 1 / -1; }
-}
-/* La pesta' + [char]0x00f1 + 'a "Configuraci' + [char]0x00f3 + 'n" es m' + [char]0x00e1 + 's larga que "Cuenta": en el celular se achica un poco el espacio entre letras y a los costados para que se lea entera. */
-@media (max-width: 760px) {
-  .bottom-tab { padding-left: 2px; padding-right: 2px; }
-  .bottom-tab > span:not(.tab-icon) { letter-spacing: -0.015em; }
-}
-.cfg-rotulo { margin-top: 6px; font-size: 0.82rem; color: var(--muted); }
-.cfg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.cfg-chips button { padding: 10px 16px; font-size: 0.9rem; }
-.cfg-chips button[aria-pressed="true"] { background: var(--lime); color: var(--ink); border-color: var(--lime); }
-/* La barra de arriba se queda con el bot' + [char]0x00f3 + 'n de tema solo en la pantalla de acceso; ya adentro, est' + [char]0x00e1 + ' en Configuraci' + [char]0x00f3 + 'n. */
-.shell:has(#dashboard:not(.hidden)) #theme-toggle { display: none; }
-
-/* Accesibilidad (misma clave y mismas ideas que en Tu protecci' + [char]0x00f3 + 'n) */
-:root.ab button, :root.ab .map-button, :root.ab .app-link, :root.ab .cfg-volver, :root.ab .bottom-tab { min-height: 48px; }
-:root.ab button, :root.ab .map-button, :root.ab .app-link { padding-top: 16px; padding-bottom: 16px; font-size: 1.05rem; }
-:root.ab .bottom-tab { padding-top: 12px; padding-bottom: 12px; }
-:root.ab .cfg-item { padding-top: 24px; padding-bottom: 24px; }
-:root.ab input[type="checkbox"] { width: 22px; height: 22px; }
-:root.ac { --muted: #e4e6df; --line: #8b9189; --ac-texto: #ffffff; }
-:root.ac[data-theme="light"] { --muted: #262723; --line: #6c6b61; --ac-texto: #000000; }
-:root.ac small, :root.ac p, :root.ac .section-copy, :root.ac .status-grid span, :root.ac .actions small, :root.ac label, :root.ac .cfg-rotulo,
-:root.ac .account-card span, :root.ac .account-card small, :root.ac .device-meta, :root.ac .command-status, :root.ac .bottom-tab { color: var(--ac-texto) !important; }
-:root.ac .card, :root.ac .cfg-item, :root.ac .cfg-volver, :root.ac input, :root.ac .ghost, :root.ac .bottom-tabs { border-color: var(--line) !important; }
 '))
 )
 $descargas = @()

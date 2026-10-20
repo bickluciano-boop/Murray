@@ -49,11 +49,14 @@ cambian de lugar. En pantalla ancha las tarjetas siguen en dos columnas.
 - **Modo de emergencia:** Configuración queda oculta, como lo estaba Cuenta (y no se abre ni escribiendo `#config…` en la dirección).
 - **Direcciones:** `#config` (la lista), `#config-cuenta`, `#config-avisos`, `#config-facial`, `#config-familia`, `#config-equipos` y `#config-apariencia`.
   Recargar la página vuelve a la misma pantalla; al tocar la pestaña siempre se ve la lista.
-- **Versiones:** `app-v9.js?v=7` pasa a `?v=8` y `theme-gold-v2.css` a `?v=cfg1`, para que el navegador no use una copia vieja.
-- **Archivos que toca** (`aplicar-consola-configuracion-panel.ps1`, respaldo `.bak-cfgconsola`): `src\panel-index.html` (pantalla nueva, pestaña y las dos
-  versiones), `src\panel-app.txt` (código nuevo al final; lo anterior no se cambia) y `src\panel-history.css` (estilos al final, marcados
-  `configuracion-v1`). Los comprueba con una huella SHA-256 antes de tocarlos y después de escribirlos. Mapa, Mis Equipos, Evidencias y los otros
-  cinco archivos de estilos no se tocan.
+- **Botón OG en la compu (arreglo de paso):** sus estilos habían quedado adentro del bloque "solo celular" (`max-width: 520px`) de `panel-explanations.css`;
+  en pantalla ancha se veía un triangulito con "OG" sin estilo, hasta sin sesión. Ahora se ve igual que en el celular (dorado; abierto, se invierte) y su
+  menú se despliega entero (desde 1280 px la franja de arriba lo recortaba: con el menú abierto se la deja de recortar). Sin sesión no se ve, como en el celular.
+- **Versión:** `app-v9.js?v=7` pasa a `?v=8`, para que el navegador no use una copia vieja del programa. Los estilos nuevos van **adentro de la propia
+  página** (un bloque `<style id="configuracion-v1">` al final del `<head>`): así la página y sus estilos siempre llegan juntos.
+- **Archivos que toca** (`aplicar-consola-configuracion-panel.ps1`, respaldo `.bak-cfgconsola`): solo `src\panel-index.html` (pantalla nueva, pestaña, estilos
+  y la versión) y `src\panel-app.txt` (código nuevo al final; lo anterior no se cambia). Los comprueba con una huella SHA-256 antes de tocarlos y después de
+  escribirlos. Mapa, Mis Equipos, Evidencias y los siete archivos de estilos no se tocan.
 
 ## 3. Lista para tildar (después de instalar)
 
@@ -71,6 +74,7 @@ cambian de lugar. En pantalla ancha las tarjetas siguen en dos columnas.
 - [ ] El botón **Atrás** del teléfono vuelve de una categoría a la lista; tocar la pestaña otra vez también.
 - [ ] Cerrando sesión, en la **pantalla de acceso** el botón de modo noche sigue arriba.
 - [ ] **Mapa y Familia, Mis Equipos y Evidencias** se ven y andan igual que antes (probar un "Hacer sonar" y un "Ver mapa").
+- [ ] En la **compu**, el botón **OG** de arriba se ve dorado (sin triangulito) y al tocarlo se despliega su menú entero; cerrando sesión desaparece.
 - [ ] Con letra **Muy grande** el nombre de la pestaña puede verse cortado ("Configura…"); les pasa igual a "Mapa y Familia" y "Evidencias".
 
 ## 4. Queda para más adelante

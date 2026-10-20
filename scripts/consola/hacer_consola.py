@@ -7,6 +7,8 @@ for f in os.listdir(O): shutil.copy(O + f, N + f)
 def leer(f):
     raw = open(O + f, 'rb').read().decode('utf-8-sig')
     return raw.replace('\r\n', '\n')
+def leer_nuevo(f):
+    return open(N + f, 'rb').read().decode('utf-8').replace('\r\n', '\n')
 def escribir(f, t):
     open(N + f, 'w', encoding='utf-8', newline='').write(t)
 def una_vez(t, a, b=None, donde=''):
@@ -39,8 +41,7 @@ h = una_vez(h,
     '<button class="bottom-tab" data-view="account" type="button"><span class="tab-icon" aria-hidden="true">&#9881;&#65038;</span><span>Configuración</span></button>',
     'pestana')
 
-# 2b) Versiones nuevas de los archivos que cambian (para que el navegador no use una copia vieja)
-h = una_vez(h, '<link rel="stylesheet" href="/theme-gold-v2.css" />', '<link rel="stylesheet" href="/theme-gold-v2.css?v=cfg1" />', 'version del css')
+# 2b) Version nueva del programa (para que el navegador no use una copia vieja)
 h = una_vez(h, '<script type="module" src="/app-v9.js?v=7"></script>', '<script type="module" src="/app-v9.js?v=8"></script>', 'version del js')
 
 # 3) La pantalla de Cuenta: se reordena. Las tarjetas se sacan tal cual del archivo de antes.
@@ -228,9 +229,10 @@ if (location.hash) { if ($("#dashboard:not(.hidden)")) cfgDesdeHash(); else cfgE
 a = a + '\n' + js
 escribir('panel-app.txt', a)
 
-# ===================== panel-history.css (se le agrega al final) =====================
-c = leer('panel-history.css')
-assert 'configuracion-v1' not in c
+# ===================== estilos: van adentro de la pagina (un bloque <style> al final del <head>) =====================
+# Asi la pagina y sus estilos siempre llegan juntos y no puede quedar una copia vieja de los estilos con la pagina nueva.
+h = leer_nuevo('panel-index.html')
+assert 'configuracion-v1' not in h
 css = r'''
 /* configuracion-v1: Configuración de la consola (lista de categorías y una pantalla por categoría). Usa los mismos colores de siempre (variables), así sirve en modo claro y modo noche. */
 .cfg-lista { padding: 0; overflow: hidden; }
@@ -261,15 +263,14 @@ css = r'''
   .cfg-panel > .cfg-volver { justify-self: start; }
   .cfg-panel > .cfg-volver, .cfg-panel > .section-head, .cfg-panel > .dashboard-section { grid-column: 1 / -1; }
 }
-/* La pestaña "Configuración" es más larga que "Cuenta": en el celular se achica un poco el espacio entre letras y a los costados para que se lea entera. */
-@media (max-width: 760px) {
-  .bottom-tab { padding-left: 2px; padding-right: 2px; }
+/* La pestaña "Configuración" es más larga que "Cuenta": en el celular se achica un poco el espacio entre letras para que se lea entera. */
+@media (max-width: 520px) {
   .bottom-tab > span:not(.tab-icon) { letter-spacing: -0.015em; }
 }
 .cfg-rotulo { margin-top: 6px; font-size: 0.82rem; color: var(--muted); }
 .cfg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .cfg-chips button { padding: 10px 16px; font-size: 0.9rem; }
-.cfg-chips button[aria-pressed="true"] { background: var(--lime); color: var(--ink); border-color: var(--lime); }
+:root .cfg-chips button[aria-pressed="true"] { background: var(--lime); color: var(--ink); border-color: var(--lime); }
 /* La barra de arriba se queda con el botón de tema solo en la pantalla de acceso; ya adentro, está en Configuración. */
 .shell:has(#dashboard:not(.hidden)) #theme-toggle { display: none; }
 
@@ -285,6 +286,21 @@ css = r'''
 :root.ac .account-card span, :root.ac .account-card small, :root.ac .device-meta, :root.ac .command-status, :root.ac .bottom-tab { color: var(--ac-texto) !important; }
 :root.ac .card, :root.ac .cfg-item, :root.ac .cfg-volver, :root.ac input, :root.ac .ghost, :root.ac .bottom-tabs { border-color: var(--line) !important; }
 '''
-c = c.rstrip('\n') + '\n' + css
-escribir('panel-history.css', c)
+# El boton OG (entrada a Tu proteccion) solo tenia estilo en el celular: sus reglas quedaron adentro del bloque "max-width: 520px" de explanations.css.
+# En la compu se veia un triangulito con "OG" sin estilo, hasta sin sesion abierta. Se repiten esas mismas reglas para pantallas mas anchas.
+expl = leer('panel-explanations.css')
+a = expl.index('/* OG: entrada a Tu proteccion')
+b = expl.index('@media (max-width: 560px) {', a)
+reglas_og = expl[a:b]
+assert reglas_og.count('.og-guardian') >= 5 and '@media' not in reglas_og and '{' in reglas_og
+css = css.rstrip('\n') + '\n\n/* El botón OG tenía estilo solo en el celular (las reglas quedaron adentro de "max-width: 520px"): acá se repiten para pantallas más anchas. */\n@media (min-width: 521px) {\n' + ''.join(('  ' + l if l.strip() else l) for l in reglas_og.splitlines(True)) + '}\n'
+css += '''/* En pantalla ancha (desde 1280 px) la franja de arriba recorta lo que se sale de ella; con el menú de OG abierto se la deja de recortar para que se vea entero. */
+@media (min-width: 1280px) {
+  .shell:has(#dashboard:not(.hidden)) > .topbar:has(.og-guardian[open]) { clip-path: none !important; box-shadow: none !important; }
+}
+'''
+sangria = lambda t: ''.join(('      ' + l if l.strip() else l) for l in t.splitlines(True))
+bloque = '    <style id="configuracion-v1">\n' + sangria(css.lstrip('\n')) + '    </style>\n'
+h = una_vez(h, '  </head>', bloque + '  </head>', 'cierre del head')
+escribir('panel-index.html', h)
 print('listo: nuevo/')
