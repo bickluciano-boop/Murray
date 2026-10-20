@@ -1054,27 +1054,32 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
   }
 }
 
-/** Sugerencias de direcciones mientras la persona escribe (Google Places, nuevo), sesgadas a donde está: traen el barrio y la ciudad, para elegir la correcta. */
+/** Sugerencias mientras la persona escribe (Google Places, nuevo): direcciones y también nombres de lugares (restaurantes, locales, plazas...), cerca de donde está, con el barrio, la ciudad
+ *  y a cuántos km queda, para elegir el correcto. */
 async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
   const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
-  if (!clave) return { sugerencias: [] as Array<{ placeId: string; principal: string; secundario: string }>, fallo: "sin_clave", detalle: "" };
+  if (!clave) return { sugerencias: [] as Array<{ placeId: string; principal: string; secundario: string; km: number | null }>, fallo: "sin_clave", detalle: "" };
   const cuerpo: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
-  if (origen) cuerpo.locationBias = { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } };
+  if (origen) {
+    cuerpo.locationBias = { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } };
+    cuerpo.origin = { latitude: origen.lat, longitude: origen.lng };
+  }
   try {
     const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
       method: "POST",
-      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat" },
+      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters" },
       body: JSON.stringify(cuerpo),
     });
     if (!r.ok) {
       const e = await r.json().catch(() => null) as { error?: { message?: string } } | null;
       return { sugerencias: [], fallo: `http_${r.status}`, detalle: String(e?.error?.message ?? "").slice(0, 160) };
     }
-    const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
+    const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
     const sugerencias = (d.suggestions ?? []).map((x) => x.placePrediction).filter((p) => p && p.placeId).slice(0, 6).map((p) => ({
       placeId: String(p!.placeId),
       principal: String(p!.structuredFormat?.mainText?.text ?? p!.text?.text ?? "").slice(0, 120),
       secundario: String(p!.structuredFormat?.secondaryText?.text ?? "").slice(0, 120),
+      km: Number.isFinite(Number(p!.distanceMeters)) && Number(p!.distanceMeters) >= 0 ? Math.round(Number(p!.distanceMeters) / 100) / 10 : null,
     })).filter((x) => x.principal);
     return { sugerencias };
   } catch (error) {
@@ -1366,7 +1371,7 @@ function pldPaginaDuenio() {
 <div id="gdActivo" style="display:none"><p id="gdActivoTxt" style="margin-top:0"></p><div class="botones"><a class="boton" id="gdAbrir" href="#">Abrir mi camino</a></div></div>
 <div id="gdForm" style="display:none">
 <label style="margin-top:0">A dónde vas</label><select id="gdLugar"></select>
-<div id="gdOtro" style="display:none"><label>Dirección o lugar</label><input id="gdTexto" maxlength="120" placeholder="Escribí y elegí una sugerencia" autocomplete="off"><div id="gdSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="gdAyudaDir" class="suave"></small></div>
+<div id="gdOtro" style="display:none"><label>Dirección o nombre del lugar</label><input id="gdTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="gdSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="gdAyudaDir" class="suave"></small></div>
 <label>Cómo vas</label><select id="gdModo"><option value="auto">En auto</option><option value="transporte">En transporte público</option><option value="caminando">Caminando</option></select>
 <label>Tiempo del camino, en minutos <span class="suave" id="gdAyudaMin"></span></label><input id="gdMin" type="number" min="1" max="300" placeholder="Ej.: 20">
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
@@ -1469,7 +1474,7 @@ function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
   if(otro&&!GDPLACE&&!$("gdTexto").value.trim()){$("gdAyudaMin").textContent="(elegí a dónde vas)";return}
-  if(otro&&GDHAYSUG&&!GDPLACE){$("gdAyudaMin").textContent="(elegí una de las direcciones sugeridas)";return}
+  if(otro&&GDHAYSUG&&!GDPLACE){$("gdAyudaMin").textContent="(elegí uno de los lugares sugeridos)";return}
   var c=gdDestinoCuerpo({accion:"estimar",modo:$("gdModo").value});
   $("gdAyudaMin").textContent="(calculando con mapas…)";
   gdPost(c).then(function(x){var d=x.d||{};
@@ -1483,13 +1488,13 @@ function gdSugerir(){
     if($("gdTexto").value.trim()!==t)return;
     var lista=d.sugerencias||[];GDHAYSUG=lista.length>0;
     if(!lista.length){$("gdAyudaDir").textContent=d.fallo&&d.fallo!=="sin_clave"?"No pudimos buscar direcciones: "+gdFalloTexto(d)+". Escribila completa, con barrio y ciudad.":"";return}
-    lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" · "+sg.secundario:"");
+    lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" · "+sg.secundario:"")+(sg.km!==null&&sg.km!==undefined?" · a "+String(sg.km).replace(".",",")+" km":"");
       b.onclick=function(){GDPLACE=sg.placeId;GDETIQUETA=(sg.principal+(sg.secundario?", "+sg.secundario:"")).slice(0,80);$("gdTexto").value=GDETIQUETA;limpiar(caja);caja.style.display="none";$("gdAyudaDir").textContent="Elegiste: "+GDETIQUETA;gdCambio()};caja.appendChild(b)});
-    caja.style.display="flex";$("gdAyudaDir").textContent="Elegí la dirección correcta (con su barrio y ciudad).";gdCambio();
+    caja.style.display="flex";$("gdAyudaDir").textContent="Elegí el lugar correcto (mirá el barrio, la ciudad y la distancia).";gdCambio();
   }).catch(function(){})}
 $("gdTexto").oninput=function(){GDPLACE="";GDETIQUETA="";$("gdMin").value="";clearTimeout(GDTIMER);GDTIMER=setTimeout(gdSugerir,400)};
 $("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;
-$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Elegí una de las direcciones que te sugerimos, así sabemos bien a dónde vas.");return}
+$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Elegí uno de los lugares que te sugerimos, así sabemos bien a dónde vas.");return}
   var enviar=function(){gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero elegí un referente que haya aceptado.",ya_hay_camino:"Ya tenés un camino en marcha.",falta_destino:"Escribí a dónde vas.",faltan_minutos:"Poné cuántos minutos tardás.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas.",destino_invalido:"Elegí de nuevo la dirección.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección."})[x.d.error]||"No se pudo empezar el camino.")})};
   var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
   try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};

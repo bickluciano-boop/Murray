@@ -871,12 +871,16 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
 
   console.log("-- sugerencias de direcciones (Google Places)");
   respuestaP = () => new Response(JSON.stringify({ suggestions: [
-    { placePrediction: { placeId: "ChIJabcdefghij1", text: { text: "Av. Cabildo 2359, C1428 Cdad. Autónoma de Buenos Aires" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Belgrano, Buenos Aires" } } } },
-    { placePrediction: { placeId: "ChIJabcdefghij2", text: { text: "Av. Cabildo 2359, Rosario" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Rosario, Santa Fe" } } } },
+    { placePrediction: { placeId: "ChIJabcdefghij1", distanceMeters: 3240, text: { text: "Av. Cabildo 2359, C1428 Cdad. Autónoma de Buenos Aires" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Belgrano, Buenos Aires" } } } },
+    { placePrediction: { placeId: "ChIJabcdefghij2", distanceMeters: 281000, text: { text: "Av. Cabildo 2359, Rosario" }, structuredFormat: { mainText: { text: "Av. Cabildo 2359" }, secondaryText: { text: "Rosario, Santa Fe" } } } },
+    { placePrediction: { placeId: "ChIJrestaurante1", distanceMeters: 1800, text: { text: "Kansas Cabildo, Av. Cabildo 2501, Buenos Aires" }, structuredFormat: { mainText: { text: "Kansas Cabildo" }, secondaryText: { text: "Av. Cabildo 2501, Belgrano" } } } },
   ] }), { status: 200 });
   let rb: any = await (await gd({ accion: "buscar", texto: "av cab" })).json();
   const lp = llamadasP[0];
-  ok(rb.sugerencias.length === 2 && rb.sugerencias[0].placeId === "ChIJabcdefghij1" && rb.sugerencias[0].principal === "Av. Cabildo 2359" && rb.sugerencias[0].secundario === "Belgrano, Buenos Aires", "al escribir devuelve sugerencias con el barrio y la ciudad");
+  ok(rb.sugerencias.length === 3 && rb.sugerencias[0].placeId === "ChIJabcdefghij1" && rb.sugerencias[0].principal === "Av. Cabildo 2359" && rb.sugerencias[0].secundario === "Belgrano, Buenos Aires", "al escribir devuelve sugerencias con el barrio y la ciudad");
+  ok(rb.sugerencias[0].km === 3.2 && rb.sugerencias[1].km === 281, "cada sugerencia dice a cuantos km queda (para distinguir el Cabildo de Rosario)");
+  ok(rb.sugerencias[2].principal === "Kansas Cabildo" && rb.sugerencias[2].placeId === "ChIJrestaurante1" && !("includedPrimaryTypes" in lp.cuerpo), "tambien salen nombres de lugares (un restaurante), no solo direcciones: la busqueda no se limita a direcciones");
+  ok(lp.cuerpo.origin.latitude === -34.6 && lp.cuerpo.origin.longitude === -58.4 && /distanceMeters/.test(lp.cabeceras["X-Goog-FieldMask"]), "y se le pasa el origen a Google para que calcule esas distancias");
   ok(/places:autocomplete/.test(lp.url) && lp.cabeceras["X-Goog-Api-Key"] === "clave-de-prueba" && lp.cuerpo.input === "av cab" && lp.cuerpo.regionCode === "AR" && lp.cuerpo.languageCode === "es" && lp.cuerpo.locationBias.circle.center.latitude === -34.6, "se le pide a Google con la clave, en espanol, en Argentina y cerca de donde esta el telefono");
   const antesP = llamadasP.length;
   rb = await (await gd({ accion: "buscar", texto: "av" })).json();
@@ -902,7 +906,7 @@ console.log("== Modo Guardian: el tiempo lo calcula Google Mapas");
   delete (env as any).GOOGLE_ROUTES_KEY;
   globalThis.fetch = fetchReal;
   const tg: string = await (pldPaginaDuenio() as any).text();
-  ok(/id="gdSugerencias"/.test(tg) && /accion:"buscar"/.test(tg) && /GDPLACE/.test(tg) && /Elegí una de las direcciones que te sugerimos/.test(tg), "la tarjeta del Guardian muestra las sugerencias y no deja empezar sin elegir una");
+  ok(/id="gdSugerencias"/.test(tg) && /accion:"buscar"/.test(tg) && /GDPLACE/.test(tg) && /Elegí uno de los lugares que te sugerimos/.test(tg) && /Dirección o nombre del lugar/.test(tg) && /Kansas Cabildo/.test(tg), "la tarjeta del Guardian muestra las sugerencias (direcciones y nombres de lugares) con su distancia y no deja empezar sin elegir una");
   await preparar();
 }
 

@@ -42,7 +42,7 @@ const B = 'http://localhost:8799';
   await pag.screenshot({ path: 'e2e_guardian_mapas.png', fullPage: true });
   await pag.selectOption('#gdLugar', '');
   console.log('minutos al cambiar a Otro lugar (no queda el numero viejo):', JSON.stringify(await pag.inputValue('#gdMin')), '|', await pag.textContent('#gdAyudaMin'));
-  await pag.fill('#gdTexto', 'Av cabildo 2359');
+  await pag.fill('#gdTexto', 'Kansas cabildo');
   await pag.waitForSelector('#gdSugerencias button');
   console.log('sugerencias:', await pag.$$eval('#gdSugerencias button', (b) => b.map((x) => x.textContent)));
   await pag.screenshot({ path: 'e2e_guardian_sugerencias.png', fullPage: true });

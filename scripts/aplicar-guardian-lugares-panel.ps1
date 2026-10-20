@@ -1,13 +1,12 @@
-﻿# aplicar-guardian-direcciones-panel.ps1 - Modo Guardian: elegir el destino entre direcciones SUGERIDAS (con barrio y ciudad) y decir por que falla Google.
-# Luciano, probando "Av cabildo 2359": "calcula todas las calles igual, no debe leer las calles, tendria que poner el barrio etc; algo esta mal". Tenia razon en dos cosas:
-#  - El "3 min" no era de Google: era el numero que habia quedado escrito de una prueba anterior. Ahora, al cambiar de destino o de modo, el casillero se vacia y se vuelve a calcular.
-#  - Una calle suelta es ambigua ("Av. Cabildo 2359" existe en varias ciudades). Ahora, al escribir (desde 3 letras) se muestran sugerencias de Google Places con el barrio y la ciudad, cerca de donde esta el
-#    telefono; se elige una y el tiempo se calcula hasta ESE lugar exacto (placeId), con el transito de ahora. Si hay sugerencias, no deja empezar sin elegir una. El camino queda con el nombre completo
-#    y las coordenadas exactas (sirven para saber si llego).
-#  - Si Google rechaza la clave o la API no esta habilitada, la pantalla lo dice con el motivo que da Google (por ejemplo "Places API (New) has not been used in project...") en vez de dejar un numero viejo.
-#  - Hace falta habilitar tambien la "Places API (New)" en Google Cloud y agregarla a las restricciones de la clave (la misma clave GOOGLE_ROUTES_KEY, que ahora sirve para Routes API y Places API).
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las ocho versiones). No cambia tablas ni rutas.
-# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-plddirecciones. Al final publica el panel solo.
+﻿# aplicar-guardian-lugares-panel.ps1 - Modo Guardian: elegir el destino entre direcciones Y nombres de lugares (restaurantes, locales, plazas...), con barrio, ciudad y distancia.
+# Luciano (20/10/2026): "tambien que deje poner nombres de lugares como restaurantes".
+#  - Al escribir (desde 3 letras) Google Places sugiere direcciones y tambien lugares por su nombre ("Kansas Cabildo"), cerca de donde esta el telefono. Cada sugerencia muestra el barrio, la ciudad
+#    y a cuantos km queda, para elegir el correcto entre varios con el mismo nombre. El tiempo se calcula hasta ese lugar exacto, con el transito de ahora.
+#  - Incluye todo lo del parche anterior de direcciones (sugerencias con barrio y ciudad, el casillero de minutos ya no queda con numeros viejos, y la pantalla dice por que falla Google). Si ya aplicaste
+#    aplicar-guardian-direcciones-panel.ps1, este lo reemplaza sin problema; si no, este lo trae todo.
+#  - Hace falta la "Places API (New)" habilitada en Google Cloud y agregada a las restricciones de la clave GOOGLE_ROUTES_KEY (junto a Routes API).
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las nueve versiones). No cambia tablas ni rutas.
+# Requiere aplicar-guardian-mejoras-panel.ps1. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldlugares. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -33,12 +32,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'async function gdBuscarLugares(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'suggestions.placePrediction.distanceMeters') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328")
+$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -52,9 +51,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-plddirecciones")) { Mal "Ya existe src\index.ts.bak-plddirecciones. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-plddirecciones")
-Ok "Respaldo creado: src\index.ts.bak-plddirecciones"
+if (Test-Path ($indice + ".bak-pldlugares")) { Mal "Ya existe src\index.ts.bak-pldlugares. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldlugares")
+Ok "Respaldo creado: src\index.ts.bak-pldlugares"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -1111,27 +1110,32 @@ async function gdRutaMapas(env: Env, origen: { lat: number; lng: number }, desti
   }
 }
 
-/** Sugerencias de direcciones mientras la persona escribe (Google Places, nuevo), sesgadas a donde est\u00e1: traen el barrio y la ciudad, para elegir la correcta. */
+/** Sugerencias mientras la persona escribe (Google Places, nuevo): direcciones y tambi\u00e9n nombres de lugares (restaurantes, locales, plazas...), cerca de donde est\u00e1, con el barrio, la ciudad
+ *  y a cu\u00e1ntos km queda, para elegir el correcto. */
 async function gdBuscarLugares(env: Env, texto: string, origen: { lat: number; lng: number } | null) {
   const clave = String((env as unknown as Record<string, string | undefined>).GOOGLE_ROUTES_KEY ?? "");
-  if (!clave) return { sugerencias: [] as Array<{ placeId: string; principal: string; secundario: string }>, fallo: "sin_clave", detalle: "" };
+  if (!clave) return { sugerencias: [] as Array<{ placeId: string; principal: string; secundario: string; km: number | null }>, fallo: "sin_clave", detalle: "" };
   const cuerpo: Record<string, unknown> = { input: texto, languageCode: "es", regionCode: "AR" };
-  if (origen) cuerpo.locationBias = { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } };
+  if (origen) {
+    cuerpo.locationBias = { circle: { center: { latitude: origen.lat, longitude: origen.lng }, radius: 50000 } };
+    cuerpo.origin = { latitude: origen.lat, longitude: origen.lng };
+  }
   try {
     const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
       method: "POST",
-      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat" },
+      headers: { "content-type": "application/json", "X-Goog-Api-Key": clave, "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters" },
       body: JSON.stringify(cuerpo),
     });
     if (!r.ok) {
       const e = await r.json().catch(() => null) as { error?: { message?: string } } | null;
       return { sugerencias: [], fallo: `http_${r.status}`, detalle: String(e?.error?.message ?? "").slice(0, 160) };
     }
-    const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
+    const d = await r.json() as { suggestions?: Array<{ placePrediction?: { placeId?: string; distanceMeters?: number; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }> };
     const sugerencias = (d.suggestions ?? []).map((x) => x.placePrediction).filter((p) => p && p.placeId).slice(0, 6).map((p) => ({
       placeId: String(p!.placeId),
       principal: String(p!.structuredFormat?.mainText?.text ?? p!.text?.text ?? "").slice(0, 120),
       secundario: String(p!.structuredFormat?.secondaryText?.text ?? "").slice(0, 120),
+      km: Number.isFinite(Number(p!.distanceMeters)) && Number(p!.distanceMeters) >= 0 ? Math.round(Number(p!.distanceMeters) / 100) / 10 : null,
     })).filter((x) => x.principal);
     return { sugerencias };
   } catch (error) {
@@ -1423,7 +1427,7 @@ function pldPaginaDuenio() {
 <div id="gdActivo" style="display:none"><p id="gdActivoTxt" style="margin-top:0"></p><div class="botones"><a class="boton" id="gdAbrir" href="#">Abrir mi camino</a></div></div>
 <div id="gdForm" style="display:none">
 <label style="margin-top:0">A d\u00f3nde vas</label><select id="gdLugar"></select>
-<div id="gdOtro" style="display:none"><label>Direcci\u00f3n o lugar</label><input id="gdTexto" maxlength="120" placeholder="Escrib\u00ed y eleg\u00ed una sugerencia" autocomplete="off"><div id="gdSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="gdAyudaDir" class="suave"></small></div>
+<div id="gdOtro" style="display:none"><label>Direcci\u00f3n o nombre del lugar</label><input id="gdTexto" maxlength="120" placeholder="Ej.: Kansas Cabildo, o Av. Cabildo 2359" autocomplete="off"><div id="gdSugerencias" class="botones" style="display:none;flex-direction:column;align-items:stretch;gap:6px;margin:8px 0 0"></div><small id="gdAyudaDir" class="suave"></small></div>
 <label>C\u00f3mo vas</label><select id="gdModo"><option value="auto">En auto</option><option value="transporte">En transporte p\u00fablico</option><option value="caminando">Caminando</option></select>
 <label>Tiempo del camino, en minutos <span class="suave" id="gdAyudaMin"></span></label><input id="gdMin" type="number" min="1" max="300" placeholder="Ej.: 20">
 <div class="botones"><button id="gdEmpezar">Empezar camino</button></div>
@@ -1526,7 +1530,7 @@ function gdCambio(){
   var otro=!$("gdLugar").value;$("gdOtro").style.display=otro?"block":"none";$("gdAyudaMin").textContent="";
   $("gdMin").value="";$("gdMin").readOnly=false;
   if(otro&&!GDPLACE&&!$("gdTexto").value.trim()){$("gdAyudaMin").textContent="(eleg\u00ed a d\u00f3nde vas)";return}
-  if(otro&&GDHAYSUG&&!GDPLACE){$("gdAyudaMin").textContent="(eleg\u00ed una de las direcciones sugeridas)";return}
+  if(otro&&GDHAYSUG&&!GDPLACE){$("gdAyudaMin").textContent="(eleg\u00ed uno de los lugares sugeridos)";return}
   var c=gdDestinoCuerpo({accion:"estimar",modo:$("gdModo").value});
   $("gdAyudaMin").textContent="(calculando con mapas\u2026)";
   gdPost(c).then(function(x){var d=x.d||{};
@@ -1540,13 +1544,13 @@ function gdSugerir(){
     if($("gdTexto").value.trim()!==t)return;
     var lista=d.sugerencias||[];GDHAYSUG=lista.length>0;
     if(!lista.length){$("gdAyudaDir").textContent=d.fallo&&d.fallo!=="sin_clave"?"No pudimos buscar direcciones: "+gdFalloTexto(d)+". Escribila completa, con barrio y ciudad.":"";return}
-    lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" \u00b7 "+sg.secundario:"");
+    lista.forEach(function(sg){var b=document.createElement("button");b.type="button";b.className="sec";b.style.textAlign="left";b.style.width="100%";b.textContent=sg.principal+(sg.secundario?" \u00b7 "+sg.secundario:"")+(sg.km!==null&&sg.km!==undefined?" \u00b7 a "+String(sg.km).replace(".",",")+" km":"");
       b.onclick=function(){GDPLACE=sg.placeId;GDETIQUETA=(sg.principal+(sg.secundario?", "+sg.secundario:"")).slice(0,80);$("gdTexto").value=GDETIQUETA;limpiar(caja);caja.style.display="none";$("gdAyudaDir").textContent="Elegiste: "+GDETIQUETA;gdCambio()};caja.appendChild(b)});
-    caja.style.display="flex";$("gdAyudaDir").textContent="Eleg\u00ed la direcci\u00f3n correcta (con su barrio y ciudad).";gdCambio();
+    caja.style.display="flex";$("gdAyudaDir").textContent="Eleg\u00ed el lugar correcto (mir\u00e1 el barrio, la ciudad y la distancia).";gdCambio();
   }).catch(function(){})}
 $("gdTexto").oninput=function(){GDPLACE="";GDETIQUETA="";$("gdMin").value="";clearTimeout(GDTIMER);GDTIMER=setTimeout(gdSugerir,400)};
 $("gdLugar").onchange=gdCambio;$("gdModo").onchange=gdCambio;
-$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Eleg\u00ed una de las direcciones que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}
+$("gdEmpezar").onclick=function(){var c=gdDestinoCuerpo({accion:"empezar",modo:$("gdModo").value,minutos:Number($("gdMin").value)||0});if(!$("gdLugar").value&&GDHAYSUG&&!GDPLACE){aviso("Eleg\u00ed uno de los lugares que te sugerimos, as\u00ed sabemos bien a d\u00f3nde vas.");return}
   var enviar=function(){gdPost(c).then(function(x){if(x.ok&&x.d.viaje){location.href=x.d.viaje.enlace;return}aviso(({sin_referentes:"Primero eleg\u00ed un referente que haya aceptado.",ya_hay_camino:"Ya ten\u00e9s un camino en marcha.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",faltan_minutos:"Pon\u00e9 cu\u00e1ntos minutos tard\u00e1s.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n."})[x.d.error]||"No se pudo empezar el camino.")})};
   var hecho=false;var seguir=function(){if(!hecho){hecho=true;enviar()}};
   try{navigator.geolocation.getCurrentPosition(function(p){c.origen={lat:p.coords.latitude,lng:p.coords.longitude};seguir()},seguir,{timeout:4000,maximumAge:60000});setTimeout(seguir,4500)}catch(e){seguir()}};
@@ -1619,10 +1623,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'suggestions.placePrediction.distanceMeters') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="detCondiciones"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-plddirecciones") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldlugares") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -1632,5 +1636,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: el Guardian ahora sugiere direcciones con barrio y ciudad (necesita Places API (New) habilitada) y dice por que falla Google. Abri /guardian con Ctrl+F5."
+Ok "LISTO: el Guardian sugiere direcciones y nombres de lugares (restaurantes, locales...) con barrio, ciudad y distancia (necesita Places API (New) habilitada). Abri /guardian con Ctrl+F5."
 Write-Host ""
