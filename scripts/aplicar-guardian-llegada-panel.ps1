@@ -1,12 +1,19 @@
-﻿# aplicar-guardian-parpadeo-panel.ps1 - Modo Guardian: en los ultimos 15 segundos el reloj del camino parpadea en rojo (no depende del sonido).
-# Luciano (20/10/2026): el pip pip pip de los ultimos 15 segundos no se escucho porque el telefono tenia unos auriculares Bluetooth conectados (el sonido salia por ahi). Una pagina web no puede forzar el parlante
-# del telefono, asi que mientras llega la version de la app que lo haga: "me parece que suma tambien lo del parpadeo para los 15 segundos".
-# Que cambia (solo la pantalla del camino):
-#  - En los ultimos 15 segundos el reloj se pone rojo y parpadea (una vez por segundo), la tarjeta del reloj se marca en rojo y aparece "Se termina el tiempo: toca Llegue o pedi mas tiempo" (lo ultimo solo si se puede pedir
-#    mas tiempo). Pasado el limite, el reloj queda rojo y quieto. Si el telefono tiene activado "reducir movimiento", no parpadea: queda rojo. El sonido y la vibracion siguen igual.
-#  - Incluye todo lo de los parches anteriores de Guardian, lugares, Configuracion, recalculo por transito y pausa. Este los reemplaza: se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las veinte versiones). No toca nada mas del panel.
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldparpadeo. Al final publica el panel solo.
+﻿# aplicar-guardian-llegada-panel.ps1 - Modo Guardian: al tocar Llegue se comprueba con la ubicacion que de verdad esta en el destino.
+# Luciano (20/10/2026): hizo un camino sin moverse, espero el tiempo y toco Llegue: lo tomo como llegado y nunca llego. "Tendria que haber una manera con la geolocalizacion de darse
+# cuenta si de verdad esta en el lugar donde iba a ir." Ademas, tocar Llegue sin estar ahi apagaba el aviso a los referentes.
+# Que cambia:
+#  - Al tocar Llegue la pantalla del camino pide la ubicacion del navegador (como Cambiar destino) y el servidor la compara con el destino, junto con la del telefono si es de los ultimos
+#    10 minutos (con cualquiera de las dos cerca alcanza: puede tener la pagina abierta en otra compu). Cerca = hasta 300 metros.
+#  - Si esta en el destino, se cierra como siempre y el resumen y el registro dicen que la ubicacion lo confirmo.
+#  - Si esta lejos (por ejemplo a 2,3 km) el camino NO se cierra: la pantalla dice cuantos km faltan y ofrece "Volver a comprobar" o "Llegue igual". Lo mismo si no se puede ver donde
+#    esta (sin permiso, ubicacion vieja o muy imprecisa). El reloj sigue y, si no llega a tiempo, el aviso a los referentes sale como siempre.
+#  - "Llegue igual" cierra el camino y deja anotado que no se pudo comprobar. Si ya se les habia avisado a los referentes, el mail dice que esta bien pero cuenta la distancia y que se
+#    comuniquen; si no se les habia avisado, no se les manda nada.
+#  - Un destino escrito a mano con los minutos (sin punto en el mapa) no se comprueba: cierra como siempre. Con los referentes ya avisados no se discute (es "ya estoy bien"): se cierra y
+#    se cuenta como estaba la ubicacion.
+#  - Incluye todo lo de los parches anteriores de Guardian, lugares, Configuracion, recalculo por transito, pausa y parpadeo. Este los reemplaza: se puede correr encima de cualquiera de ellos.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las catorce versiones que dejaron los parches desde aplicar-guardian-mejoras-panel.ps1). No toca
+# nada mas del panel. Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldllegada. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -32,12 +39,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'id="finalTxt"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'async function gdComprobarLlegada(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("88d257c0bb656331b11ebc66c0f3521a884bd69fffa915a649cf143c0211d218", "a887fbf6bdbf1e85e4a223f5a4030a2e76d03a926b175bb25bf434da812c4e11", "e9d0a02cb9e148f97f2252c27b6ff6e255dd2c7691460711436024ca7eb3bc1c", "36cda30909fa54787b0e682833b526b4719fe9ad7c4bc4fdd3f510e149560ccd", "db1d0c40da359644ef62f03571f025a20e1935957c372430fe1848d945aee385", "905732ab1a69eaaeb7405cb0b5eab31fb0c970558761dcde20bf73808b582759", "85283ceb6c5b866c568093e2b33e3fda9454c1c4271a79951c4772142da076dd", "0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -51,9 +58,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldparpadeo")) { Mal "Ya existe src\index.ts.bak-pldparpadeo. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldparpadeo")
-Ok "Respaldo creado: src\index.ts.bak-pldparpadeo"
+if (Test-Path ($indice + ".bak-pldllegada")) { Mal "Ya existe src\index.ts.bak-pldllegada. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldllegada")
+Ok "Respaldo creado: src\index.ts.bak-pldllegada"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -870,6 +877,8 @@ const GD_MAX_EXTENSIONES = 3;
 const GD_ENTRE_ALERTAS_MIN = 10;
 const GD_MAX_ALERTAS = 3;
 const GD_RADIO_LLEGADA_M = 150;
+const GD_RADIO_VERIFICAR_M = 300;   // al tocar Llegu\u00e9 se da por llegada hasta esta distancia del destino (el punto del mapa puede quedar en la calle o lejos de la puerta de un lugar grande)
+const GD_PRECISION_LLEGADA_M = 500; // una ubicaci\u00f3n menos precisa que esto no alcanza para comprobar que lleg\u00f3
 const GD_PING_CADA_MIN = 5;
 const GD_MAX_MINUTOS = 300;
 const GD_CIERRE_HORAS = 12;
@@ -977,10 +986,10 @@ async function gdCerrarPausa(env: Env, v: GdViaje, p: GdProgreso, ahora: number)
 type GdViaje = {
   id: string; ownerEmail: string; destino: string; destLat: number | null; destLng: number | null; modo: string;
   estimadoMin: number; startedAt: string; deadlineAt: string; extensiones: number; estado: string;
-  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null; endedAt: string | null;
+  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null; endedAt: string | null; motivoFin: string | null;
 };
 
-const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt,ended_at AS endedAt";
+const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt,ended_at AS endedAt,motivo_fin AS motivoFin";
 
 /** Minutos que se calculan para ir de un punto a otro (distancia por calles ~30 % m\u00e1s larga que en l\u00ednea recta; el transporte suma 5 min de espera). */
 function gdEstimar(km: number, modo: string) {
@@ -1050,6 +1059,7 @@ async function gdPresentar(env: Env, v: GdViaje) {
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
     puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
     ajusteAutoMin: pr.autoMin, pausa: enPausa ? { hasta: pr.pausaHasta, restaMs: pr.restaMs ?? 0 } : null, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo, destinoExacto: v.destLat !== null && v.destLng !== null,
+    llegada: v.estado === "llego" ? (v.motivoFin === "llegue_comprobada" ? "comprobada" : v.motivoFin === "llegue_sin_comprobar" ? "sin_comprobar" : null) : null,
     enlace: await gdEnlace(env, v),
   };
 }
@@ -1061,15 +1071,16 @@ async function gdUbicacion(env: Env, email: string) {
 }
 
 /** Les cuenta a los referentes que lleg\u00f3 bien (solo si ya se les hab\u00eda avisado). */
-async function gdAvisarLlego(env: Env, v: GdViaje, motivo: string) {
+async function gdAvisarLlego(env: Env, v: GdViaje, motivo: string, sinComprobar = false) {
   if (v.alertas <= 0) return 0;
   const cfg = await pldLeerConfig(env, v.ownerEmail);
   const quien = pldNombreDe(v.ownerEmail, cfg);
+  const cierre = sinComprobar ? `Si quer\u00e9s quedarte tranquilo, comunicate con ${quien}.` : "Ya no hace falta que hagas nada.";
   let enviados = 0;
   for (const x of await pldReferentesActivos(env, v.ownerEmail)) {
     const ok = await pldCorreo(
       env, x.email, `${quien} est\u00e1 bien`,
-      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> ${escapeHtml(motivo)} Ya no hace falta que hagas nada.</p>`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> ${escapeHtml(motivo)} ${escapeHtml(cierre)}</p>`,
     );
     if (ok) enviados++;
   }
@@ -1439,6 +1450,44 @@ async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown
   return { ok: true, viaje: await gdPresentar(env, v) };
 }
 
+type GdComprobacion = { estado: "cerca" | "lejos" | "incierta" | "sin_ubicacion"; distanciaM: number | null; fuente: "navegador" | "telefono" | null; haceMin: number | null; precisionM: number | null };
+
+/** Comprueba con la ubicaci\u00f3n de la persona que est\u00e1 en el destino al tocar Llegu\u00e9: la que manda el navegador en ese momento y la de su tel\u00e9fono si es de los \u00faltimos minutos
+ *  (con cualquiera de las dos cerca alcanza: puede tener la p\u00e1gina abierta en otra compu, o el tel\u00e9fono en el bolsillo). Cerca: hasta 300 m. Lejos: seguro que est\u00e1 afuera, aun contando
+ *  el error de la ubicaci\u00f3n. Incierta: no alcanza para decir ninguna de las dos (por ejemplo, una ubicaci\u00f3n poco precisa). Sin ubicaci\u00f3n: no se sabe d\u00f3nde est\u00e1. */
+async function gdComprobarLlegada(env: Env, v: GdViaje, pedido: unknown): Promise<GdComprobacion> {
+  const fuentes: Array<{ lat: number; lng: number; fuente: "navegador" | "telefono"; haceMin: number; precision: number }> = [];
+  const o = pedido as { lat?: unknown; lng?: unknown; precision?: unknown } | null;
+  if (o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180 && !(Number(o.precision) > GD_PRECISION_MAX_M)) {
+    fuentes.push({ lat: Number(o.lat), lng: Number(o.lng), fuente: "navegador", haceMin: 0, precision: Number.isFinite(Number(o.precision)) ? Math.max(0, Number(o.precision)) : 0 });
+  }
+  const ub = await gdUbicacion(env, v.ownerEmail);
+  const en = ub.ubicacion ? Date.parse(ub.ubicacion.en ?? "") : NaN;
+  const haceMin = Number.isFinite(en) ? Math.max(0, Math.round((Date.now() - en) / 60_000)) : null;
+  if (ub.ubicacion && haceMin !== null && haceMin <= GD_UBICACION_RECIENTE_MIN) fuentes.push({ lat: ub.ubicacion.lat, lng: ub.ubicacion.lng, fuente: "telefono", haceMin, precision: 0 });
+  if (!fuentes.length) return { estado: "sin_ubicacion", distanciaM: null, fuente: null, haceMin, precisionM: null };
+  const medidas = fuentes.map((f) => {
+    const distancia = Math.round(pldDistanciaKm(f.lat, f.lng, Number(v.destLat), Number(v.destLng)) * 1000);
+    const estado: GdComprobacion["estado"] = distancia - f.precision > GD_RADIO_VERIFICAR_M ? "lejos" : distancia <= GD_RADIO_VERIFICAR_M && f.precision <= GD_PRECISION_LLEGADA_M ? "cerca" : "incierta";
+    return { ...f, distancia, estado };
+  }).sort((a, b) => a.distancia - b.distancia);
+  const elegida = medidas.find((m) => m.estado === "cerca") ?? medidas.find((m) => m.estado === "incierta") ?? medidas[0];
+  return { estado: elegida.estado, distanciaM: elegida.distancia, fuente: elegida.fuente, haceMin: elegida.haceMin, precisionM: elegida.precision || null };
+}
+
+function gdDistanciaTexto(m: number) {
+  if (m < 1000) return `${Math.max(10, Math.round(m / 10) * 10)} m`;
+  return `${String(Math.round(m / 100) / 10).replace(".", ",")} km`;
+}
+
+/** Lo que se sabe de la ubicaci\u00f3n, dicho para la persona ("tu ubicaci\u00f3n est\u00e1 a 2,3 km de Casa") o para sus referentes ("su ubicaci\u00f3n est\u00e1 a 2,3 km de Casa"). */
+function gdClausulaComprobacion(c: GdComprobacion, destino: string, ella: boolean) {
+  const de = ella ? "tu" : "su";
+  if (c.estado === "lejos") return `${de} ubicaci\u00f3n est\u00e1 a ${gdDistanciaTexto(c.distanciaM ?? 0)} de ${destino}`;
+  if (c.estado === "incierta") return `${de} ubicaci\u00f3n no es lo bastante precisa para comprobar que ${ella ? "llegaste" : "lleg\u00f3"} a ${destino}`;
+  return `no pudimos ver d\u00f3nde ${ella ? "est\u00e1s" : "est\u00e1"} para comprobar que ${ella ? "llegaste" : "lleg\u00f3"} a ${destino}`;
+}
+
 /** Llegu\u00e9 / Extender / Necesito ayuda / Cancelar. */
 async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, cuerpo: Record<string, unknown> = {}) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
@@ -1446,14 +1495,33 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   const g = await gdLeerConfig(env, v.ownerEmail);
   const pr = await gdLeerProgreso(env, v.id);
   if (accion === "llegue" || (accion === "cancelar" && v.estado === "alerta")) {
+    // Llegu\u00e9 se comprueba con la ubicaci\u00f3n de la persona (si se sabe d\u00f3nde queda el destino): si no est\u00e1 ah\u00ed, el camino sigue abierto y se le dice por qu\u00e9. Si en realidad ya lleg\u00f3
+    // (el punto del mapa queda lejos de la puerta, no hay GPS...) toca \u00abLlegu\u00e9 igual\u00bb y queda anotado como no comprobado. En la alerta no se discute: es \u00abya estoy bien\u00bb,
+    // se cierra y se cuenta c\u00f3mo estaba la ubicaci\u00f3n.
+    const comp = accion === "llegue" && v.destLat !== null && v.destLng !== null ? await gdComprobarLlegada(env, v, cuerpo.origen) : null;
+    const igual = cuerpo.forzar === true;
+    if (comp && comp.estado !== "cerca" && v.estado !== "alerta" && !igual) {
+      await pldRegistrar(env, v.ownerEmail, null, "guardian", `Tocaste Llegu\u00e9, pero ${gdClausulaComprobacion(comp, v.destino, true)}: el camino sigue abierto.`);
+      return { error: comp.estado === "lejos" ? "lejos_del_destino" : "sin_comprobar", status: 409, detalle: { motivo: comp.estado, distanciaM: comp.distanciaM, fuente: comp.fuente, haceMin: comp.haceMin, precisionM: comp.precisionM } };
+    }
     let vf = v, pf = pr;
     if (pr.pausaHasta && v.estado !== "alerta") ({ viaje: vf, progreso: pf } = await gdCerrarPausa(env, v, pr, Date.now())); // llego frenado: se cuenta lo que duro la pausa y el limite vuelve a lo que quedaba
     const fin = now();
-    await env.DB.prepare("UPDATE gd_viajes SET estado=''llego'',ended_at=?,motivo_fin=''llegue'' WHERE id=?").bind(fin, v.id).run();
+    const sinComprobar = !!comp && comp.estado !== "cerca";
+    await env.DB.prepare("UPDATE gd_viajes SET estado=''llego'',ended_at=?,motivo_fin=? WHERE id=?").bind(fin, comp ? (sinComprobar ? "llegue_sin_comprobar" : "llegue_comprobada") : "llegue", v.id).run();
     const f = gdFin({ ...vf, endedAt: fin }, g.margenMin, pf.autoMin, pf.paradaMin)!;
-    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}: tocaste Llegu\u00e9 a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
-    await gdAvisarLlego(env, v, `lleg\u00f3 bien a ${v.destino}: toc\u00f3 Llegu\u00e9 a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
-    return { ok: true, estado: "llego" };
+    const demora = gdDemoraTexto(f.despuesMin, f.limiteHora);
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", !comp
+      ? `Llegaste bien a ${v.destino}: tocaste Llegu\u00e9 a las ${f.hora}, ${demora}.`
+      : sinComprobar
+        ? `Cerraste el camino a ${v.destino}: tocaste Llegu\u00e9 a las ${f.hora}, ${demora}, pero ${gdClausulaComprobacion(comp, v.destino, true)}.`
+        : `Llegaste bien a ${v.destino}: tocaste Llegu\u00e9 a las ${f.hora}, ${demora}. Tu ubicaci\u00f3n lo confirm\u00f3 (a ${gdDistanciaTexto(comp.distanciaM ?? 0)}).`);
+    await gdAvisarLlego(env, v, !comp
+      ? `lleg\u00f3 bien a ${v.destino}: toc\u00f3 Llegu\u00e9 a las ${f.hora}, ${demora}.`
+      : sinComprobar
+        ? `toc\u00f3 Llegu\u00e9 a las ${f.hora}, ${demora}, y dice que est\u00e1 bien, pero ${gdClausulaComprobacion(comp, v.destino, false)}.`
+        : `lleg\u00f3 bien a ${v.destino}: toc\u00f3 Llegu\u00e9 a las ${f.hora}, ${demora}. Su ubicaci\u00f3n lo confirma.`, sinComprobar);
+    return { ok: true, estado: "llego", llegada: comp ? (sinComprobar ? "sin_comprobar" : "comprobada") : null };
   }
   if (accion === "cancelar") {
     await env.DB.prepare("UPDATE gd_viajes SET estado=''cancelado'',ended_at=?,motivo_fin=''cancelado'' WHERE id=?").bind(now(), v.id).run();
@@ -1601,7 +1669,7 @@ async function gdApi(request: Request, env: Env) {
     return gdBuscarApi(env, email, cuerpo);
   }
   const r = await gdAccion(env, viaje, accion, Number(cuerpo.minutos), cuerpo);
-  if ("error" in r) return json({ error: r.error, ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}) }, r.status);
+  if ("error" in r) return json({ error: r.error, ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}), ...("detalle" in r && r.detalle ? { detalle: r.detalle } : {}) }, r.status);
   const nuevo = await gdPorId(env, viaje.id);
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
@@ -1637,6 +1705,7 @@ function gdPaginaCamino() {
 <div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="pausaTxt" style="display:none;color:#f0c75a;font-weight:700;margin:0 0 6px"></div><div id="finalTxt" style="display:none;color:#ff5a4d;font-weight:700;margin:0 0 6px"></div><div id="sonidoAviso" style="display:none;color:#e0806a;font-weight:700;margin:0 0 6px">Toc\u00e1 la pantalla para que suenen los pitidos.</div><div id="estadoTxt"></div></div>
 <div class="tarjeta" id="acciones">
 <button class="grande" id="bLlegue">Llegu\u00e9</button>
+<div id="lleguePanel" class="subpanel" role="status" style="display:none"><p id="llegueTxt" style="margin:0 0 8px"></p><div class="botones" style="margin:0"><button class="sec" id="bLlegueDeNuevo">Volver a comprobar</button><button class="sec" id="bLlegueIgual">Llegu\u00e9 igual</button></div></div>
 <button class="grande sec" id="bSeguir" style="display:none;margin-top:10px">Ya sigo</button>
 <div id="extBloque"><p class="suave" style="margin:16px 0 4px">\u00bfNecesit\u00e1s m\u00e1s tiempo?</p>
 <div class="botones tres" style="margin-top:6px"><button class="sec" data-m="10">+10 min</button><button class="sec" data-m="20">+20 min</button><button class="sec" data-m="30">+30 min</button></div></div>
@@ -1647,7 +1716,7 @@ function gdPaginaCamino() {
 <div id="cmMinBloque" style="display:none"><label>Tiempo hasta ah\u00ed, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
 <div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde est\u00e1s ahora.</small></div>
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
-<small class="suave">Si no lleg\u00e1s a tiempo y no ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes con tu \u00faltima ubicaci\u00f3n. \u201cNecesito ayuda\u201d les avisa ahora mismo.</small>
+<small class="suave">Si no lleg\u00e1s a tiempo y no ped\u00eds m\u00e1s tiempo, les avisamos a tus referentes con tu \u00faltima ubicaci\u00f3n. \u201cNecesito ayuda\u201d les avisa ahora mismo. Al tocar \u201cLlegu\u00e9\u201d comprobamos con tu ubicaci\u00f3n que est\u00e1s en el destino.</small>
 </div>
 <div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protecci\u00f3n</a><a class="boton sec" id="bOtro" href="/guardian#guardian">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
 <div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button><button class="sec" id="bProbar">Probar sonido</button></div><small class="suave" id="sonidoTxt"></small></div>
@@ -1668,7 +1737,7 @@ function pantallaEncendida(){try{if(LUZ&&!luz&&navigator.wakeLock&&document.visi
 ["pointerdown","touchstart","keydown"].forEach(function(e){document.addEventListener(e,function(){if(SONIDO)audio();estadoSonido()},{passive:true})});
 document.addEventListener("visibilitychange",pantallaEncendida);
 function aviso(x){$("aviso").textContent=x||""}
-function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;e.fallo=d.fallo;throw e}return d})})}
+function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;e.fallo=d.fallo;e.detalle=d.detalle;throw e}return d})})}
 function hora(s){try{return new Date(s).toLocaleTimeString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return s}}
 function reloj(ms){var s=Math.max(0,Math.floor(ms/1000));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;function d(n){return(n<10?"0":"")+n}return h>0?h+" h "+d(m)+" min":d(m)+":"+d(x)}
 function enPausa(){return !!(V&&V.pausa&&Date.parse(V.pausa.hasta)>Date.now()+desfase)}
@@ -1679,7 +1748,7 @@ function pintar(d){
   $("destino").textContent="Vas a "+V.destino;
   $("detalle").textContent=V.modoTexto.charAt(0).toUpperCase()+V.modoTexto.slice(1)+" \u00b7 "+V.estimadoMin+" min + "+V.margenMin+" de margen";
   var activo=V.estado==="en_camino"||V.estado==="aviso"||V.estado==="alerta";
-  $("acciones").style.display=activo?"block":"none";
+  $("acciones").style.display=activo?"block":"none";if(!activo||V.estado==="alerta")$("lleguePanel").style.display="none";
   $("extBloque").style.display=V.extensionesMax>0&&!enPausa()?"block":"none";
   $("bSeguir").style.display=activo&&enPausa()?"block":"none";
   $("despues").style.display=activo?"none":"block";
@@ -1693,7 +1762,7 @@ function pintar(d){
   var tx={en_camino:"Ten\u00e9s que llegar antes de las "+hora(V.deadlineAt)+"."+(V.ajusteAutoMin>0?" Sumamos "+V.ajusteAutoMin+" minutos por tr\u00e1nsito.":"")+" Cuando llegues, toc\u00e1 Llegu\u00e9.",aviso:"\u00bfSegu\u00eds en camino? Si no respond\u00e9s, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",llego:"Llegaste bien. \u00a1Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerr\u00f3 solo."}[V.estado]||"";
   if(enPausa()&&V.estado==="en_camino")tx="En pausa hasta las "+hora(V.pausa.hasta)+". Cuando termine, el reloj sigue con los "+Math.ceil(V.pausa.restaMs/60000)+" minutos que te quedaban. No les avisamos a tus referentes.";
   var f=V.fin;
-  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegu\u00e9 a las "+f.hora+": "+(f.despuesMin===0?"justo en el l\u00edmite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"despu\u00e9s")+" del l\u00edmite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el c\u00e1lculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tr\u00e1nsito":"")+(f.paradaMin>0?" + "+f.paradaMin+" de parada":"")+"."}
+  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegu\u00e9 a las "+f.hora+": "+(f.despuesMin===0?"justo en el l\u00edmite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"despu\u00e9s")+" del l\u00edmite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el c\u00e1lculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tr\u00e1nsito":"")+(f.paradaMin>0?" + "+f.paradaMin+" de parada":"")+"."+(V.llegada==="comprobada"?" Comprobamos con tu ubicaci\u00f3n que estabas en "+V.destino+".":V.llegada==="sin_comprobar"?" No se pudo comprobar con tu ubicaci\u00f3n que hayas llegado.":"")}
   $("estadoTxt").textContent=tx;$("estadoTxt").className=V.estado==="alerta"?"mal":(V.estado==="llego"?"ok":"suave");
   if(V.deadlineAt!==ultimoLimite){ultimoLimite=V.deadlineAt;ultimoPitido=0;sonoFinal=false}
   $("sonidoCard").style.display=(V.estado==="en_camino"||V.estado==="aviso")?"block":"none";
@@ -1722,10 +1791,28 @@ function tick(){
     else if(ms<=0&&!sonoFinal){sonoFinal=true;pitido(true)}
   }
 }
-function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",demasiadas_extensiones:"Ya extendiste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",demasiadas_paradas:"Ya frenaste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",sin_extensiones:"En la configuraci\u00f3n del Modo Guardi\u00e1n no se puede pedir m\u00e1s tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya termin\u00f3."})[e.codigo]||"No se pudo. Prob\u00e1 de nuevo."}
+function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: toc\u00e1 Llegu\u00e9 cuando est\u00e9s bien.",demasiadas_extensiones:"Ya extendiste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",demasiadas_paradas:"Ya frenaste el m\u00e1ximo de veces: toc\u00e1 Llegu\u00e9 o ped\u00ed ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a m\u00e1s de 5 horas: revis\u00e1 la direcci\u00f3n.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Eleg\u00ed c\u00f3mo vas.",destino_invalido:"Eleg\u00ed de nuevo la direcci\u00f3n.",falta_destino:"Escrib\u00ed a d\u00f3nde vas.",sin_extensiones:"En la configuraci\u00f3n del Modo Guardi\u00e1n no se puede pedir m\u00e1s tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya termin\u00f3.",lejos_del_destino:"Todav\u00eda no est\u00e1s en el destino: segu\u00ed hasta ah\u00ed y toc\u00e1 Llegu\u00e9 de nuevo.",sin_comprobar:"No pudimos ver d\u00f3nde est\u00e1s para comprobar que llegaste."})[e.codigo]||"No se pudo. Prob\u00e1 de nuevo."}
 function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
-$("bLlegue").onclick=function(){hacer({accion:"llegue"},"Listo: avisamos que llegaste bien.")};
+function dist(m){return m<1000?Math.max(10,Math.round(m/10)*10)+" m":String(Math.round(m/100)/10).replace(".",",")+" km"}
+function noLlego(d){ // el servidor no dio por llegada: se cuenta por que y se ofrece volver a comprobar o cerrar igual
+  var de=V?V.destino:"el destino",desde=d.fuente==="telefono"?" (la \u00faltima de tu tel\u00e9fono, de hace "+(d.haceMin||0)+" min)":"";
+  var x=d.motivo==="lejos"?"Todav\u00eda no est\u00e1s en "+de+": seg\u00fan tu ubicaci\u00f3n"+desde+" est\u00e1s a "+dist(d.distanciaM||0)+". Segu\u00ed hasta ah\u00ed y toc\u00e1 Llegu\u00e9 de nuevo."
+    :d.motivo==="incierta"?"Tu ubicaci\u00f3n no es lo bastante precisa para comprobar que llegaste a "+de+(d.precisionM?" (error de unos "+dist(d.precisionM)+")":"")+". Prob\u00e1 al aire libre o con el GPS activado, y volv\u00e9 a comprobar."
+    :"No pudimos ver d\u00f3nde est\u00e1s para comprobar que llegaste a "+de+". Activ\u00e1 la ubicaci\u00f3n de este navegador y volv\u00e9 a comprobar.";
+  $("llegueTxt").textContent=x+" Si en realidad ya llegaste, toc\u00e1 \u00abLlegu\u00e9 igual\u00bb: se cierra el camino y queda anotado que no se pudo comprobar.";
+  $("lleguePanel").style.display="block"}
+function llegue(igual){ // Llegu\u00e9: se comprueba con la ubicaci\u00f3n del navegador de la persona (y la de su tel\u00e9fono, si es reciente)
+  var b=$("bLlegue");if(b.disabled)return;aviso("");$("lleguePanel").style.display="none";
+  var fin=function(){b.disabled=false;b.textContent="Llegu\u00e9"};
+  var enviar=function(o){var c={accion:"llegue"};if(o)c.origen={lat:o.lat,lng:o.lng,precision:o.precision};if(igual)c.forzar=true;
+    api(c).then(function(d){fin();pintar(d);aviso(d.llegada==="comprobada"?"Listo: comprobamos con tu ubicaci\u00f3n que llegaste y cerramos el camino.":d.llegada==="sin_comprobar"?"Listo: cerramos el camino. Qued\u00f3 anotado que no se pudo comprobar que llegaste.":"Listo: avisamos que llegaste bien.")})
+      .catch(function(e){fin();if(e.codigo==="lejos_del_destino"||e.codigo==="sin_comprobar")noLlego(e.detalle||{});else aviso(errorDe(e))})};
+  b.disabled=true;
+  if(V&&V.destinoExacto&&V.estado!=="alerta"&&!igual){b.textContent="Comprobando tu ubicaci\u00f3n\u2026";POS=null;ubicar(enviar)}else enviar(null)}
+$("bLlegue").onclick=function(){llegue(false)};
+$("bLlegueDeNuevo").onclick=function(){llegue(false)};
+$("bLlegueIgual").onclick=function(){llegue(true)};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: ten\u00e9s "+b.getAttribute("data-m")+" minutos m\u00e1s.")}});
 $("bAyuda").onclick=function(){if(confirm("\u00bfPedir ayuda? Les avisamos ahora mismo a tus referentes, con tu \u00faltima ubicaci\u00f3n."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};
 $("bCancelar").onclick=function(){if(confirm("\u00bfCancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
@@ -2127,10 +2214,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 1) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldparpadeo") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldllegada") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2140,5 +2227,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: en los ultimos 15 segundos del camino el reloj parpadea en rojo. Abri el camino con Ctrl+F5 y proba."
+Ok "LISTO: al tocar Llegue se comprueba con tu ubicacion que estas en el destino. Abri el camino con Ctrl+F5 y proba."
 Write-Host ""

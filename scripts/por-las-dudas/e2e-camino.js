@@ -185,13 +185,48 @@ const poner = (ruta, cuerpo) => fetch(B + ruta, { method: 'POST', body: cuerpo =
   const reg = await (await fetch(B + '/api/remote/por-las-dudas')).json();
   console.log('   registro:', (reg.registro || []).filter((x) => /parada|pausa|frenar|Seguís|tránsito|Cambiaste/.test(x.detail)).map((x) => x.detail.slice(0, 120)));
 
-  // --- llegar: el resumen cuenta los minutos por transito y de parada
+  // --- llegar: se comprueba con la ubicacion. El navegador esta a ~1,7 km de la Casa de prueba: el camino no se cierra y la pantalla explica por que
   await pag.click('#bLlegue');
+  await pag.waitForSelector('#lleguePanel', { state: 'visible' });
+  console.log('9) llegue lejos del destino: ' + await texto('#llegueTxt'));
+  console.log('   botones:', await pag.$$eval('#lleguePanel button', (b) => b.map((x) => x.textContent.trim())), '| el boton Llegué vuelve a decir:', await texto('#bLlegue'), '| el camino sigue abierto:', await pag.isVisible('#acciones'), '|', (await texto('#estadoTxt')).slice(0, 50));
+  await pag.screenshot({ path: 'e2e_camino_llegue_lejos.png', fullPage: true });
+  // ahora el navegador esta en la puerta de Casa: "Volver a comprobar" cierra el camino como comprobado; el resumen cuenta los minutos por transito y de parada
+  await ctx.setGeolocation({ latitude: -34.4902, longitude: -58.4 });
+  await pag.click('#bLlegueDeNuevo');
   await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('Tocaste Llegué'));
-  console.log('9) llegue: ' + await texto('#estadoTxt'));
+  console.log('   en la puerta de Casa: ' + await texto('#aviso') + ' | ' + await texto('#estadoTxt'));
   await pag.screenshot({ path: 'e2e_camino_final.png', fullPage: true });
   const mailsFin = (await (await fetch(B + '/__correos')).json()).filter((c) => c.to === 'mama@correo.com' && /no llegó|está bien/.test(c.subject));
   console.log('   mails a la referente en todo el recorrido (debe ser 0):', mailsFin.length);
+
+  // --- otro camino a Casa, con el navegador lejos: "Llegué igual" lo cierra y queda anotado que no se pudo comprobar
+  await ctx.setGeolocation({ latitude: -34.505, longitude: -58.4 });
+  const otro = await (await fetch(B + '/api/guardian', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'empezar', lugarId: 'pl1', modo: 'auto' }) })).json();
+  await pag.goto(otro.viaje.enlace.replace(/^https?:\/\/[^/]+/, B));
+  await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
+  await pag.click('#bLlegue');
+  await pag.waitForSelector('#lleguePanel', { state: 'visible' });
+  await pag.click('#bLlegueIgual');
+  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('No se pudo comprobar'));
+  console.log('9b) "Llegué igual": ' + await texto('#aviso') + ' | ' + await texto('#estadoTxt'));
+  const reg2 = await (await fetch(B + '/api/remote/por-las-dudas')).json();
+  console.log('   registro:', (reg2.registro || []).filter((x) => /Cerraste el camino|Tocaste Llegué, pero|Tu ubicación lo confirmó/.test(x.detail)).map((x) => x.detail.slice(0, 150)));
+
+  // --- el navegador no deja ver la ubicacion (la persona dijo que no) y la ultima del telefono es de hace 2 horas: no se puede comprobar; al dejarla ver, en la puerta de Casa, cierra como comprobado
+  await poner('/__gd-ubicacion', { lat: -34.6, lng: -58.4, haceMin: 120 });
+  const otro2 = await (await fetch(B + '/api/guardian', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'empezar', lugarId: 'pl1', modo: 'auto', origen: { lat: -34.505, lng: -58.4, precision: 20 } }) })).json(); // el camino se arma desde donde esta el navegador (la ubicacion del telefono es vieja)
+  await pag.goto(otro2.viaje.enlace.replace(/^https?:\/\/[^/]+/, B));
+  await pag.waitForFunction(() => document.getElementById('viaje').style.display === 'block');
+  await pag.evaluate(() => { window.__geoReal = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation); navigator.geolocation.getCurrentPosition = (ok, err) => setTimeout(() => err({ code: 1, message: 'User denied Geolocation' }), 50); });
+  await pag.click('#bLlegue');
+  await pag.waitForSelector('#lleguePanel', { state: 'visible' });
+  console.log('9c) sin permiso de ubicacion y con la del telefono de hace 2 horas: ' + await texto('#llegueTxt'));
+  await ctx.setGeolocation({ latitude: -34.4902, longitude: -58.4 });
+  await pag.evaluate(() => { navigator.geolocation.getCurrentPosition = window.__geoReal; }); // ahora si la deja ver
+  await pag.click('#bLlegueDeNuevo');
+  await pag.waitForFunction(() => document.getElementById('estadoTxt').textContent.includes('Comprobamos con tu ubicación'));
+  console.log('   con permiso y en la puerta de Casa: ' + await texto('#aviso'));
 
   // --- Configuracion: el tope por transito
   await pag.goto(B + '/guardian#config-guardian');

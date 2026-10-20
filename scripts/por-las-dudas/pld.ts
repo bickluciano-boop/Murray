@@ -814,6 +814,8 @@ const GD_MAX_EXTENSIONES = 3;
 const GD_ENTRE_ALERTAS_MIN = 10;
 const GD_MAX_ALERTAS = 3;
 const GD_RADIO_LLEGADA_M = 150;
+const GD_RADIO_VERIFICAR_M = 300;   // al tocar Llegué se da por llegada hasta esta distancia del destino (el punto del mapa puede quedar en la calle o lejos de la puerta de un lugar grande)
+const GD_PRECISION_LLEGADA_M = 500; // una ubicación menos precisa que esto no alcanza para comprobar que llegó
 const GD_PING_CADA_MIN = 5;
 const GD_MAX_MINUTOS = 300;
 const GD_CIERRE_HORAS = 12;
@@ -921,10 +923,10 @@ async function gdCerrarPausa(env: Env, v: GdViaje, p: GdProgreso, ahora: number)
 type GdViaje = {
   id: string; ownerEmail: string; destino: string; destLat: number | null; destLng: number | null; modo: string;
   estimadoMin: number; startedAt: string; deadlineAt: string; extensiones: number; estado: string;
-  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null; endedAt: string | null;
+  avisoAt: string | null; alertas: number; lastAlertAt: string | null; llegadaAt: string | null; pingAt: string | null; endedAt: string | null; motivoFin: string | null;
 };
 
-const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt,ended_at AS endedAt";
+const GD_COLUMNAS = "id,owner_email AS ownerEmail,destino,dest_lat AS destLat,dest_lng AS destLng,modo,estimado_min AS estimadoMin,started_at AS startedAt,deadline_at AS deadlineAt,extensiones,estado,aviso_at AS avisoAt,alertas,last_alert_at AS lastAlertAt,llegada_at AS llegadaAt,ping_at AS pingAt,ended_at AS endedAt,motivo_fin AS motivoFin";
 
 /** Minutos que se calculan para ir de un punto a otro (distancia por calles ~30 % más larga que en línea recta; el transporte suma 5 min de espera). */
 function gdEstimar(km: number, modo: string) {
@@ -994,6 +996,7 @@ async function gdPresentar(env: Env, v: GdViaje) {
     startedAt: v.startedAt, deadlineAt: v.deadlineAt, extensiones: v.extensiones, extensionesMax: g.maxExtensiones, alertas: v.alertas,
     puedeExtender: activo && v.extensiones < g.maxExtensiones, opcionesExtender: GD_EXTENSIONES,
     ajusteAutoMin: pr.autoMin, pausa: enPausa ? { hasta: pr.pausaHasta, restaMs: pr.restaMs ?? 0 } : null, paradas: pr.paradas, paradasMax: g.maxExtensiones > 0 ? GD_MAX_PARADAS : 0, puedeParar: activo && g.maxExtensiones > 0 && pr.paradas < GD_MAX_PARADAS, opcionesParada: GD_PARADAS, puedeCambiar: activo, destinoExacto: v.destLat !== null && v.destLng !== null,
+    llegada: v.estado === "llego" ? (v.motivoFin === "llegue_comprobada" ? "comprobada" : v.motivoFin === "llegue_sin_comprobar" ? "sin_comprobar" : null) : null,
     enlace: await gdEnlace(env, v),
   };
 }
@@ -1005,15 +1008,16 @@ async function gdUbicacion(env: Env, email: string) {
 }
 
 /** Les cuenta a los referentes que llegó bien (solo si ya se les había avisado). */
-async function gdAvisarLlego(env: Env, v: GdViaje, motivo: string) {
+async function gdAvisarLlego(env: Env, v: GdViaje, motivo: string, sinComprobar = false) {
   if (v.alertas <= 0) return 0;
   const cfg = await pldLeerConfig(env, v.ownerEmail);
   const quien = pldNombreDe(v.ownerEmail, cfg);
+  const cierre = sinComprobar ? `Si querés quedarte tranquilo, comunicate con ${quien}.` : "Ya no hace falta que hagas nada.";
   let enviados = 0;
   for (const x of await pldReferentesActivos(env, v.ownerEmail)) {
     const ok = await pldCorreo(
       env, x.email, `${quien} está bien`,
-      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> ${escapeHtml(motivo)} Ya no hace falta que hagas nada.</p>`,
+      `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> ${escapeHtml(motivo)} ${escapeHtml(cierre)}</p>`,
     );
     if (ok) enviados++;
   }
@@ -1383,6 +1387,44 @@ async function gdEmpezar(env: Env, email: string, cuerpo: Record<string, unknown
   return { ok: true, viaje: await gdPresentar(env, v) };
 }
 
+type GdComprobacion = { estado: "cerca" | "lejos" | "incierta" | "sin_ubicacion"; distanciaM: number | null; fuente: "navegador" | "telefono" | null; haceMin: number | null; precisionM: number | null };
+
+/** Comprueba con la ubicación de la persona que está en el destino al tocar Llegué: la que manda el navegador en ese momento y la de su teléfono si es de los últimos minutos
+ *  (con cualquiera de las dos cerca alcanza: puede tener la página abierta en otra compu, o el teléfono en el bolsillo). Cerca: hasta 300 m. Lejos: seguro que está afuera, aun contando
+ *  el error de la ubicación. Incierta: no alcanza para decir ninguna de las dos (por ejemplo, una ubicación poco precisa). Sin ubicación: no se sabe dónde está. */
+async function gdComprobarLlegada(env: Env, v: GdViaje, pedido: unknown): Promise<GdComprobacion> {
+  const fuentes: Array<{ lat: number; lng: number; fuente: "navegador" | "telefono"; haceMin: number; precision: number }> = [];
+  const o = pedido as { lat?: unknown; lng?: unknown; precision?: unknown } | null;
+  if (o && Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lng)) && Math.abs(Number(o.lat)) <= 90 && Math.abs(Number(o.lng)) <= 180 && !(Number(o.precision) > GD_PRECISION_MAX_M)) {
+    fuentes.push({ lat: Number(o.lat), lng: Number(o.lng), fuente: "navegador", haceMin: 0, precision: Number.isFinite(Number(o.precision)) ? Math.max(0, Number(o.precision)) : 0 });
+  }
+  const ub = await gdUbicacion(env, v.ownerEmail);
+  const en = ub.ubicacion ? Date.parse(ub.ubicacion.en ?? "") : NaN;
+  const haceMin = Number.isFinite(en) ? Math.max(0, Math.round((Date.now() - en) / 60_000)) : null;
+  if (ub.ubicacion && haceMin !== null && haceMin <= GD_UBICACION_RECIENTE_MIN) fuentes.push({ lat: ub.ubicacion.lat, lng: ub.ubicacion.lng, fuente: "telefono", haceMin, precision: 0 });
+  if (!fuentes.length) return { estado: "sin_ubicacion", distanciaM: null, fuente: null, haceMin, precisionM: null };
+  const medidas = fuentes.map((f) => {
+    const distancia = Math.round(pldDistanciaKm(f.lat, f.lng, Number(v.destLat), Number(v.destLng)) * 1000);
+    const estado: GdComprobacion["estado"] = distancia - f.precision > GD_RADIO_VERIFICAR_M ? "lejos" : distancia <= GD_RADIO_VERIFICAR_M && f.precision <= GD_PRECISION_LLEGADA_M ? "cerca" : "incierta";
+    return { ...f, distancia, estado };
+  }).sort((a, b) => a.distancia - b.distancia);
+  const elegida = medidas.find((m) => m.estado === "cerca") ?? medidas.find((m) => m.estado === "incierta") ?? medidas[0];
+  return { estado: elegida.estado, distanciaM: elegida.distancia, fuente: elegida.fuente, haceMin: elegida.haceMin, precisionM: elegida.precision || null };
+}
+
+function gdDistanciaTexto(m: number) {
+  if (m < 1000) return `${Math.max(10, Math.round(m / 10) * 10)} m`;
+  return `${String(Math.round(m / 100) / 10).replace(".", ",")} km`;
+}
+
+/** Lo que se sabe de la ubicación, dicho para la persona ("tu ubicación está a 2,3 km de Casa") o para sus referentes ("su ubicación está a 2,3 km de Casa"). */
+function gdClausulaComprobacion(c: GdComprobacion, destino: string, ella: boolean) {
+  const de = ella ? "tu" : "su";
+  if (c.estado === "lejos") return `${de} ubicación está a ${gdDistanciaTexto(c.distanciaM ?? 0)} de ${destino}`;
+  if (c.estado === "incierta") return `${de} ubicación no es lo bastante precisa para comprobar que ${ella ? "llegaste" : "llegó"} a ${destino}`;
+  return `no pudimos ver dónde ${ella ? "estás" : "está"} para comprobar que ${ella ? "llegaste" : "llegó"} a ${destino}`;
+}
+
 /** Llegué / Extender / Necesito ayuda / Cancelar. */
 async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, cuerpo: Record<string, unknown> = {}) {
   const activo = v.estado === "en_camino" || v.estado === "aviso" || v.estado === "alerta";
@@ -1390,14 +1432,33 @@ async function gdAccion(env: Env, v: GdViaje, accion: string, minutos: number, c
   const g = await gdLeerConfig(env, v.ownerEmail);
   const pr = await gdLeerProgreso(env, v.id);
   if (accion === "llegue" || (accion === "cancelar" && v.estado === "alerta")) {
+    // Llegué se comprueba con la ubicación de la persona (si se sabe dónde queda el destino): si no está ahí, el camino sigue abierto y se le dice por qué. Si en realidad ya llegó
+    // (el punto del mapa queda lejos de la puerta, no hay GPS...) toca «Llegué igual» y queda anotado como no comprobado. En la alerta no se discute: es «ya estoy bien»,
+    // se cierra y se cuenta cómo estaba la ubicación.
+    const comp = accion === "llegue" && v.destLat !== null && v.destLng !== null ? await gdComprobarLlegada(env, v, cuerpo.origen) : null;
+    const igual = cuerpo.forzar === true;
+    if (comp && comp.estado !== "cerca" && v.estado !== "alerta" && !igual) {
+      await pldRegistrar(env, v.ownerEmail, null, "guardian", `Tocaste Llegué, pero ${gdClausulaComprobacion(comp, v.destino, true)}: el camino sigue abierto.`);
+      return { error: comp.estado === "lejos" ? "lejos_del_destino" : "sin_comprobar", status: 409, detalle: { motivo: comp.estado, distanciaM: comp.distanciaM, fuente: comp.fuente, haceMin: comp.haceMin, precisionM: comp.precisionM } };
+    }
     let vf = v, pf = pr;
     if (pr.pausaHasta && v.estado !== "alerta") ({ viaje: vf, progreso: pf } = await gdCerrarPausa(env, v, pr, Date.now())); // llego frenado: se cuenta lo que duro la pausa y el limite vuelve a lo que quedaba
     const fin = now();
-    await env.DB.prepare("UPDATE gd_viajes SET estado='llego',ended_at=?,motivo_fin='llegue' WHERE id=?").bind(fin, v.id).run();
+    const sinComprobar = !!comp && comp.estado !== "cerca";
+    await env.DB.prepare("UPDATE gd_viajes SET estado='llego',ended_at=?,motivo_fin=? WHERE id=?").bind(fin, comp ? (sinComprobar ? "llegue_sin_comprobar" : "llegue_comprobada") : "llegue", v.id).run();
     const f = gdFin({ ...vf, endedAt: fin }, g.margenMin, pf.autoMin, pf.paradaMin)!;
-    await pldRegistrar(env, v.ownerEmail, null, "guardian", `Llegaste bien a ${v.destino}: tocaste Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
-    await gdAvisarLlego(env, v, `llegó bien a ${v.destino}: tocó Llegué a las ${f.hora}, ${gdDemoraTexto(f.despuesMin, f.limiteHora)}.`);
-    return { ok: true, estado: "llego" };
+    const demora = gdDemoraTexto(f.despuesMin, f.limiteHora);
+    await pldRegistrar(env, v.ownerEmail, null, "guardian", !comp
+      ? `Llegaste bien a ${v.destino}: tocaste Llegué a las ${f.hora}, ${demora}.`
+      : sinComprobar
+        ? `Cerraste el camino a ${v.destino}: tocaste Llegué a las ${f.hora}, ${demora}, pero ${gdClausulaComprobacion(comp, v.destino, true)}.`
+        : `Llegaste bien a ${v.destino}: tocaste Llegué a las ${f.hora}, ${demora}. Tu ubicación lo confirmó (a ${gdDistanciaTexto(comp.distanciaM ?? 0)}).`);
+    await gdAvisarLlego(env, v, !comp
+      ? `llegó bien a ${v.destino}: tocó Llegué a las ${f.hora}, ${demora}.`
+      : sinComprobar
+        ? `tocó Llegué a las ${f.hora}, ${demora}, y dice que está bien, pero ${gdClausulaComprobacion(comp, v.destino, false)}.`
+        : `llegó bien a ${v.destino}: tocó Llegué a las ${f.hora}, ${demora}. Su ubicación lo confirma.`, sinComprobar);
+    return { ok: true, estado: "llego", llegada: comp ? (sinComprobar ? "sin_comprobar" : "comprobada") : null };
   }
   if (accion === "cancelar") {
     await env.DB.prepare("UPDATE gd_viajes SET estado='cancelado',ended_at=?,motivo_fin='cancelado' WHERE id=?").bind(now(), v.id).run();
@@ -1545,7 +1606,7 @@ async function gdApi(request: Request, env: Env) {
     return gdBuscarApi(env, email, cuerpo);
   }
   const r = await gdAccion(env, viaje, accion, Number(cuerpo.minutos), cuerpo);
-  if ("error" in r) return json({ error: r.error, ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}) }, r.status);
+  if ("error" in r) return json({ error: r.error, ...("fallo" in r && r.fallo ? { fallo: r.fallo } : {}), ...("detalle" in r && r.detalle ? { detalle: r.detalle } : {}) }, r.status);
   const nuevo = await gdPorId(env, viaje.id);
   return json({ ...r, ahora: now(), viaje: nuevo ? await gdPresentar(env, nuevo) : null });
 }
@@ -1581,6 +1642,7 @@ function gdPaginaCamino() {
 <div id="reloj" style="font-size:2.6rem;font-weight:800;margin:14px 0 4px"></div><div id="pausaTxt" style="display:none;color:#f0c75a;font-weight:700;margin:0 0 6px"></div><div id="finalTxt" style="display:none;color:#ff5a4d;font-weight:700;margin:0 0 6px"></div><div id="sonidoAviso" style="display:none;color:#e0806a;font-weight:700;margin:0 0 6px">Tocá la pantalla para que suenen los pitidos.</div><div id="estadoTxt"></div></div>
 <div class="tarjeta" id="acciones">
 <button class="grande" id="bLlegue">Llegué</button>
+<div id="lleguePanel" class="subpanel" role="status" style="display:none"><p id="llegueTxt" style="margin:0 0 8px"></p><div class="botones" style="margin:0"><button class="sec" id="bLlegueDeNuevo">Volver a comprobar</button><button class="sec" id="bLlegueIgual">Llegué igual</button></div></div>
 <button class="grande sec" id="bSeguir" style="display:none;margin-top:10px">Ya sigo</button>
 <div id="extBloque"><p class="suave" style="margin:16px 0 4px">¿Necesitás más tiempo?</p>
 <div class="botones tres" style="margin-top:6px"><button class="sec" data-m="10">+10 min</button><button class="sec" data-m="20">+20 min</button><button class="sec" data-m="30">+30 min</button></div></div>
@@ -1591,7 +1653,7 @@ function gdPaginaCamino() {
 <div id="cmMinBloque" style="display:none"><label>Tiempo hasta ahí, en minutos</label><input id="cmMin" type="number" min="1" max="300" placeholder="Ej.: 20"></div>
 <div class="botones"><button id="cmConfirmar">Cambiar destino</button></div><small class="suave">Recalculamos el tiempo desde donde estás ahora.</small></div>
 <div class="botones"><button class="sec" id="bAyuda" style="border-color:#e0806a;color:#e0806a">Necesito ayuda</button><button class="sec" id="bCancelar">Cancelar camino</button></div>
-<small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo.</small>
+<small class="suave">Si no llegás a tiempo y no pedís más tiempo, les avisamos a tus referentes con tu última ubicación. “Necesito ayuda” les avisa ahora mismo. Al tocar “Llegué” comprobamos con tu ubicación que estás en el destino.</small>
 </div>
 <div class="tarjeta" id="despues" style="display:none"><div class="botones" style="margin:0"><a class="boton" id="bVolver" href="/guardian">Volver a Tu protección</a><a class="boton sec" id="bOtro" href="/guardian#guardian">Empezar otro camino</a><a class="boton sec" id="bInicio" href="/">Ir al inicio</a></div></div>
 <div class="tarjeta" id="sonidoCard"><div class="botones" style="margin-top:0"><button class="sec" id="bSonido">Sonido: activado</button><button class="sec" id="bProbar">Probar sonido</button></div><small class="suave" id="sonidoTxt"></small></div>
@@ -1612,7 +1674,7 @@ function pantallaEncendida(){try{if(LUZ&&!luz&&navigator.wakeLock&&document.visi
 ["pointerdown","touchstart","keydown"].forEach(function(e){document.addEventListener(e,function(){if(SONIDO)audio();estadoSonido()},{passive:true})});
 document.addEventListener("visibilitychange",pantallaEncendida);
 function aviso(x){$("aviso").textContent=x||""}
-function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;e.fallo=d.fallo;throw e}return d})})}
+function api(c){c.t=t;return fetch("/api/guardian",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(c),credentials:"same-origin"}).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||"error");e.codigo=d.error;e.fallo=d.fallo;e.detalle=d.detalle;throw e}return d})})}
 function hora(s){try{return new Date(s).toLocaleTimeString("es-AR",{timeZone:"America/Argentina/Buenos_Aires",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return s}}
 function reloj(ms){var s=Math.max(0,Math.floor(ms/1000));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;function d(n){return(n<10?"0":"")+n}return h>0?h+" h "+d(m)+" min":d(m)+":"+d(x)}
 function enPausa(){return !!(V&&V.pausa&&Date.parse(V.pausa.hasta)>Date.now()+desfase)}
@@ -1623,7 +1685,7 @@ function pintar(d){
   $("destino").textContent="Vas a "+V.destino;
   $("detalle").textContent=V.modoTexto.charAt(0).toUpperCase()+V.modoTexto.slice(1)+" · "+V.estimadoMin+" min + "+V.margenMin+" de margen";
   var activo=V.estado==="en_camino"||V.estado==="aviso"||V.estado==="alerta";
-  $("acciones").style.display=activo?"block":"none";
+  $("acciones").style.display=activo?"block":"none";if(!activo||V.estado==="alerta")$("lleguePanel").style.display="none";
   $("extBloque").style.display=V.extensionesMax>0&&!enPausa()?"block":"none";
   $("bSeguir").style.display=activo&&enPausa()?"block":"none";
   $("despues").style.display=activo?"none":"block";
@@ -1637,7 +1699,7 @@ function pintar(d){
   var tx={en_camino:"Tenés que llegar antes de las "+hora(V.deadlineAt)+"."+(V.ajusteAutoMin>0?" Sumamos "+V.ajusteAutoMin+" minutos por tránsito.":"")+" Cuando llegues, tocá Llegué.",aviso:"¿Seguís en camino? Si no respondés, les avisamos a tus referentes.",alerta:"Ya les avisamos a tus referentes. Tocá Llegué cuando estés bien.",llego:"Llegaste bien. ¡Gracias por avisar!",cancelado:"Camino cancelado.",cerrado:"Este camino se cerró solo."}[V.estado]||"";
   if(enPausa()&&V.estado==="en_camino")tx="En pausa hasta las "+hora(V.pausa.hasta)+". Cuando termine, el reloj sigue con los "+Math.ceil(V.pausa.restaMs/60000)+" minutos que te quedaban. No les avisamos a tus referentes.";
   var f=V.fin;
-  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegué a las "+f.hora+": "+(f.despuesMin===0?"justo en el límite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"después")+" del límite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el cálculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tránsito":"")+(f.paradaMin>0?" + "+f.paradaMin+" de parada":"")+"."}
+  if(V.estado==="llego"&&f){var n=Math.abs(f.despuesMin);tx="Tocaste Llegué a las "+f.hora+": "+(f.despuesMin===0?"justo en el límite":n+(n===1?" minuto ":" minutos ")+(f.despuesMin<0?"antes":"después")+" del límite")+" ("+f.limiteHora+"). Tardaste "+f.duracionMin+" min; el cálculo era de "+V.estimadoMin+" min + "+V.margenMin+" de margen"+(f.extraMin>0?" + "+f.extraMin+" que pediste":"")+(f.autoMin>0?" + "+f.autoMin+" por tránsito":"")+(f.paradaMin>0?" + "+f.paradaMin+" de parada":"")+"."+(V.llegada==="comprobada"?" Comprobamos con tu ubicación que estabas en "+V.destino+".":V.llegada==="sin_comprobar"?" No se pudo comprobar con tu ubicación que hayas llegado.":"")}
   $("estadoTxt").textContent=tx;$("estadoTxt").className=V.estado==="alerta"?"mal":(V.estado==="llego"?"ok":"suave");
   if(V.deadlineAt!==ultimoLimite){ultimoLimite=V.deadlineAt;ultimoPitido=0;sonoFinal=false}
   $("sonidoCard").style.display=(V.estado==="en_camino"||V.estado==="aviso")?"block":"none";
@@ -1666,10 +1728,28 @@ function tick(){
     else if(ms<=0&&!sonoFinal){sonoFinal=true;pitido(true)}
   }
 }
-function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",demasiadas_paradas:"Ya frenaste el máximo de veces: tocá Llegué o pedí ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas.",destino_invalido:"Elegí de nuevo la dirección.",falta_destino:"Escribí a dónde vas.",sin_extensiones:"En la configuración del Modo Guardián no se puede pedir más tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó."})[e.codigo]||"No se pudo. Probá de nuevo."}
+function errorDe(e){return({ya_se_aviso:"Ya les avisamos a tus referentes: tocá Llegué cuando estés bien.",demasiadas_extensiones:"Ya extendiste el máximo de veces: tocá Llegué o pedí ayuda.",demasiadas_paradas:"Ya frenaste el máximo de veces: tocá Llegué o pedí ayuda.",sin_pausa:"Ya no estabas en pausa.",destino_muy_lejos:"Ese lugar queda a más de 5 horas: revisá la dirección.",lugar_invalido:"Ese lugar no existe.",modo_invalido:"Elegí cómo vas.",destino_invalido:"Elegí de nuevo la dirección.",falta_destino:"Escribí a dónde vas.",sin_extensiones:"En la configuración del Modo Guardián no se puede pedir más tiempo.",enlace_invalido:"Este enlace no sirve.",camino_terminado:"Este camino ya terminó.",lejos_del_destino:"Todavía no estás en el destino: seguí hasta ahí y tocá Llegué de nuevo.",sin_comprobar:"No pudimos ver dónde estás para comprobar que llegaste."})[e.codigo]||"No se pudo. Probá de nuevo."}
 function hacer(c,ok){aviso("");return api(c).then(function(d){pintar(d);if(ok)aviso(ok)}).catch(function(e){aviso(errorDe(e))})}
 $("bSonido").onclick=function(){SONIDO=!SONIDO;try{localStorage.setItem("gdSonido",SONIDO?"1":"0")}catch(e){}if(SONIDO)audio();estadoSonido()};
-$("bLlegue").onclick=function(){hacer({accion:"llegue"},"Listo: avisamos que llegaste bien.")};
+function dist(m){return m<1000?Math.max(10,Math.round(m/10)*10)+" m":String(Math.round(m/100)/10).replace(".",",")+" km"}
+function noLlego(d){ // el servidor no dio por llegada: se cuenta por que y se ofrece volver a comprobar o cerrar igual
+  var de=V?V.destino:"el destino",desde=d.fuente==="telefono"?" (la última de tu teléfono, de hace "+(d.haceMin||0)+" min)":"";
+  var x=d.motivo==="lejos"?"Todavía no estás en "+de+": según tu ubicación"+desde+" estás a "+dist(d.distanciaM||0)+". Seguí hasta ahí y tocá Llegué de nuevo."
+    :d.motivo==="incierta"?"Tu ubicación no es lo bastante precisa para comprobar que llegaste a "+de+(d.precisionM?" (error de unos "+dist(d.precisionM)+")":"")+". Probá al aire libre o con el GPS activado, y volvé a comprobar."
+    :"No pudimos ver dónde estás para comprobar que llegaste a "+de+". Activá la ubicación de este navegador y volvé a comprobar.";
+  $("llegueTxt").textContent=x+" Si en realidad ya llegaste, tocá «Llegué igual»: se cierra el camino y queda anotado que no se pudo comprobar.";
+  $("lleguePanel").style.display="block"}
+function llegue(igual){ // Llegué: se comprueba con la ubicación del navegador de la persona (y la de su teléfono, si es reciente)
+  var b=$("bLlegue");if(b.disabled)return;aviso("");$("lleguePanel").style.display="none";
+  var fin=function(){b.disabled=false;b.textContent="Llegué"};
+  var enviar=function(o){var c={accion:"llegue"};if(o)c.origen={lat:o.lat,lng:o.lng,precision:o.precision};if(igual)c.forzar=true;
+    api(c).then(function(d){fin();pintar(d);aviso(d.llegada==="comprobada"?"Listo: comprobamos con tu ubicación que llegaste y cerramos el camino.":d.llegada==="sin_comprobar"?"Listo: cerramos el camino. Quedó anotado que no se pudo comprobar que llegaste.":"Listo: avisamos que llegaste bien.")})
+      .catch(function(e){fin();if(e.codigo==="lejos_del_destino"||e.codigo==="sin_comprobar")noLlego(e.detalle||{});else aviso(errorDe(e))})};
+  b.disabled=true;
+  if(V&&V.destinoExacto&&V.estado!=="alerta"&&!igual){b.textContent="Comprobando tu ubicación…";POS=null;ubicar(enviar)}else enviar(null)}
+$("bLlegue").onclick=function(){llegue(false)};
+$("bLlegueDeNuevo").onclick=function(){llegue(false)};
+$("bLlegueIgual").onclick=function(){llegue(true)};
 Array.prototype.forEach.call(document.querySelectorAll("button[data-m]"),function(b){b.onclick=function(){hacer({accion:"extender",minutos:Number(b.getAttribute("data-m"))},"Listo: tenés "+b.getAttribute("data-m")+" minutos más.")}});
 $("bAyuda").onclick=function(){if(confirm("¿Pedir ayuda? Les avisamos ahora mismo a tus referentes, con tu última ubicación."))hacer({accion:"ayuda"},"Les avisamos a tus referentes.")};
 $("bCancelar").onclick=function(){if(confirm("¿Cancelar el camino? No se les avisa a tus referentes."))hacer({accion:"cancelar"})};
