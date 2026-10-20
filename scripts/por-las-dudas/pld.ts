@@ -1045,6 +1045,7 @@ async function gdAvisarReferentes(env: Env, v: GdViaje, numero: number) {
   const u = ub.ubicacion;
   const tarde = Math.max(0, Math.round((Date.now() - Date.parse(v.deadlineAt)) / 60000));
   const origen = pldOrigen(env);
+  const donde = u ? await gdDondeEsta(env, u, { nombre: v.destino, lat: v.destLat, lng: v.destLng }) : "";
   let enviados = 0;
   for (const x of await pldReferentesActivos(env, v.ownerEmail)) {
     const enlace = await pldEnlaceReferente(env, origen, x);
@@ -1052,7 +1053,7 @@ async function gdAvisarReferentes(env: Env, v: GdViaje, numero: number) {
       env, x.email, `${quien} no llegó a ${v.destino} a la hora prevista`,
       `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p>`
       + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> activó el Modo Guardián para ir a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> ${escapeHtml(GD_MODOS[v.modo] ?? "")} y <strong style="color:#fff">no llegó a la hora prevista</strong> (${escapeHtml(gdHora(v.deadlineAt))}${tarde > 0 ? `, hace ${escapeHtml(pldTiempo(tarde))}` : ""}). No avisó que estaba bien ni pidió más tiempo.</p>`
-      + (u ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todavía no tenemos una ubicación de su teléfono.</p>`)
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${donde}</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todavía no tenemos una ubicación de su teléfono.</p>`)
       + `<p style="color:#d2d2ce;line-height:1.55">Probá comunicarte con ${escapeHtml(quien)} ahora. Si no lográs hablar y es grave, llamá al 911 y mostrales esta ubicación.</p>`
       + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">También podés ver su última señal desde tu enlace personal (aviso ${numero} de ${g.maxAlertas} como máximo):</p>`
       + pldBoton(enlace, "Ver su última señal") + pldEnlaceEscrito(enlace),
@@ -1183,6 +1184,27 @@ function gdClave(env: Env): { clave: string; sobran: number } {
   const m = /AIza[0-9A-Za-z_-]{35}/.exec(cruda);
   const clave = m ? m[0] : cruda.replace(/[^0-9A-Za-z_-]/g, "");
   return { clave, sobran: cruda.length - clave.length };
+}
+
+/** La dirección de un punto según Google (Geocoding), para los mails cuando el teléfono no mandó la dirección. Si no hay clave, la clave no tiene permitida esa API o Google tarda, devuelve null y el mail muestra las coordenadas. */
+async function gdDireccionDe(env: Env, lat: number, lng: number): Promise<string | null> {
+  const k = gdClave(env);
+  if (!k.clave) return null;
+  try {
+    const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=es&result_type=street_address|route|premise&key=${k.clave}`, { signal: AbortSignal.timeout(3000) });
+    const d = (await r.json()) as { status?: string; results?: Array<{ formatted_address?: string }> };
+    const dir = d.status === "OK" ? String(d.results?.[0]?.formatted_address ?? "").trim() : "";
+    return dir || null;
+  } catch {
+    return null;
+  }
+}
+
+/** "Dónde está", para los mails (ya listo para el HTML): la dirección que mandó el teléfono o, si no la trajo, la que da Google; si tampoco, las coordenadas. Y, si se sabe dónde queda el destino, a cuánto está. */
+async function gdDondeEsta(env: Env, u: { lat: number; lng: number; address: string | null }, destino: { nombre: string; lat: number | null; lng: number | null }) {
+  const dir = u.address || (await gdDireccionDe(env, u.lat, u.lng)) || `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`;
+  const lejos = destino.lat !== null && destino.lng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, destino.lat, destino.lng) * 1000) : null;
+  return escapeHtml(dir) + (lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destino.nombre)}` : "");
 }
 
 /** Datos de la clave para mostrar cuando algo falla (sin mostrarla entera): cuántos caracteres tiene, con qué empieza y si hubo que quitarle caracteres raros. */
@@ -1448,7 +1470,7 @@ async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; m
   const u = ub.ubicacion;
   const destinoTxt = nuevo ? nuevo.destino : v.destino;
   const dLat = nuevo ? nuevo.lat : v.destLat, dLng = nuevo ? nuevo.lng : v.destLng;
-  const lejos = u && dLat !== null && dLng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, dLat, dLng) * 1000) : null;
+  const donde = u ? await gdDondeEsta(env, u, { nombre: destinoTxt, lat: dLat, lng: dLng }) : "";
   const hora = gdHora(now());
   const asunto = nuevo ? `${quien} cambió el destino: ahora va a ${nuevo.destino}` : `${quien} canceló el camino a ${v.destino}`;
   const que = nuevo
@@ -1459,7 +1481,7 @@ async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; m
     const ok = await pldCorreo(
       env, x.email, asunto,
       `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55">${que}</p>`
-      + (u ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}${lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destinoTxt)}` : ""}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todavía no hay una ubicación de su teléfono.</p>`)
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">Última ubicación${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${donde}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todavía no hay una ubicación de su teléfono.</p>`)
       + `<p style="color:#d2d2ce;line-height:1.55">Si no lo esperabas, comunicate con ${escapeHtml(quien)}.</p>`,
     );
     if (ok) {

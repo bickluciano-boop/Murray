@@ -1,12 +1,13 @@
-﻿# aplicar-sos-enlace-vivo-panel.ps1 - SOS: mientras la persona tiene un SOS en marcha, el enlace de sus referentes muestra su ultima senal sin condiciones.
-# Pendiente abierto desde el 20/10/2026 ("hacemos esos pendientes"): hasta ahora, despues del mail del SOS, el boton "No lo encuentro" del referente seguia pidiendo las condiciones del Modo Cautela.
+﻿# aplicar-mails-direccion-panel.ps1 - Mails del Modo Guardian: si el telefono no mando la direccion, la pone Google; y siempre dicen a cuanto esta del destino.
+# Luciano (20/10/2026), revisando los mails de las pruebas: "algunos llegan sin datos de direccion" (decian solo las coordenadas, por ejemplo -34.58003, -58.41070).
 # Que cambia (solo el servidor del panel; no toca la base ni la app):
-#  - Desde que la persona aprieta el SOS (y se les avisa a sus referentes) hasta que lo cancela (como mucho 6 horas), el enlace personal del referente muestra la ultima ubicacion, la bateria y el mapa,
-#    con el cartel "SOS en marcha: pidio ayuda. Intenta comunicarte ya; si es grave, llama al 911". No se le manda un "Estas bien?" a quien pidio ayuda. A la persona se le cuenta que lo vieron.
-#  - Si todavia no hay ubicacion del telefono, lo dice y repite lo del 911. Cancelado el SOS, todo vuelve a ser como antes (con las condiciones del Modo Cautela).
-#  - El boton del SOS sigue en 3 segundos (no se toca). Incluye todo lo de los parches anteriores. Se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 que es el que dejaron los parches anteriores (acepta las dieciocho versiones desde
-# aplicar-guardian-mejoras-panel.ps1). Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldsosenlace. Al final publica el panel solo.
+#  - Los mails de "no llego a la hora prevista" y los de "cancelo el camino" o "cambio el destino" muestran la ultima ubicacion con su direccion. Si el telefono no la mando, se le pide a Google
+#    (Geocoding); si la clave no tiene permitida esa API, o Google no contesta, se muestran las coordenadas como hasta ahora.
+#  - Todos agregan a cuanto esta del destino (por ejemplo "a 200 m de Ugarteche 3326").
+#  - Los avisos repetidos de "no llego" (hasta 3, cada 10 minutos) son a proposito y siguen igual: se cambian en Configuracion > Modo Guardian.
+#  - Para que Google ponga la direccion, la clave de Google (la del panel) tiene que tener habilitada tambien la "Geocoding API". Si no, no pasa nada: salen las coordenadas.
+# Incluye todo lo de los parches anteriores. Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 (acepta las diecinueve versiones desde
+# aplicar-guardian-mejoras-panel.ps1). Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldmails. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -32,12 +33,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'async function pldSosActivo(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'async function gdDondeEsta(') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972", "a3eff07125cf5e97427a3f534e6e428a6f21ecc2fb0b126b7587ac74487e4b62")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972", "a3eff07125cf5e97427a3f534e6e428a6f21ecc2fb0b126b7587ac74487e4b62", "01405976b34a86bb0f5c095a6b547e52f62d13ab34a3113d71ac8beca9e2be52")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -51,9 +52,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldsosenlace")) { Mal "Ya existe src\index.ts.bak-pldsosenlace. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldsosenlace")
-Ok "Respaldo creado: src\index.ts.bak-pldsosenlace"
+if (Test-Path ($indice + ".bak-pldmails")) { Mal "Ya existe src\index.ts.bak-pldmails. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldmails")
+Ok "Respaldo creado: src\index.ts.bak-pldmails"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -1101,6 +1102,7 @@ async function gdAvisarReferentes(env: Env, v: GdViaje, numero: number) {
   const u = ub.ubicacion;
   const tarde = Math.max(0, Math.round((Date.now() - Date.parse(v.deadlineAt)) / 60000));
   const origen = pldOrigen(env);
+  const donde = u ? await gdDondeEsta(env, u, { nombre: v.destino, lat: v.destLat, lng: v.destLng }) : "";
   let enviados = 0;
   for (const x of await pldReferentesActivos(env, v.ownerEmail)) {
     const enlace = await pldEnlaceReferente(env, origen, x);
@@ -1108,7 +1110,7 @@ async function gdAvisarReferentes(env: Env, v: GdViaje, numero: number) {
       env, x.email, `${quien} no lleg\u00f3 a ${v.destino} a la hora prevista`,
       `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p>`
       + `<p style="color:#d2d2ce;line-height:1.55"><strong style="color:#fff">${escapeHtml(quien)}</strong> activ\u00f3 el Modo Guardi\u00e1n para ir a <strong style="color:#fff">${escapeHtml(v.destino)}</strong> ${escapeHtml(GD_MODOS[v.modo] ?? "")} y <strong style="color:#fff">no lleg\u00f3 a la hora prevista</strong> (${escapeHtml(gdHora(v.deadlineAt))}${tarde > 0 ? `, hace ${escapeHtml(pldTiempo(tarde))}` : ""}). No avis\u00f3 que estaba bien ni pidi\u00f3 m\u00e1s tiempo.</p>`
-      + (u ? `<p style="color:#d2d2ce;line-height:1.55">\u00daltima ubicaci\u00f3n${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todav\u00eda no tenemos una ubicaci\u00f3n de su tel\u00e9fono.</p>`)
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">\u00daltima ubicaci\u00f3n${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${donde}</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todav\u00eda no tenemos una ubicaci\u00f3n de su tel\u00e9fono.</p>`)
       + `<p style="color:#d2d2ce;line-height:1.55">Prob\u00e1 comunicarte con ${escapeHtml(quien)} ahora. Si no logr\u00e1s hablar y es grave, llam\u00e1 al 911 y mostrales esta ubicaci\u00f3n.</p>`
       + `<p style="color:#8f8d85;font-size:13px;line-height:1.5">Tambi\u00e9n pod\u00e9s ver su \u00faltima se\u00f1al desde tu enlace personal (aviso ${numero} de ${g.maxAlertas} como m\u00e1ximo):</p>`
       + pldBoton(enlace, "Ver su \u00faltima se\u00f1al") + pldEnlaceEscrito(enlace),
@@ -1239,6 +1241,27 @@ function gdClave(env: Env): { clave: string; sobran: number } {
   const m = /AIza[0-9A-Za-z_-]{35}/.exec(cruda);
   const clave = m ? m[0] : cruda.replace(/[^0-9A-Za-z_-]/g, "");
   return { clave, sobran: cruda.length - clave.length };
+}
+
+/** La direcci\u00f3n de un punto seg\u00fan Google (Geocoding), para los mails cuando el tel\u00e9fono no mand\u00f3 la direcci\u00f3n. Si no hay clave, la clave no tiene permitida esa API o Google tarda, devuelve null y el mail muestra las coordenadas. */
+async function gdDireccionDe(env: Env, lat: number, lng: number): Promise<string | null> {
+  const k = gdClave(env);
+  if (!k.clave) return null;
+  try {
+    const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=es&result_type=street_address|route|premise&key=${k.clave}`, { signal: AbortSignal.timeout(3000) });
+    const d = (await r.json()) as { status?: string; results?: Array<{ formatted_address?: string }> };
+    const dir = d.status === "OK" ? String(d.results?.[0]?.formatted_address ?? "").trim() : "";
+    return dir || null;
+  } catch {
+    return null;
+  }
+}
+
+/** "D\u00f3nde est\u00e1", para los mails (ya listo para el HTML): la direcci\u00f3n que mand\u00f3 el tel\u00e9fono o, si no la trajo, la que da Google; si tampoco, las coordenadas. Y, si se sabe d\u00f3nde queda el destino, a cu\u00e1nto est\u00e1. */
+async function gdDondeEsta(env: Env, u: { lat: number; lng: number; address: string | null }, destino: { nombre: string; lat: number | null; lng: number | null }) {
+  const dir = u.address || (await gdDireccionDe(env, u.lat, u.lng)) || `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`;
+  const lejos = destino.lat !== null && destino.lng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, destino.lat, destino.lng) * 1000) : null;
+  return escapeHtml(dir) + (lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destino.nombre)}` : "");
 }
 
 /** Datos de la clave para mostrar cuando algo falla (sin mostrarla entera): cu\u00e1ntos caracteres tiene, con qu\u00e9 empieza y si hubo que quitarle caracteres raros. */
@@ -1504,7 +1527,7 @@ async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; m
   const u = ub.ubicacion;
   const destinoTxt = nuevo ? nuevo.destino : v.destino;
   const dLat = nuevo ? nuevo.lat : v.destLat, dLng = nuevo ? nuevo.lng : v.destLng;
-  const lejos = u && dLat !== null && dLng !== null ? Math.round(pldDistanciaKm(u.lat, u.lng, dLat, dLng) * 1000) : null;
+  const donde = u ? await gdDondeEsta(env, u, { nombre: destinoTxt, lat: dLat, lng: dLng }) : "";
   const hora = gdHora(now());
   const asunto = nuevo ? `${quien} cambi\u00f3 el destino: ahora va a ${nuevo.destino}` : `${quien} cancel\u00f3 el camino a ${v.destino}`;
   const que = nuevo
@@ -1515,7 +1538,7 @@ async function gdAvisarCambio(env: Env, v: GdViaje, nuevo?: { destino: string; m
     const ok = await pldCorreo(
       env, x.email, asunto,
       `<p style="font-size:20px;font-weight:700;margin:0 0 14px">Hola ${escapeHtml(x.name)},</p><p style="color:#d2d2ce;line-height:1.55">${que}</p>`
-      + (u ? `<p style="color:#d2d2ce;line-height:1.55">\u00daltima ubicaci\u00f3n${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${u.address ? escapeHtml(u.address) : `${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`}${lejos !== null ? `, a ${escapeHtml(gdDistanciaTexto(lejos))} de ${escapeHtml(destinoTxt)}` : ""}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todav\u00eda no hay una ubicaci\u00f3n de su tel\u00e9fono.</p>`)
+      + (u ? `<p style="color:#d2d2ce;line-height:1.55">\u00daltima ubicaci\u00f3n${ub.ultimaVez ? ` (${escapeHtml(pldFechaHora(ub.ultimaVez))})` : ""}: ${donde}.</p>${pldBoton(`https://www.google.com/maps?q=${u.lat},${u.lng}`, "Abrir en el mapa")}` : `<p style="color:#d2d2ce;line-height:1.55">Todav\u00eda no hay una ubicaci\u00f3n de su tel\u00e9fono.</p>`)
       + `<p style="color:#d2d2ce;line-height:1.55">Si no lo esperabas, comunicate con ${escapeHtml(quien)}.</p>`,
     );
     if (ok) {
@@ -2263,10 +2286,10 @@ $nuevo = $f.texto.Substring(0, $a) + $nuevoBloque + $f.texto.Substring($b)
 $esperado = $f.texto.Length - $viejo.Length + $nuevoBloque.Length
 [System.IO.File]::WriteAllText($indice, $nuevo, (New-Object System.Text.UTF8Encoding($f.bom)))
 $v = Leer $indice
-$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function pldSosActivo(') -eq 1) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
+$bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'async function gdDondeEsta(') -eq 1) -and ((Contar $v.texto 'async function pldSosActivo(') -eq 1) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldsosenlace") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldmails") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2276,5 +2299,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: con un SOS en marcha, el enlace del referente muestra la ultima senal. Probalo apretando el SOS y abriendo el enlace de un referente."
+Ok "LISTO: los mails del Modo Guardian ahora traen la direccion (o las coordenadas) y a cuanto esta del destino."
 Write-Host ""
