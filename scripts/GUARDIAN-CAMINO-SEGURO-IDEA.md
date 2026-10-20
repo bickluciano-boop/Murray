@@ -1,6 +1,6 @@
 # "Guardián": acompañarte en el camino (cuando vas a un lugar y no te sentís tranquilo)
 
-Estado: **IDEA** (Luciano, 19/10/2026; la vio en otra app). Nada construido.
+Estado: **PRIMERA VERSIÓN ARMADA EN EL SERVIDOR (20/10/2026), sin instalar** (código y pruebas en `scripts/por-las-dudas/`, sección "Modo Guardián" de `pld.ts`; 240 pruebas y navegador ok). Idea de Luciano del 19/10/2026 (la vio en otra app).
 
 **Nombres (aclarados por Luciano el 19/10/2026):** **Referentes** = las personas que elige (una sola lista para todo); **SOS** = el botón manual, que avisa a la familia
 y a los referentes; **Modo Guardián** = este servicio, acompañarte en el camino (lo activa la persona); **Modo Cautela** = la función que avisa sola, que hoy se llama "Por las dudas"
@@ -35,3 +35,14 @@ Estás volviendo a tu casa, vas a un lugar que no te gusta, te perdiste o esper�
 - Cuánto se extiende al apretar "Extender" (10, 20, 30 min) y cuántas veces.
 - Qué pasa con "No llegué bien": ¿avisa como un SOS?
 - Revisión legal igual que para "Por las dudas".
+
+## Lo que quedó armado (20/10/2026)
+
+- **Decisiones de arranque** (Luciano dijo "hay que programar el seguimiento Guardián"): extender **10 / 20 / 30 minutos, hasta 3 veces**; "No llegué bien" = **"Necesito ayuda"**: avisa enseguida a los referentes como un SOS, con la última ubicación; margen de **2 minutos**; aviso a la persona **2 minutos antes** de vencer; si no responde, mail a los referentes y repetición **cada 10 minutos, hasta 3 avisos**; un camino olvidado se cierra solo a las **12 horas**.
+- **El reloj corre en el servidor** (`gdCron`, hoy sin enganchar: hace falta un cron de cada minuto en `wrangler.toml` y engancharlo en `scheduled`).
+- **Destino:** uno de sus Lugares (el tiempo se calcula por distancia en línea recta × 1,3 y velocidad media: auto 28 km/h, transporte 15 km/h + 5 min de espera, caminando 4,5 km/h; **es una estimación, la persona puede cambiarla**) u "Otro lugar" con los minutos puestos por ella. Sin Google Directions todavía (mejorar cuando haya clave del lado del servidor).
+- **Seguimiento:** mientras dura el camino se le pide al teléfono una ubicación nueva cada 5 minutos (Android; en iPhone no despierta la app) y, si el teléfono llega al destino (150 m, ubicación de menos de 10 minutos), se le pregunta "¿Llegaste bien?".
+- **Páginas:** la tarjeta "Modo Guardián" dentro de `/guardian` (empezar) y `/camino?t=...` (el camino: reloj, Llegué, +10/+20/+30, Necesito ayuda, Cancelar), con enlace personal firmado: se abre desde el mail o el aviso sin entrar al panel. API: `POST /api/guardian`.
+- **Condiciones:** hace falta al menos un referente que haya aceptado; un menor puede empezar su propio camino; no se puede armar el camino de otro.
+- **Tabla nueva:** `gd_viajes`. Los avisos al teléfono llevan `data: { tipo: "guardian", url }` para que la app abra el enlace al tocarlos.
+- **Pendiente:** instalador (tabla + código + rutas + cron de cada minuto), pantalla del camino en la app (seguimiento en segundo plano con la app abierta, llegada automática más precisa), compartir el camino en vivo con los referentes, Directions de Google, revisión legal.

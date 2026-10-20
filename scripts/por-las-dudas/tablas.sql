@@ -6,3 +6,5 @@ CREATE INDEX IF NOT EXISTS pld_referentes_owner ON pld_referentes (owner_email);
 CREATE INDEX IF NOT EXISTS pld_log_owner ON pld_log (owner_email, created_at);
 CREATE INDEX IF NOT EXISTS pld_checkins_ref ON pld_checkins (referente_id, created_at);
 CREATE TABLE IF NOT EXISTS pld_episodios (owner_email TEXT PRIMARY KEY, started_at TEXT NOT NULL, checkin_at TEXT, seen_at TEXT, alerts INTEGER NOT NULL DEFAULT 0, last_alert_at TEXT, state TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gd_viajes (id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, destino TEXT NOT NULL, dest_lat REAL, dest_lng REAL, modo TEXT NOT NULL, estimado_min INTEGER NOT NULL, started_at TEXT NOT NULL, deadline_at TEXT NOT NULL, extensiones INTEGER NOT NULL DEFAULT 0, estado TEXT NOT NULL, aviso_at TEXT, alertas INTEGER NOT NULL DEFAULT 0, last_alert_at TEXT, llegada_at TEXT, ping_at TEXT, ended_at TEXT, motivo_fin TEXT);
+CREATE INDEX IF NOT EXISTS gd_viajes_owner ON gd_viajes (owner_email, estado);

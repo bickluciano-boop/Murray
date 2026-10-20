@@ -19,7 +19,7 @@ sqlite.exec("CREATE TABLE family_members (id TEXT PRIMARY KEY, owner_email TEXT 
 sqlite.exec("CREATE TABLE location_history (id TEXT PRIMARY KEY, device_id TEXT, latitude REAL, longitude REAL, accuracy REAL, altitude REAL, heading REAL, address TEXT, captured_at TEXT, created_at TEXT)");
 const env: any = { DB, SESSION_SECRET: "x", PASSKEY_ORIGIN: "https://panel.test", RESEND_API_KEY: "re_test", MAIL_FROM: "Ojo Guard <a@b.c>", SUPPORT_EMAIL: "s@b.c" };
 const correos: Array<{ to: string; subject: string; html: string }> = [];
-const avisos: Array<{ token: string | null; title: string; body: string }> = [];
+const avisos: Array<{ token: string | null; title: string; body: string; data?: any }> = [];
 const pings: any[] = [];
 let sesionActual: any = { email: "lucas@correo.com", method: "passkey" };
 const now = () => new Date().toISOString();
@@ -31,7 +31,7 @@ const hash = async (v: string) => createHash("sha256").update(v).digest("hex");
 let correoOk = true;
 function setCorreoOk(v: boolean) { correoOk = v; }
 const fetchCorreo = async (_u: string, init: any) => { if (!correoOk) return new Response("fallo", { status: 500 }); const b = JSON.parse(init.body); correos.push({ to: b.to[0], subject: b.subject, html: b.html }); return new Response("{}", { status: 200 }); };
-const sendExpoNotice = async (token: string | null, title: string, body: string, _o?: any) => { avisos.push({ token, title, body }); return true; };
+const sendExpoNotice = async (token: string | null, title: string, body: string, _o?: any) => { avisos.push({ token, title, body, data: _o?.data }); return true; };
 const queueAutoLocateCommand = async (_e: any, d: any) => { pings.push(d); };
 const readSessionInfo = async (_r: Request, _s: string) => sesionActual;
 function setSesion(s: any) { sesionActual = s; }

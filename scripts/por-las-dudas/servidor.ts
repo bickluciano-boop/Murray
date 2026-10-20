@@ -4,6 +4,7 @@ sqlite.prepare("INSERT INTO devices (id,name,owner_email,platform,battery,last_s
   .run("dev1", "Celu de Lucas", "lucas@correo.com", "android", 8, hace2(150), JSON.stringify({ latitude: -34.52, longitude: -58.4, address: "Av. Siempre Viva 742" }), hace2(150), "ExpoPushToken[abc]", "approved", "primary");
 sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fm1", "lucas@correo.com", "tomi@correo.com", "Tomi", "Lucas", "menor", "activo");
 sqlite.prepare("INSERT INTO family_members (id,owner_email,member_email,name,owner_name,role,status) VALUES (?,?,?,?,?,?,?)").run("fm2", "lucas@correo.com", "ana@correo.com", "Ana", "Lucas", "adulto", "activo");
+sqlite.prepare("INSERT INTO family_places (id,owner_email,name,latitude,longitude,radius,created_at) VALUES (?,?,?,?,?,?,?)").run("pl1", "lucas@correo.com", "Casa", -34.49, -58.4, 150, new Date().toISOString());
 setSesion({ email: "lucas@correo.com", method: "passkey" });
 const servidor = createServer(async (req, res) => {
   const origen = "http://localhost:" + (servidor.address() as any).port;
@@ -22,6 +23,10 @@ const servidor = createServer(async (req, res) => {
     else if (ruta === "POST /api/referente/buscar") r = await pldApiReferenteBuscar(request, env);
     else if (ruta === "GET /estoy-bien") r = pldPaginaEstoyBien();
     else if (ruta === "POST /api/estoy-bien") r = await pldApiEstoyBien(request, env);
+    else if (ruta === "GET /camino") r = gdPaginaCamino();
+    else if (url.pathname === "/api/guardian") r = await gdApi(request, env);
+    else if (ruta === "POST /__gd-cron") { await gdCron(env); r = json({ ok: true }); }
+    else if (ruta === "POST /__gd-minutos") { sqlite.prepare("UPDATE gd_viajes SET deadline_at=? WHERE estado IN ('en_camino','aviso','alerta')").run(new Date(Date.now() + Number(cuerpo) * 60_000).toISOString()); r = json({ ok: true }); }
     else if (ruta === "GET /__correos") r = json(correos);
     else if (ruta === "POST /__correo-falla") { setCorreoOk(cuerpo !== "1"); r = json({ ok: true }); }
     else if (ruta === "POST /__sesion") { setSesion(JSON.parse(cuerpo || "null")); r = json({ ok: true }); }
