@@ -46,7 +46,7 @@ const B = 'http://localhost:8799';
   await ref.screenshot({ path: 'e2e_referente.png', fullPage: true });
   // --- Estoy bien
   const mails = await (await fetch(B + '/__correos')).json();
-  const chk = /href="([^"]*\/estoy-bien\?t=[^"]+)"/.exec(mails.filter((c) => c.to === 'lucas@correo.com').pop().html)[1];
+  const chk = /href="([^"]*\/estoy-bien\?t=[^"]+)"/.exec(mails.filter((c) => c.to === 'lucas@correo.com' && /\/estoy-bien\?t=/.test(c.html)).pop().html)[1]; // el ultimo mail a Lucas puede ser el de "consulto tu ultima senal" (de noche las condiciones se cumplen)
   const eb = await ctx.newPage();
   await eb.goto(chk.replace(/^https?:\/\/[^/]+/, B));
   await eb.click('#b');
