@@ -1,0 +1,29 @@
+/* Estetica nueva (azul, blanco y dorado): solo apariencia, ningun id, boton ni funcion cambia */
+:root{--e-fondo:#FAF8F3;--e-tarjeta:#fff;--e-linea:#E3E7F1;--e-texto:#14213D;--e-texto2:#3E4A6B;--e-suave:#5B6580;--e-azul:#1F4FD1;--e-azul-link:#1F4FD1;--e-azul-suave:#EEF2FB;--e-dorado:#E3A92B;--e-dorado-suave:#FFF3D6;--e-dorado-texto:#7A5200;--e-sombra:0 6px 24px rgba(20,33,61,.08)}
+:root:not([data-theme="light"]){--e-fondo:#0B1020;--e-tarjeta:#121A33;--e-linea:rgba(255,255,255,.12);--e-texto:#F5F0E6;--e-texto2:#D5DBEC;--e-suave:#A9B3CE;--e-azul:#3D6BEA;--e-azul-link:#9DBBFF;--e-azul-suave:rgba(255,255,255,.07);--e-dorado:#FFC247;--e-dorado-suave:rgba(255,194,71,.16);--e-dorado-texto:#FFD477;--e-sombra:0 6px 24px rgba(0,0,0,.35)}
+html,body{background:var(--e-fondo) !important;color:var(--e-texto) !important;font-family:"Plus Jakarta Sans",Inter,"Segoe UI",system-ui,sans-serif !important}
+h1,h2,h3,.dashboard-title{color:var(--e-texto) !important;letter-spacing:-.01em}
+p,.section-copy,.message,small{color:var(--e-texto2)}
+.eyebrow{color:var(--e-dorado-texto) !important;letter-spacing:.08em}
+.account-card,.device,.list-card{background:var(--e-tarjeta) !important;border:1px solid var(--e-linea) !important;border-radius:24px !important;box-shadow:var(--e-sombra) !important;color:var(--e-texto) !important}
+.cfg-lista,#cfg-lista{border-radius:24px !important;border-color:var(--e-linea) !important;background:var(--e-tarjeta) !important;box-shadow:var(--e-sombra) !important;overflow:hidden}
+.cfg-item{border-color:var(--e-linea) !important;color:var(--e-texto) !important}
+.cfg-item:hover,.cfg-item:focus-visible{background:var(--e-azul-suave) !important}
+button.ghost,.ghost,.secondary,.accion-secundaria,.icon-button{background:var(--e-tarjeta) !important;color:var(--e-texto) !important;border:1.5px solid var(--e-linea) !important;box-shadow:none !important}
+input,select,textarea{background:var(--e-tarjeta) !important;color:var(--e-texto) !important;border:1.5px solid var(--e-linea) !important;border-radius:16px !important}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--e-azul-link) !important;outline-offset:2px}
+.bottom-tabs{background:var(--e-tarjeta) !important;border:1px solid var(--e-linea) !important;border-radius:28px !important;box-shadow:0 10px 34px rgba(20,33,61,.14) !important}
+.status-tag,.status-tag-core{background:var(--e-dorado-suave) !important;color:var(--e-dorado-texto) !important;border:0 !important;border-radius:999px !important}
+.og-guardian>summary.ghost{background:var(--e-dorado) !important;color:#3A2A05 !important;border-color:var(--e-dorado) !important}
+.og-menu{border-radius:20px !important;background:var(--e-tarjeta) !important;border:1px solid var(--e-linea) !important;box-shadow:0 14px 40px rgba(20,33,61,.18) !important}
+.og-menu a{color:var(--e-texto) !important}
+.brand,.brand span{color:var(--e-azul-link) !important;font-weight:300;letter-spacing:.06em}
+.device-name{color:var(--e-texto) !important}.device-meta,.device-state{color:var(--e-suave) !important}
+
+button.ghost,a.ghost,summary.ghost{border-radius:999px !important}
+.cfg-item{background:transparent !important;border-radius:0 !important}
+#actualizar,#refresh,.dashboard-tools .ghost{font-weight:700}
+.account-state{background:var(--e-tarjeta) !important;border-color:var(--e-linea) !important;color:var(--e-texto2) !important;border-radius:999px !important}
+
+.bottom-tab{border-radius:22px !important}
+.status-grid>*,.summary-grid>*,.health-row{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important;color:var(--e-texto) !important}

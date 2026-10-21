@@ -10,6 +10,7 @@ tildar: `../FOTO-CONSOLA-20-10-2026.md`.
 - `generar_consola.py`: arma `../aplicar-consola-configuracion-panel.ps1` (instalador de tres archivos). Usa el motor de los instaladores anteriores
   de la consola y suma dos controles: la huella SHA-256 de los originales antes de tocar nada y la del resultado después de escribir (si no coincide,
   restaura desde los respaldos). `CONSOLA_DIR` es la carpeta que tiene `orig/` y `nuevo/`.
+- `estetica.css` y `generar_estetica_consola.py`: el estilo nuevo (azul, blanco y dorado; claro y noche) como un bloque `<style id="estetica-v1">` que se agrega al final de la cabecera de `panel-index.html` (solo apariencia: no cambia ningun id, boton ni programa) y el generador de `../aplicar-consola-estetica-panel.ps1` (parte de `nuevo/panel-index.html`, el que deja el instalador de Configuracion, y comprueba su huella antes y despues). Se comprobo que `e2e-consola.js` y `e2e-emergencia.js` dan lo mismo con y sin el estilo.
 - `huellas-20-10-2026.txt`: huellas SHA-256 de los diez archivos de la foto (inventario de Luciano, con saltos de línea normalizados).
 - `servir.js`: servidor estático con los nombres que usa la página (`node servir.js nuevo 8802`); el modo demostración es `/?demo=1`.
 - `e2e-consola.js`, `e2e-emergencia.js` y `e2e-og.js`: recorridos en navegador real (Playwright). El primero prueba Configuración completa (categorías,
