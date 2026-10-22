@@ -3,7 +3,7 @@
 #  - Los links de los SMS, de los mails y de las paginas (Tu proteccion, camino, referente) pasan a https://ms.ojoguard.app/...
 #  - Las passkeys (huella / Face ID) pasan a ser de ms.ojoguard.app: hay que volver a registrarlas UNA vez (el codigo de 6 numeros por correo sigue andando igual).
 #  - La direccion vieja (ojo-guard-ms-api.bickluciano.workers.dev) sigue funcionando para entrar con el codigo por correo.
-# Cambia SOLO wrangler.toml (respaldo wrangler.toml.bak-dominio). No toca la base, el codigo ni la consola.
+# Cambia SOLO wrangler.toml (respaldo wrangler.toml.bak-dominio; el arreglo de workers.dev usa .bak-dominio2). No toca la base, el codigo ni la consola.
 # Va en la carpeta del PANEL (la que tiene wrangler.toml). Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
@@ -35,7 +35,12 @@ $cambios = @(
 # Direccion propia del panel (se conecto en Cloudflare el 22/10/2026). La direccion vieja de workers.dev sigue funcionando.
 [[routes]]
 pattern = "ms.ojoguard.app"
-custom_domain = true')
+custom_domain = true'),
+    @('wrangler.toml', 'mantener activa la direccion workers.dev', 'compatibility_date = "2026-07-31"', 'compatibility_date = "2026-07-31"
+
+# La direccion vieja (workers.dev) tiene que seguir activa: la app del telefono todavia la usa. Sin estas dos lineas, wrangler la apaga.
+workers_dev = true
+preview_urls = true')
 )
 $descargas = @()
 
@@ -121,5 +126,5 @@ Ok "Archivos listos. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: el panel ya usa https://ms.ojoguard.app. Ahora hay que volver a registrar la huella o Face ID (una sola vez)."
+Ok "LISTO: el panel ya usa https://ms.ojoguard.app y sigue activa la direccion vieja. Ahora hay que volver a registrar la huella o Face ID (una sola vez)."
 Write-Host ""
