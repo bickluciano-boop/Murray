@@ -19,11 +19,10 @@ A4 = 'export default {'
 N4 = bloque + '\n' + A4
 A5 = '<h1>${code}</h1><p>'
 N5 = ('<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;background:#0c0d0f;color:#f6f6f2;padding:28px;border-radius:20px">'
-      '<p style="color:#f4c64e;font-size:12px;font-weight:800;letter-spacing:.16em">OJO GUARD &#183; C&#211;DIGO</p>'
-      '<p style="margin:14px 0 18px"><span style="display:inline-block;font-size:34px;font-weight:800;letter-spacing:.3em;padding:14px 20px 14px 26px;border-radius:12px;background:#EEF2FB;color:#14213D">${code}</span></p>'
-      '<p style="color:#d2d2ce;line-height:1.55">')
+      '<p style="margin:0 0 8px"><span style="display:block;text-align:center;font-size:42px;font-weight:800;letter-spacing:.14em;padding:14px 8px;border-radius:12px;background:#EEF2FB;color:#14213D">${code}</span></p>'
+      '<p style="color:#d2d2ce;line-height:1.45;font-size:14px;margin:0 0 4px">')
 A6 = '<p>Vence en 15 minutos y funciona una sola vez.</p>'
-N6 = '<p style="color:#8f8d85;font-size:13px">Vence en 15 minutos y funciona una sola vez.</p></div>'
+N6 = '<p style="color:#8f8d85;font-size:12px;margin:0">Vence en 15 minutos y funciona una sola vez.</p></div>'
 filas = [
     ('direccion del panel en mails y SMS (ms.ojoguard.app)', A1, N1),
     ('mails: se arma con la franja nueva', A2, N2),
