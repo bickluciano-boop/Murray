@@ -77,7 +77,7 @@ export type PaletaIdentidad = {
 
 type Paso = "perfil" | "documento" | "cara";
 const ORDEN: Paso[] = ["perfil", "documento", "cara"];
-const TOTAL_PASOS = 7;
+const TOTAL_PASOS = 6;
 const PRIMER_PASO = 3;
 
 const DORADO = "#D4A94D";
