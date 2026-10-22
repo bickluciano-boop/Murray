@@ -1,0 +1,5 @@
+/* Mapa y Familia: la lista, la ficha y los botones pasan al azul de la identidad (las variables del mapa apuntan a las nuevas) */
+#og-mapa,:root[data-theme="light"] #og-mapa,:root[data-theme="dark"] #og-mapa{--ogm-fondo:var(--e-fondo);--ogm-panel:var(--e-tarjeta);--ogm-linea:var(--e-linea);--ogm-texto:var(--e-texto);--ogm-suave:var(--e-suave);--ogm-tenue:var(--e-suave);--ogm-oro:var(--e-azul);--ogm-oro-vivo:var(--e-azul-link);--ogm-oro-fondo:var(--e-azul-suave);--ogm-oro-borde:var(--e-linea);--ogm-sombra:var(--e-sombra)}
+#og-mapa .ogm-botones button.oro,#og-mapa .ogm-dlg-botones button.oro,#og-mapa .ogm-elegir button.oro,#og-mapa .ogm-foto:not(:disabled)::after{background:var(--e-azul) !important;border-color:var(--e-azul) !important;color:#fff !important}
+#og-mapa .ogm-botones button,#og-mapa .ogm-dlg-botones button,#og-mapa .ogm-elegir button{border-radius:999px}
+#og-mapa .ogm-lista li{border-radius:20px}
