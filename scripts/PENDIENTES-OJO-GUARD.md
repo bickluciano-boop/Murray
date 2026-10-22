@@ -1098,7 +1098,8 @@ Actualizado: 16/10/2026.
   las condiciones: batería baja 50, noche de 0 a 23, 2 señales), (2) "Estoy bien" y el aviso al
   referente, (3) el registro. Ojo: tras "Estoy bien", durante 30 min "No lo encuentro" responde que
   ya dijo que está bien.
-- [ ] **Twilio (SMS) no manda: la cuenta está SUSPENDIDA por saldo bajo** (corrige lo que se creía el 17/10: "se terminó el crédito gratis").
+- [x] **Twilio (SMS): RESUELTO el 21-22/10/2026.** Luciano entró a la consola con "Continue with Google" (bickluciano@gmail.com), cargó USD 20 (saldo -1,65 → 18,35), la cuenta pasó a **Active** en minutos y el **22/10 a las 22:21 llegaron dos SMS reales a su iPhone** (remitente 33004): "Ingreso desde la app del telefono" y "Solicitud de ubicacion", con enlace al panel. Quedan: (1) dejar la **recarga automática** bien configurada (Billing → Manage auto-recharge: USD 20 cuando baje de USD 5, con la tarjeta que funcionó); (2) el número de EE.UU. +1 251 360 4304 tiene un registro **A2P a medias** (iniciado el 16/09): no hizo falta para Argentina; (3) a futuro, acortar el enlace de los SMS (hoy es la dirección larga de workers.dev). Con esto se puede decir en la app y en la bienvenida que el código y los avisos de seguridad llegan también por SMS. El resto de este apartado es el historial de cómo estaba antes.
+- [x] (historial) **Twilio (SMS) no manda: la cuenta está SUSPENDIDA por saldo bajo** (corrige lo que se creía el 17/10: "se terminó el crédito gratis").
   Según los mails del 24 y 25/09/2026 (en el Gmail de Luciano): cuenta "My First Twilio Account" (SID AC006275…), dueño **bickluciano@gmail.com**;
   la **recarga automática falló** (pago rechazado: USD 10,06 el 24/09 y USD 20,50 el 25/09), el saldo quedó en -USD 0,50 y el 25/09 Twilio la
   suspendió ("Action Required: Your Twilio account is suspended (Low Balance)"). Mientras esté suspendida no salen los SMS de "Avisos de seguridad"
