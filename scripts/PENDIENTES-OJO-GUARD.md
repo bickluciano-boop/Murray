@@ -1355,3 +1355,11 @@ como opción más adelante.
 - PENDIENTE: subir esas fotos al servidor (no hay endpoint) y mostrar la foto de perfil en el circulo familiar.
 - PENDIENTE: pasos 6 y 7 del arranque (telefono y claves, circulo) siguen siendo las pantallas actuales ("Preparar este telefono"); falta unificar el aspecto y la barra de 7 pasos.
 - Quien ya tiene la app abierta con su cuenta no ve nada de esto: solo el usuario nuevo.
+
+## Dominio propio del panel (22/10/2026)
+- `ojoguard.app` esta ahora en Cloudflare (servidores de nombres `ligia`/`rudy`); los 21 registros se copiaron desde IONOS (web en GitHub Pages, correo IONOS, Resend en `notificaciones`, `panel`, `watch`). DNSSEC no estaba activo.
+- `ms.ojoguard.app` conectado al Worker `ojo-guard-ms-api` desde Cloudflare (Dominios y rutas). `aplicar-dominio-panel.ps1` lo deja fijo en `wrangler.toml` y pasa `PASSKEY_ORIGIN` / `PASSKEY_RP_ID` a ese dominio (links de SMS y mails + passkeys). Hay que volver a registrar las passkeys una vez.
+- PENDIENTE: registros opcionales no copiados: TXT `_openai-site-verification`, AAAA de `info`, TXT `cf-custom-hostname` (sin guion bajo).
+- PENDIENTE: la web `ojoguard.app` (GitHub Pages) muestra "We're still building this page" con el correo personal; poner contenido real, boton "Ingresar" a `ms.ojoguard.app` y `soporte@ojoguard.app`. Bing indexa `watch.ojoguard.app` primero.
+- PENDIENTE: la app (build) sigue llamando a `workers.dev` (`OJO_REMOTE_API_BASE` en sos.ts/familyGeofence.ts y en App.tsx): funciona, pero conviene pasarla a `ms.ojoguard.app` en el proximo build.
+- PENDIENTE: marca: buscar "Ojo Guard" en el INPI (clases 9, 42, 45) y registrarla con un agente; el usuario de YouTube `@ojoguard` esta ocupado por un canal inactivo.
