@@ -1348,3 +1348,10 @@ como opción más adelante.
 - [ ] Encabezado del panel en el celular, apretado.
 - [ ] Actualizar la presentación con una captura del mapa.
 - [ ] Tiempo de viaje en auto en "Cómo llegar" (es pago: decide Lu).
+
+## App: arranque del usuario nuevo (22/10/2026)
+- Instalados en la app (salen en la PROXIMA build): bienvenida de 13 diapositivas, foto de perfil, foto del documento (DNI o pasaporte), foto de la cara, acceso solo con prueba de 3 dias (Empresa escondida, su codigo queda), logo e icono nuevos.
+- PENDIENTE (no existe todavia): la COMPARACION entre la cara y el documento. Hoy las tres fotos quedan guardadas en el telefono con estado "pendiente_de_verificar". Hay que decidir proveedor o desarrollo propio, deteccion de persona real, texto de consentimiento, cuanto tiempo se guardan los datos y revision legal (datos biometricos). Hasta entonces la app NO dice que verifico nada.
+- PENDIENTE: subir esas fotos al servidor (no hay endpoint) y mostrar la foto de perfil en el circulo familiar.
+- PENDIENTE: pasos 6 y 7 del arranque (telefono y claves, circulo) siguen siendo las pantallas actuales ("Preparar este telefono"); falta unificar el aspecto y la barra de 7 pasos.
+- Quien ya tiene la app abierta con su cuenta no ve nada de esto: solo el usuario nuevo.
