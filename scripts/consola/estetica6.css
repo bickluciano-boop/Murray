@@ -1,0 +1,6 @@
+/* estetica-v6: barra de arriba. El boton OG pasa de mostaza al azul y las pestanas ya no se montan sobre los botones de la derecha en ventanas de 1280 a 1699 px. */
+header.topbar .topbar-actions details.og-guardian > summary.ghost{background:var(--e-azul) !important;color:#fff !important;border:0 !important;box-shadow:0 8px 20px rgba(31,79,209,.22) !important;padding:10px 18px !important}
+header.topbar .topbar-actions details.og-guardian[open] > summary.ghost{background:var(--e-texto) !important;color:var(--e-tarjeta) !important}
+@media (min-width:1280px) and (max-width:1699px){
+  nav.bottom-tabs{left:max(300px, calc(50vw - 300px)) !important;transform:none !important}
+}
