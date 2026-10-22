@@ -1,0 +1,19 @@
+/* estetica-v3: lo que todavia quedaba en mostaza (--lime) pasa al azul de la identidad. Solo apariencia. */
+.map-button,.location-history .map-button,.location-actions .map-button,.demo-banner,.pull-refresh-indicator{background:var(--e-azul) !important;color:#fff !important;border:0 !important;border-radius:999px !important}
+.device-icon,.onboarding li>strong,.brand-eye{background:var(--e-azul) !important;color:#fff !important}
+.summary-grid strong,.list-card>strong,.evidence-tags,.message,.privacy-note strong{color:var(--e-azul-link) !important}
+.ms-mark{color:var(--e-azul-link) !important;border-color:var(--e-azul-link) !important}
+.command-status{border-left-color:var(--e-azul) !important}
+.summary-icon,.empty-icon{color:var(--e-azul-link) !important;background:var(--e-azul-suave) !important}
+.privacy-note{background:var(--e-dorado-suave) !important;border-color:var(--e-linea) !important;color:var(--e-texto2) !important}
+.empty-state{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important}
+input:focus,input:focus-visible{border-color:var(--e-azul) !important;box-shadow:0 0 0 3px rgba(31,79,209,.18) !important}
+.map-modal-card{background:var(--e-tarjeta) !important;border-color:var(--e-linea) !important;color:var(--e-texto) !important;border-radius:24px !important}
+.map-modal-head{color:var(--e-texto) !important;border-color:var(--e-linea) !important}
+.map-modal-canvas{background:var(--e-azul-suave) !important}
+.scan-radar{background:conic-gradient(from 0deg,var(--e-azul),transparent 65%) !important}
+.scan-radar::after{background:var(--e-tarjeta) !important}
+.scan-loading,.scan-image-label{color:var(--e-suave) !important}
+.location-history li{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important;color:var(--e-texto2) !important}
+.secure-badge{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important;color:var(--e-azul-link) !important}
+.evidence-image span,.evidence-placeholder strong{background:rgba(20,33,61,.78) !important;color:#fff !important}
