@@ -1984,6 +1984,7 @@ function pldPaginaDuenio() {
 <div id="vCfgReg" style="display:none">
 <div class="tarjeta"><div id="registro" class="suave">Cargando…</div></div>
 </div>
+<div class="arriba" id="pieAtras" style="display:none;margin-top:18px"><a class="atras" id="aAtrasPie" href="#">← Volver</a></div>
 </div>
 <script>
 (function(){
@@ -2002,7 +2003,7 @@ var PROPIA=true,RO=false,NOMBREPERSONA="",DEF=null,GDDEF=null;
 function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(h==="tus-referentes")h="config-referentes";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(!PROPIA&&h==="guardian")h="";if(!PROPIA&&h==="config-guardian")h="configuracion";return h}
 var DESDEPANEL=vistaActual()==="configuracion"; // la página se abrió directo en Configuración (como desde la consola del panel): ahí "atrás" vuelve a la Configuración del panel, no al inicio
 function titulo(){var v=vistaActual();var t=DESDEPANEL&&v==="configuracion"?"Tu protección":TITULOS[v];if(NOMBREPERSONA)t=v?t+" · "+NOMBREPERSONA:"Protección de "+NOMBREPERSONA;$("titulo").textContent=t}
-function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"← Configuración":"← Tu protección"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"← Configuración":"← Ir al inicio";titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"← Configuración":"← Tu protección"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"← Configuración":"← Ir al inicio";var pie=$("pieAtras"),ap=$("aAtrasPie"),dest=pan?"/#config":(p!==undefined?"#"+p:"");if(!v||!dest){pie.style.display="none"}else{pie.style.display="flex";ap.setAttribute("href",dest);ap.textContent=pan||(p==="configuracion"&&!DESDEPANEL)?"← Configuración":"← Tu protección"}titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
 window.addEventListener("hashchange",function(){mostrarVista(true)});
 function sw(b,on){b.setAttribute("aria-checked",on?"true":"false")}
 function pintar(d){

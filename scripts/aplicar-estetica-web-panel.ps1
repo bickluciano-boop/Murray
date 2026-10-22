@@ -1,14 +1,9 @@
-﻿# aplicar-estetica-web-panel.ps1 - Paginas web del panel (el camino del Modo Guardian, Tu proteccion y el enlace del referente): estilo nuevo en azul, blanco y dorado.
-# Luciano (21/10/2026), viendo la maqueta: "eso si me gusta", "la tipografia es mas clara, se ve mejor", "el violeta no me gusta, prefiero azul, blanco y dorado", "la nuestra es muy dura".
-# Que cambia (solo el servidor del panel; no toca la base, la consola ni la app):
-#  - Estilo: fondo marfil calido con tarjetas blancas de esquinas redondas; siempre arranca en claro (aunque el aparato este en modo oscuro); la version de noche se elige con el interruptor "Modo noche" de Accesibilidad (se recuerda y vale tambien para la consola) (azul tinta, marfil y dorado). Botones en forma de pastilla,
-#    azul para lo principal; interruptores, listas y etiquetas redondeadas. Tipografia mas clara (Plus Jakarta Sans y Outfit, de Google Fonts; si no cargan, la del sistema).
-#  - El camino: el reloj va dentro de un anillo azul que se vacia con el tiempo; los botones de +10/+20/+30, Voy a frenar, Cambiar destino, Necesito ayuda y Cancelar van de a dos. El aviso de
-#    "sonido sin activar" ya no es rojo (es un aviso, no un error). Rojo solo para lo urgente (ultimos 15 segundos, Necesito ayuda).
-#  - El logo de arriba pasa a ser el ojo dorado suelto (sin cuadrado) con la palabra "ojo guard" en minuscula, finita, al lado (el logo anterior era para fondo oscuro). Accesibilidad (texto grande, alto contraste, botones grandes) sigue andando.
-#  - Incluye todo lo de los parches anteriores, tambien el de los mails con direccion (si todavia no lo habias corrido). Se puede correr encima de cualquiera de ellos.
-# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 (acepta las veinte versiones desde aplicar-guardian-mejoras-panel.ps1).
-# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldlogo. Al final publica el panel solo.
+﻿# aplicar-estetica-web-panel.ps1 - Paginas web del panel (Tu proteccion, el camino del Modo Guardian y el enlace del referente): estilo nuevo en azul, blanco y dorado, mas el boton "Volver" al pie.
+# Luciano (22/10/2026), viendo Referentes: "esta no tiene para ir atras". Lo que se agrega: al pie de cada pantalla de Tu proteccion (Referentes, Modo Cautela, Modo Guardian, Ajustes, Accesibilidad, Registro, Configuracion) un boton
+#  "Volver" que lleva al mismo lugar que el de arriba (a Configuracion, a Tu proteccion, o a la Configuracion de la consola si se abrio desde ahi). En el inicio de Tu proteccion no aparece. No cambia nada mas.
+# Incluye todo lo de los instaladores anteriores del estilo (logo nuevo, Modo noche, camino con anillo): se puede correr encima de cualquiera de ellos, tambien encima del ya instalado.
+# Reemplaza el codigo de Modo Cautela dentro de src\index.ts, comprobando antes con una huella SHA-256 (acepta las veinticinco versiones desde aplicar-guardian-mejoras-panel.ps1).
+# Va en la carpeta del PANEL (la que tiene wrangler.toml). Respaldo .bak-pldatras. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -34,12 +29,12 @@ Ok "Carpeta correcta"
 $indice = Join-Path $raiz "src\index.ts"
 if (-not (Test-Path $indice)) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 $f = Leer $indice
-if ((Contar $f.texto 'class="nom"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar $f.texto 'id="pieAtras"') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar $f.texto 'async function gdRutaMapas(') -ne 1) { Mal "Falta aplicar antes aplicar-guardian-mejoras-panel.ps1."; return }
 $marcaIni = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.' $f.crlf
 $marcaFin = Ajustar 'async function fetchCorreo(input: string, init: RequestInit) {' $f.crlf
-$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972", "a3eff07125cf5e97427a3f534e6e428a6f21ecc2fb0b126b7587ac74487e4b62", "01405976b34a86bb0f5c095a6b547e52f62d13ab34a3113d71ac8beca9e2be52", "ed257a3da64e770eaab6cb9ef4cbc0390b953fdfe59ba473d2a578dcb98b885f", "6d0788d14c09bdbe0e50e4104bd1cd0a735617d7e66493f65cdb8e64bf075e40", "624cb7f0408c980827336dec9f5ce0293518c39b0844e6efd70c2ed12ede0869", "3f560a76dd444dda820d5aa6f7cddb26ef7650346a4e065ec629149368c817c4", "133bf72763dd8ca8d85d69f79b30c5028fdf78e9e945ca3f961d4f0bf88caf09")
+$huellasViejas = @("0c81f3e5789c0d0adfb413684025bdb4eba0b2607c6485aae6c891b4d061f328", "8ef511b2d13d6fd83a10324cef0957a1440069a4cb44789ac189687fdfdea086", "8caf8ec1e76564ee7b11a1f13f4183a7eb1812a81a7847a4270cb680332b754f", "450ac01b1e85bbcc4a065754c21abbc84e9e07c200d146dea0ce3413f2345d9a", "17d575d8937b1d4cd0aabeae342947043a209b60fd212ba026f780b92316217c", "512cfe3d7c2b3988534dfe2f722f99fd5ab50abaf6b6c6faa5fa31b7b60d00f0", "b976c0026e3c7b379bfbc11275c45d23d0a0661ec27fa3e97f47380f438e7f26", "8c7fa17c76c184d4800758649dc7f29132bed43e25a0204867846d33f4e432ba", "c287fc279d4df85ed98dd24929d76da96052e9deffbf56fb27a2938f98af25f5", "b66ebca4a1f4d502ae307f3bb2ebb1d7197243bf36e5832400c956da81ba18be", "fd39fc50f50ba957e6a3a6e6159dae7c6e1e2c659df8b7112355dc24abedfa76", "65787f3d87e7cb874e73bde5022c13f575747d05b6d5017bd47dd4ef6faf2515", "abc104785111176e9d541bb7f60e63cfccb530c5960c50b73eb90686cf8e0bab", "c55b9fe1328f65d13b5686a199d13ce71a4a263e28daf556d479528b2263cd2b", "0326e91b18208f5f05b7efac44cc3ef40382ef4577c5bc4c494c014467b502da", "f59816045234dca3c72bdff13c5e5cf51de17eb7cde202d81c176c8d524e3c60", "3246968f7f10a3ef97a34b0ee02605236efacfc7fac092266fbb967cc408c972", "a3eff07125cf5e97427a3f534e6e428a6f21ecc2fb0b126b7587ac74487e4b62", "01405976b34a86bb0f5c095a6b547e52f62d13ab34a3113d71ac8beca9e2be52", "ed257a3da64e770eaab6cb9ef4cbc0390b953fdfe59ba473d2a578dcb98b885f", "6d0788d14c09bdbe0e50e4104bd1cd0a735617d7e66493f65cdb8e64bf075e40", "624cb7f0408c980827336dec9f5ce0293518c39b0844e6efd70c2ed12ede0869", "3f560a76dd444dda820d5aa6f7cddb26ef7650346a4e065ec629149368c817c4", "133bf72763dd8ca8d85d69f79b30c5028fdf78e9e945ca3f961d4f0bf88caf09", "321e92191dd0e620cd9be6b6e6bb38e9230987f2ada0e5480db8bfbd64ddb11e")
 $ok = $true
 if ((Contar $f.texto $marcaIni) -ne 1) { Mal "No encuentro el principio del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
 if ((Contar $f.texto $marcaFin) -ne 1) { Mal "No encuentro el final del codigo de Modo Cautela (esperaba 1)."; $ok = $false }
@@ -53,9 +48,9 @@ $hasher = [System.Security.Cryptography.SHA256]::Create()
 $huella = ([System.BitConverter]::ToString($hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($viejoLF)))).Replace("-", "").ToLower()
 if ($huellasViejas -notcontains $huella) { Mal ("El codigo de Modo Cautela que hay en src\index.ts no es el que dejaron los parches anteriores (huella " + $huella + "). No toco nada. Mandame esta pantalla."); return }
 Ok ("Codigo de Modo Cautela actual reconocido: " + $viejoLF.Length + " caracteres")
-if (Test-Path ($indice + ".bak-pldlogo")) { Mal "Ya existe src\index.ts.bak-pldlogo. No toco nada."; return }
-Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldlogo")
-Ok "Respaldo creado: src\index.ts.bak-pldlogo"
+if (Test-Path ($indice + ".bak-pldatras")) { Mal "Ya existe src\index.ts.bak-pldatras. No toco nada."; return }
+Copy-Item -LiteralPath $indice -Destination ($indice + ".bak-pldatras")
+Ok "Respaldo creado: src\index.ts.bak-pldatras"
 $nuevoBloque = Ajustar '// ---------------------------------------------------------------------------
 // "Modo Cautela" (antes "Por las dudas"; N\u00daCLEO \u00b7 EN VALIDACI\u00d3N): referentes de emergencia.
 // La persona elige de antemano a qui\u00e9n avisar; en el d\u00eda a d\u00eda nadie ve nada. Si pasan cosas raras (las condiciones que ella
@@ -2042,6 +2037,7 @@ function pldPaginaDuenio() {
 <div id="vCfgReg" style="display:none">
 <div class="tarjeta"><div id="registro" class="suave">Cargando\u2026</div></div>
 </div>
+<div class="arriba" id="pieAtras" style="display:none;margin-top:18px"><a class="atras" id="aAtrasPie" href="#">\u2190 Volver</a></div>
 </div>
 <script>
 (function(){
@@ -2060,7 +2056,7 @@ var PROPIA=true,RO=false,NOMBREPERSONA="",DEF=null,GDDEF=null;
 function vistaActual(){var h=(location.hash||"").replace(/^#/,"");if(h==="gdSeccion")h="guardian";if(h==="tus-referentes")h="config-referentes";if(!Object.prototype.hasOwnProperty.call(VISTAS,h))h="";if(!PROPIA&&h==="guardian")h="";if(!PROPIA&&h==="config-guardian")h="configuracion";return h}
 var DESDEPANEL=vistaActual()==="configuracion"; // la p\u00e1gina se abri\u00f3 directo en Configuraci\u00f3n (como desde la consola del panel): ah\u00ed "atr\u00e1s" vuelve a la Configuraci\u00f3n del panel, no al inicio
 function titulo(){var v=vistaActual();var t=DESDEPANEL&&v==="configuracion"?"Tu protecci\u00f3n":TITULOS[v];if(NOMBREPERSONA)t=v?t+" \u00b7 "+NOMBREPERSONA:"Protecci\u00f3n de "+NOMBREPERSONA;$("titulo").textContent=t}
-function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"\u2190 Configuraci\u00f3n":"\u2190 Tu protecci\u00f3n"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"\u2190 Configuraci\u00f3n":"\u2190 Ir al inicio";titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
+function mostrarVista(arriba){var v=vistaActual();Object.keys(VISTAS).forEach(function(k){$(VISTAS[k]).style.display=k===v?"block":"none"});var h=$("aHub"),i=$("aInicio"),p=PADRES[v],pan=DESDEPANEL&&v==="configuracion";if(p===undefined||pan){h.style.display="none"}else{h.style.display="inline-block";h.setAttribute("href","#"+p);h.textContent=p==="configuracion"&&!DESDEPANEL?"\u2190 Configuraci\u00f3n":"\u2190 Tu protecci\u00f3n"}i.setAttribute("href",pan?"/#config":"/");i.textContent=pan?"\u2190 Configuraci\u00f3n":"\u2190 Ir al inicio";var pie=$("pieAtras"),ap=$("aAtrasPie"),dest=pan?"/#config":(p!==undefined?"#"+p:"");if(!v||!dest){pie.style.display="none"}else{pie.style.display="flex";ap.setAttribute("href",dest);ap.textContent=pan||(p==="configuracion"&&!DESDEPANEL)?"\u2190 Configuraci\u00f3n":"\u2190 Tu protecci\u00f3n"}titulo();if(arriba){aviso("");window.scrollTo(0,0)}}
 window.addEventListener("hashchange",function(){mostrarVista(true)});
 function sw(b,on){b.setAttribute("aria-checked",on?"true":"false")}
 function pintar(d){
@@ -2296,7 +2292,7 @@ $v = Leer $indice
 $bien = ($v.texto.Length -eq $esperado) -and ((Contar $v.texto 'id="anilloProg"') -eq 1) -and ((Contar $v.texto 'async function gdDondeEsta(') -eq 1) -and ((Contar $v.texto 'async function pldSosActivo(') -eq 1) -and ((Contar $v.texto 'var DESDEPANEL=') -eq 1) -and ((Contar $v.texto 'async function gdAvisarCambio(') -eq 1) -and ((Contar $v.texto 'id="gCambios"') -eq 1) -and ((Contar $v.texto 'async function gdComprobarLlegada(') -eq 1) -and ((Contar $v.texto 'id="gRadio"') -eq 1) -and ((Contar $v.texto 'function parpadeo(on)') -eq 1) -and ((Contar $v.texto 'id="bLlegueIgual"') -eq 0) -and ((Contar $v.texto 'async function gdBuscarLugares(') -eq 1) -and ((Contar $v.texto 'id="vConfig"') -eq 1) -and ((Contar $v.texto 'async function gdAjustarPorTransito(') -eq 1) -and ((Contar $v.texto 'async function gdLeerProgreso(') -eq 1) -and ((Contar $v.texto 'id="bFrenar"') -eq 1) -and ((Contar $v.texto 'id="bCambiar"') -eq 1) -and ((Contar $v.texto 'id="gAuto"') -eq 1) -and ((Contar $v.texto 'async function gdCerrarPausa(') -eq 1) -and ((Contar $v.texto 'async function gdOrigenActual(') -eq 1) -and ((Contar $v.texto 'function gdModosHtml(') -eq 1) -and ((Contar $v.texto 'id="bSeguir"') -eq 1) -and ((Contar $v.texto 'gdModosHtml("cmModos", "auto")') -eq 1) -and ((Contar $v.texto 'id="bProbar"') -eq 1) -and ((Contar $v.texto 'id="finalTxt"') -eq 1) -and ((Contar $v.texto 'id="relojCard"') -eq 1) -and ((Contar $v.texto 'async function gdLeerConfig(') -eq 1) -and ((Contar $v.texto 'id="cReset"') -eq 1) -and ((Contar $v.texto 'async function gdRutaMapas(') -eq 1) -and ((Contar $v.texto 'function gdFin(') -eq 1) -and ((Contar $v.texto 'async function gdCron(') -eq 1) -and ((Contar $v.texto 'route === "GET /camino"') -eq 1) -and ((Contar $v.texto 'async function pldResolverPersona(') -eq 1) -and ((Contar $v.texto 'Estado de tu tel') -eq 1) -and ((Contar $v.texto 'id="gMargen"') -eq 1) -and ((Contar $v.texto 'id="pOtro"') -eq 1) -and ((Contar $v.texto 'async function pldCerrarEpisodio(') -eq 1) -and ((Contar $v.texto 'route === "GET /guardian"') -eq 1) -and ((Contar $v.texto 'async function pldAvisarSos(') -eq 1) -and ((Contar $v.texto 'async function nativeFamilySos') -eq 1) -and ((Contar $v.texto 'async function fetchCorreo') -eq 1)
 if (-not $bien) {
     Mal "Algo no salio bien. Restauro src\index.ts desde el respaldo."
-    Copy-Item -LiteralPath ($indice + ".bak-pldlogo") -Destination $indice -Force
+    Copy-Item -LiteralPath ($indice + ".bak-pldatras") -Destination $indice -Force
     Mal "Restaurado. Mandame esta pantalla."
     return
 }
@@ -2306,5 +2302,5 @@ Ok "Archivo listo. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: las paginas del camino, Tu proteccion y el referente tienen el estilo nuevo. Abri el camino o Tu proteccion en el celular y mira."
+Ok "LISTO: Tu proteccion tiene el boton Volver al pie de cada pantalla. Abri Referentes (o Modo Cautela, Ajustes...) y baja al final."
 Write-Host ""
