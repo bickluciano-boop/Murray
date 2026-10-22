@@ -17,3 +17,24 @@ input:focus,input:focus-visible{border-color:var(--e-azul) !important;box-shadow
 .location-history li{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important;color:var(--e-texto2) !important}
 .secure-badge{background:var(--e-azul-suave) !important;border-color:var(--e-linea) !important;color:var(--e-azul-link) !important}
 .evidence-image span,.evidence-placeholder strong{background:rgba(20,33,61,.78) !important;color:#fff !important}
+/* pantalla de acceso (Entra a tu cuenta): tarjeta, ojo nuevo y desplegables en el estilo moderno */
+#access.hero.card{background:var(--e-tarjeta) !important;border:1px solid var(--e-linea) !important;border-radius:28px !important;box-shadow:var(--e-sombra) !important;color:var(--e-texto) !important}
+#access .acceso-marca{filter:none !important;width:150px !important;height:auto !important;margin:2px auto 18px !important}
+#access .eyebrow{color:var(--e-azul-link) !important;letter-spacing:.14em !important;text-align:center}
+#access h1{font-size:clamp(1.9rem,6vw,2.5rem) !important;text-align:center;letter-spacing:-.02em !important;color:var(--e-texto) !important}
+#access .hero-copy,#access p{color:var(--e-texto2) !important}
+#access .hero-copy{text-align:center;max-width:44ch;margin-left:auto;margin-right:auto}
+#access label{color:var(--e-texto) !important;font-weight:700}
+#access small{color:var(--e-suave) !important}
+#access summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--e-azul-suave) !important;color:var(--e-azul-link) !important;border:1px solid var(--e-linea) !important;border-radius:18px;padding:13px 16px;font-weight:700;font-size:.92rem}
+#access summary::-webkit-details-marker{display:none}
+#access summary::after{content:"+";margin-left:auto;font-size:1.2rem;line-height:1}
+#access details[open]>summary::after{content:"\2212"}
+#access details{margin:12px 0}
+#access details[open]>summary{margin-bottom:12px}
+#access a,#access .app-link{color:var(--e-azul-link) !important}
+#access .setup-steps li{color:var(--e-texto2) !important}
+#access button.ghost{background:var(--e-tarjeta) !important;color:var(--e-texto) !important;border:1.5px solid var(--e-linea) !important;border-radius:999px !important}
+#access form button{width:100%}
+#access .acceso-passkey,#access details.acceso-passkey,#access details{background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important}
+#access .acceso-passkey>summary{margin:0}

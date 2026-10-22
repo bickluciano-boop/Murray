@@ -26,9 +26,15 @@ bloque = '    <style id="estetica-v3">\n' + css + '\n    </style>\n'
 cierre = '  </head>'
 assert o.count(cierre) == 1
 n = o.replace(cierre, bloque + cierre)
+OJO = open(R + 'consola/ojo.svg.txt', encoding='utf-8').read().strip()
+ojo = OJO.replace('class="ojo"', 'class="acceso-marca"').replace('width="44" height="26"', 'width="150" height="90"').replace('ogOro', 'ogOroA')
+m1 = re.search(r'<svg class="acceso-marca".*?</svg>', o, re.S)
+assert m1 and o.count(m1.group(0)) == 1
+n = n.replace(m1.group(0), ojo)
 cambios = ("$cambios = @(\n"
-           "    ,@('src\\panel-index.html', 'estilos del ultimo dorado a azul', %s, %s)\n)\n") % (psq(cierre), psq(bloque + cierre))
-cabeza = '''# aplicar-consola-botones-panel.ps1 - Consola (Ojo Guard MS): lo ultimo que quedaba en mostaza pasa al azul de la identidad.
+           "    @('src\\panel-index.html', 'ojo nuevo en la pantalla de acceso', %s, %s),\n"
+           "    @('src\\panel-index.html', 'estilos del ultimo dorado a azul y pantalla de acceso', %s, %s)\n)\n") % (psq(m1.group(0)), psq(ojo), psq(cierre), psq(bloque + cierre))
+cabeza = '''# aplicar-consola-botones-panel.ps1 - Consola (Ojo Guard MS): lo ultimo que quedaba en mostaza pasa al azul de la identidad y la pantalla de acceso (Entra a tu cuenta) queda moderna.
 # Botones Ver mapa aca / Escanear ubicacion / Como llegar, iconos de los relojes, numeros y avisos, ventana del mapa y estados vacios, en claro y en noche. El boton OG de emergencia queda dorado a proposito.
 # Luciano (22/10/2026): "todavia habia bastantes botones mostaza". Solo APARIENCIA: se agrega un bloque <style id="estetica-v3">. Ninguna funcion cambia.
 # Va en la carpeta del PANEL (la que tiene wrangler.toml). Toca solo src\\panel-index.html, y solo si es el que dejo aplicar-consola-identidad-panel.ps1 (huella SHA-256 antes y despues). Respaldo .bak-consolabotones. Al final publica
