@@ -1,0 +1,12 @@
+/* estetica-v5: pines del mapa. Personas: cara (o inicial) con aro blanco. Equipos: icono blanco sobre azul. El elegido se agranda y se marca en azul; el nombre va en una pastilla. */
+#og-mapa .ogm-pin .ogm-av{background:var(--e-azul-suave) !important;color:var(--e-azul) !important;border:3px solid #fff !important;box-shadow:0 6px 18px rgba(20,33,61,.30) !important}
+#og-mapa .ogm-pin .ogm-av.ogm-av-dibujo{background:var(--e-azul) !important;color:#fff !important}
+#og-mapa .ogm-pin.sel .ogm-av{border-color:var(--e-azul) !important}
+#og-mapa .ogm-pin.sel .ogm-av.ogm-av-dibujo{border-color:#fff !important;box-shadow:0 0 0 4px var(--e-azul),0 6px 18px rgba(20,33,61,.30) !important}
+#og-mapa .ogm-pin.off .ogm-av{filter:grayscale(1);opacity:.85}
+#og-mapa .ogm-halo{background:radial-gradient(circle,rgba(31,79,209,.34),rgba(31,79,209,0) 70%) !important}
+#og-mapa .ogm-etq{background:var(--e-tarjeta) !important;color:var(--e-texto) !important;border:0 !important;border-radius:999px !important;padding:4px 12px !important;box-shadow:0 4px 14px rgba(20,33,61,.22) !important}
+#og-mapa .ogm-etq em{color:var(--e-suave) !important}
+#og-mapa .ogm-pin .ogm-marca{display:none}
+#og-mapa .ogm-pin.sel .ogm-etq{background:var(--e-azul) !important;color:#fff !important}
+#og-mapa .ogm-pin.sel .ogm-etq em{color:rgba(255,255,255,.82) !important}
