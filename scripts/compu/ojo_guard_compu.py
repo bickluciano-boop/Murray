@@ -71,7 +71,7 @@ try:
 except ImportError:
     winsound = None
 
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 ES_MAC = (sys.platform == "darwin") or os.environ.get("OJO_FAKE_PLATFORM") == "darwin"
 ES_WINDOWS = (os.name == "nt")
 API_BASE = os.environ.get("OJO_API_BASE", "https://ojo-guard-ms-api.bickluciano.workers.dev")
@@ -386,6 +386,31 @@ def ubicacion_de_windows():
     return None, "windows_ubicacion_desactivada" if permiso == "Denied" else "windows_sin_ubicacion"
 
 
+_DELEGADO_CL = []
+
+
+def _delegado_cl():
+    """Objeto que recibe los avisos de CoreLocation (hace falta para que macOS muestre el pedido de permiso y para saber si dio error)."""
+    if _DELEGADO_CL:
+        return _DELEGADO_CL[0]
+    from Foundation import NSObject
+
+    class DelegadoUbicacion(NSObject):
+        error = None
+
+        def locationManagerDidChangeAuthorization_(self, admin):
+            pass
+
+        def locationManager_didFailWithError_(self, admin, error):
+            try:
+                self.error = int(error.code())
+            except Exception:
+                self.error = -1
+
+    _DELEGADO_CL.append(DelegadoUbicacion.alloc().init())
+    return _DELEGADO_CL[0]
+
+
 def ubicacion_de_macos():
     """(lat, lon, precision_m, altitud, rumbo) o (None, motivo). Usa CoreLocation de macOS (pyobjc-framework-CoreLocation)."""
     if not ES_MAC:
@@ -399,6 +424,9 @@ def ubicacion_de_macos():
         if not CoreLocation.CLLocationManager.locationServicesEnabled():
             return None, "mac_servicios_de_ubicacion_apagados"
         admin = CoreLocation.CLLocationManager.alloc().init()
+        delegado = _delegado_cl()
+        delegado.error = None
+        admin.setDelegate_(delegado)
         try:
             admin.requestWhenInUseAuthorization()
         except Exception:
@@ -420,7 +448,7 @@ def ubicacion_de_macos():
             except Exception:
                 permiso = -1
             # 0 sin responder, 1 restringido, 2 denegado, 3 siempre, 4 en uso
-            return None, "mac_sin_ubicacion_permiso_" + str(permiso)
+            return None, "mac_sin_ubicacion_permiso_" + str(permiso) + ("_error_" + str(delegado.error) if delegado.error is not None else "")
         coord = ubic.coordinate()
         rumbo = ubic.course()
         return (float(coord.latitude), float(coord.longitude), float(ubic.horizontalAccuracy()), float(ubic.altitude()),
@@ -472,6 +500,8 @@ def obtener_ubicacion():
             "altitude": alt, "heading": rumbo, "address": direccion, "confidence": confianza(prec),
             "source": "macos" if ES_MAC else "windows",
         }, None
+    if ES_MAC and motivo:
+        decir("Ubicacion exacta de macOS no disponible (" + str(motivo) + "): uso la aproximada por internet.")
     ip = ubicacion_por_internet()
     if ip:
         lat, lon, lugar = ip
