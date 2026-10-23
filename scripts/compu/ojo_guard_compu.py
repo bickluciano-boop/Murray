@@ -49,6 +49,7 @@ import os
 import platform
 import re
 import shutil
+import ssl
 import socket
 import struct
 import subprocess
@@ -66,7 +67,7 @@ try:
 except ImportError:
     winsound = None
 
-VERSION = "0.6"
+VERSION = "0.6.1"
 ES_MAC = (sys.platform == "darwin") or os.environ.get("OJO_FAKE_PLATFORM") == "darwin"
 ES_WINDOWS = (os.name == "nt")
 API_BASE = os.environ.get("OJO_API_BASE", "https://ojo-guard-ms-api.bickluciano.workers.dev")
@@ -89,6 +90,18 @@ ARCHIVO_AGENTE = os.path.join(os.path.expanduser("~"), "Library", "LaunchAgents"
 
 
 # ------------------------------------------------------------------ utilidades
+def _contexto_ssl():
+    """En Mac, el Python de python.org no trae certificados: se usan los de 'certifi' si estan instalados."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return None
+
+
+CONTEXTO_SSL = _contexto_ssl()
+
+
 def hora():
     return time.strftime("%H:%M:%S")
 
@@ -141,7 +154,7 @@ def llamar(metodo, ruta, cuerpo=None, token=None, tiempo=20):
         metodo = "GET"
     pedido = urllib.request.Request(ruta if externo else API_BASE + ruta, data=datos, method=metodo, headers=cabeceras)
     try:
-        with urllib.request.urlopen(pedido, timeout=tiempo) as r:
+        with urllib.request.urlopen(pedido, timeout=tiempo, context=CONTEXTO_SSL) as r:
             crudo = r.read().decode("utf-8", "replace")
             return r.status, (json.loads(crudo) if crudo else {})
     except urllib.error.HTTPError as e:
@@ -150,8 +163,8 @@ def llamar(metodo, ruta, cuerpo=None, token=None, tiempo=20):
             return e.code, json.loads(crudo)
         except ValueError:
             return e.code, {"error": "respuesta_no_json"}
-    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
-        return 0, {"error": "sin_conexion"}
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError) as error:
+        return 0, {"error": "sin_conexion", "detalle": type(error).__name__ + ": " + str(error)[:160]}
 
 
 # ------------------------------------------------------------------ datos de la compu
@@ -591,6 +604,11 @@ def pedir_codigo(email):
     codigo, r = llamar("POST", "/api/remote/access/request", {"email": email, "accessType": "company"})
     if codigo == 0:
         decir("No hay conexion con el servidor. Revisa internet e intenta de nuevo.")
+        detalle = str(r.get("detalle", ""))
+        if detalle:
+            decir("Detalle tecnico: " + detalle)
+        if "CERTIFICATE" in detalle.upper():
+            decir("Falta instalar los certificados de seguridad. Corre:  python3 -m pip install --user certifi")
         return False
     if codigo >= 400:
         decir("El servidor no acepto el pedido de codigo (" + str(codigo) + "): " + str(r.get("error", "")))
