@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Ojo Guard para computadora - Windows y Mac: SONAR, EVIDENCIA, UBICAR Y ARRANQUE AUTOMATICO (version 0.6)
+Ojo Guard para computadora - Windows y Mac: SONAR, EVIDENCIA, UBICAR Y ARRANQUE AUTOMATICO (version 0.7)
+
+NOVEDAD 0.7: en Mac intenta la ubicacion REAL de macOS (CoreLocation, por WiFi) y solo si no se puede usa la aproximada por internet.
+Requiere:  python3 -m pip install --user pyobjc-framework-CoreLocation  y el permiso de Ubicacion para la app OjoGuardCompu
+(ver instalar_mac_permisos.sh). Sin eso todo sigue como en la 0.6.1.
 
 NOVEDAD 0.6: ahora tambien corre en Mac (macOS). En Mac el sonido sale por afplay, la foto con la camara
 integrada (opencv), el audio con el microfono (sounddevice) y la ubicacion es APROXIMADA por internet
@@ -67,7 +71,7 @@ try:
 except ImportError:
     winsound = None
 
-VERSION = "0.6.1"
+VERSION = "0.7.0"
 ES_MAC = (sys.platform == "darwin") or os.environ.get("OJO_FAKE_PLATFORM") == "darwin"
 ES_WINDOWS = (os.name == "nt")
 API_BASE = os.environ.get("OJO_API_BASE", "https://ojo-guard-ms-api.bickluciano.workers.dev")
@@ -382,6 +386,49 @@ def ubicacion_de_windows():
     return None, "windows_ubicacion_desactivada" if permiso == "Denied" else "windows_sin_ubicacion"
 
 
+def ubicacion_de_macos():
+    """(lat, lon, precision_m, altitud, rumbo) o (None, motivo). Usa CoreLocation de macOS (pyobjc-framework-CoreLocation)."""
+    if not ES_MAC:
+        return None, "no_es_mac"
+    try:
+        import CoreLocation
+        from Foundation import NSDate, NSRunLoop
+    except ImportError:
+        return None, "mac_falta_pyobjc"
+    try:
+        if not CoreLocation.CLLocationManager.locationServicesEnabled():
+            return None, "mac_servicios_de_ubicacion_apagados"
+        admin = CoreLocation.CLLocationManager.alloc().init()
+        try:
+            admin.requestWhenInUseAuthorization()
+        except Exception:
+            pass
+        admin.setDesiredAccuracy_(CoreLocation.kCLLocationAccuracyBest)
+        admin.startUpdatingLocation()
+        ubic = None
+        limite = time.time() + 25
+        while time.time() < limite:
+            NSRunLoop.currentRunLoop().runUntilDate_(NSDate.dateWithTimeIntervalSinceNow_(0.5))
+            ubic = admin.location()
+            if ubic is not None and ubic.horizontalAccuracy() >= 0:
+                break
+            ubic = None
+        admin.stopUpdatingLocation()
+        if ubic is None:
+            try:
+                permiso = int(admin.authorizationStatus())
+            except Exception:
+                permiso = -1
+            # 0 sin responder, 1 restringido, 2 denegado, 3 siempre, 4 en uso
+            return None, "mac_sin_ubicacion_permiso_" + str(permiso)
+        coord = ubic.coordinate()
+        rumbo = ubic.course()
+        return (float(coord.latitude), float(coord.longitude), float(ubic.horizontalAccuracy()), float(ubic.altitude()),
+                float(rumbo) if rumbo is not None and rumbo >= 0 else None), None
+    except Exception as error:
+        return None, "mac_ubicacion_fallo:" + type(error).__name__
+
+
 def ubicacion_por_internet():
     """Ubicacion APROXIMADA por la direccion IP: sirve para saber en que zona esta, no en que calle."""
     if os.environ.get("OJO_SIN_IP") == "1":
@@ -416,14 +463,14 @@ def confianza(precision):
 def obtener_ubicacion():
     """(dict_para_el_servidor, None) o (None, motivo)."""
     ahora = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    datos, motivo = ubicacion_de_windows()
+    datos, motivo = ubicacion_de_macos() if ES_MAC else ubicacion_de_windows()
     if datos:
         lat, lon, prec, alt, rumbo = datos
         direccion = direccion_en_texto(lat, lon)
         return {
             "latitude": lat, "longitude": lon, "accuracy": round(prec), "capturedAt": ahora,
             "altitude": alt, "heading": rumbo, "address": direccion, "confidence": confianza(prec),
-            "source": "windows",
+            "source": "macos" if ES_MAC else "windows",
         }, None
     ip = ubicacion_por_internet()
     if ip:
@@ -443,12 +490,13 @@ def probar_ubicacion():
     if not ubic:
         print("No se pudo obtener ubicacion. Motivo: " + str(motivo))
         if ES_MAC:
-            print("En Mac la ubicacion exacta no esta disponible: se usa la aproximada por internet. Revisa que haya conexion.")
+            print("En Mac: la ubicacion exacta necesita  python3 -m pip install --user pyobjc-framework-CoreLocation  y el permiso de Ubicacion")
+            print("para OjoGuardCompu (Ajustes del Sistema > Privacidad y seguridad > Localizacion). Si no, se usa la aproximada por internet.")
         if "windows" in str(motivo):
             print("Revisa: Configuracion de Windows > Privacidad > Ubicacion: 'Ubicacion' activada y")
             print("'Permitir que las aplicaciones de escritorio accedan a tu ubicacion' activada.")
         return 1
-    print("Origen:     " + ("servicio de ubicacion de Windows (WiFi)" if ubic["source"] == "windows" else "APROXIMADA por internet (zona de la ciudad)"))
+    print("Origen:     " + ("servicio de ubicacion de Windows (WiFi)" if ubic["source"] == "windows" else "servicio de ubicacion de macOS (WiFi)" if ubic["source"] == "macos" else "APROXIMADA por internet (zona de la ciudad)"))
     print("Latitud:    " + str(ubic["latitude"]))
     print("Longitud:   " + str(ubic["longitude"]))
     print("Precision:  +-" + str(ubic["accuracy"]) + " m (" + ubic["confidence"] + ")")
