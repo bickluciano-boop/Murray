@@ -4,7 +4,7 @@
 # Hace tres cosas (en este orden) y se detiene si una falla, sin dejar nada a medias:
 #   1) Instala la biblioteca pyobjc-framework-CoreLocation para tu usuario (python3 -m pip install --user).
 #   2) Comprueba que la app OjoGuardCompu (ver instalar_mac_permisos.sh) la puede cargar.
-#   3) Baja el programa nuevo (v0.7.0), verifica su huella, guarda una copia del anterior y reinicia el lanzador.
+#   3) Baja el programa nuevo (v0.7.1), verifica su huella, guarda una copia del anterior y reinicia el lanzador.
 # Despues macOS te pregunta si OjoGuardCompu puede usar tu ubicacion: tocas Permitir.
 #
 # Uso:   bash actualizar_mac_ubicacion.sh           (actualiza)
@@ -15,8 +15,8 @@ CARPETA="$HOME/Library/Application Support/OjoGuardCompu"
 SCRIPT="$CARPETA/ojo_guard_compu.py"
 AGENTE="$HOME/Library/LaunchAgents/app.ojoguard.compu.plist"
 COPIA="$SCRIPT.bak-0.6.1"
-URL="https://raw.githubusercontent.com/bickluciano-boop/Murray/8a7007d885563db3cfb1dd653e5f0026bc532f64/scripts/compu/ojo_guard_compu.py"
-HUELLA="e3baf9f220fff5208bbe4783086db27689f19ed15e44d5999caf87c445b94ad2"
+URL="https://raw.githubusercontent.com/bickluciano-boop/Murray/9d17552ff41e9f3915c56c1ae44a65a923b8d114/scripts/compu/ojo_guard_compu.py"
+HUELLA="2e6c217011de5ae742d56b54ac6100719c81fd973d73b14ccd70ea59c16e2fd5"
 
 fallar() { echo ""; echo "NO SE CAMBIO EL PROGRAMA: $*"; exit 1; }
 reiniciar() {
@@ -48,7 +48,7 @@ if [ "$PRUEBA" != "CORELOCATION_OK" ]; then
 fi
 echo "  La app puede usar CoreLocation."
 
-echo "3) Bajando el programa nuevo (v0.7.0)..."
+echo "3) Bajando el programa nuevo (v0.7.1)..."
 TMP="$(mktemp -t ojoguard.XXXXXX)"
 curl -fsSL -o "$TMP" "$URL" || { rm -f "$TMP"; fallar "no se pudo bajar el programa."; }
 if [ "$(shasum -a 256 "$TMP" | cut -d' ' -f1)" != "$HUELLA" ]; then
