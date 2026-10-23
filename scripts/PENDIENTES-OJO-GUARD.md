@@ -1374,3 +1374,9 @@ como opción más adelante.
 - PENDIENTE: logo de la marca en el circulo del remitente (BIMI): hace falta DMARC estricto + logo SVG Tiny + certificado (VMC, pide marca registrada, o CMC, pide 12 meses de uso publico del logo). Costo de cientos a mas de mil dolares por ano, a cotizar. Va despues del registro de marca en INPI.
 - PENDIENTE: tope diario de gasto del mapa de Google cuando haya muchos clientes.
 - PENDIENTE: la web de `ojoguard.app` raiz ya no es la de GitHub: ahora es el panel. Si se arma una web de presentacion, va en `www.ojoguard.app` (sigue apuntando a GitHub Pages) o en otro subdominio; el pie de los mails ya dice `ojoguard.app`.
+
+## Mac como equipo (23/10/2026)
+- `scripts/compu/ojo_guard_compu.py` (v0.6) es el programa de la computadora para Windows y Mac. El de Windows en uso es la v0.5 (`ojo_guard_compu_v05_windows.py` en la misma carpeta, copia de referencia). En la notebook corre desde `%APPDATA%\OjoGuardCompu`; `config.json` y `log.txt` de ahi NO se comparten (tienen la clave y ubicaciones).
+- Mac: sonido con `afplay`, foto con opencv (AVFoundation), audio con sounddevice, bateria con `pmset`, ubicacion APROXIMADA por internet (macOS no da ubicacion exacta a un Python simple), arranque con LaunchAgent. El panel lo muestra como equipo "Mac" (plataforma `macos`).
+- PENDIENTE: probar en la Mac real (permisos de camara y microfono; si el LaunchAgent los pide, correr una vez a mano con `--probar-evidencia`). Mejora posible: ubicacion exacta con CoreLocation (pyobjc).
+- PENDIENTE: en el panel, "Agregar dispositivo" no ofrece computadoras; el alta se hace corriendo este programa. Agregar una opcion "Computadora (Windows o Mac)" con los pasos.
