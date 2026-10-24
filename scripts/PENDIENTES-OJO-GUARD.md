@@ -1443,3 +1443,11 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Mejora a evaluar (requiere build): que el aviso push despierte a la app para leer la orden al instante, y que el Dr. Ojo Guard muestre "última orden recibida / último aviso de pantalla completa".
 
 - **Mejora de la app (hallazgo de Luciano, 24/10/2026): "Permisos de Android 4/4" no parece un botón.** Cuesta encontrarlo en Ajustes y es justo donde está el diagnóstico de Modo perdido. Que se vea como botón (tarjeta con flecha y relieve) y que el Dr. Ojo Guard lleve directo ahí ("Ver diagnóstico"). Requiere build.
+
+### Modo perdido no toma la pantalla bloqueada: causa más probable (24/10/2026, app 0.9.1 build 170, leyendo App.tsx y src/backgroundRemoteTask.ts)
+- Hay DOS caminos que ejecutan la orden "lost-mode":
+  1. `src/backgroundRemoteTask.ts` (segundo plano: push de datos, tarea periódica, alarma exacta cada ~15 min): activa el estado Y llama a `triggerForegroundAlert("lost-mode")` = `showFullScreenAlert(..., fijar=true)`, y lo anota en el historial. Este es el que funcionó el 28/09 y el 20/10.
+  2. `App.tsx` `executeRemoteCommand` rama "lost-mode" (cuando el proceso de la app está vivo y el aviso push dispara `addNotificationReceivedListener` → `syncRemoteCommands`): activa el estado, intenta `startScreenPinning()` y postea una notificación común. **NO llama a `showFullScreenAlert`.** Depende del vigilante de 2 s (`traerLaPantallaAlFrente`), que en segundo plano Android congela (lo dice el comentario de `triggerForegroundAlert`).
+- Evidencia del 24/10: en el historial no hay ninguna orden lost-mode en segundo plano (todas las lecturas dicen "ninguna orden pendiente": 10:10, 10:29, 11:02), el último aviso de pantalla completa sigue siendo 20/10 15:54:14, y llegaron dos notificaciones (la del servidor + la común de App.tsx). Todo cuadra con que la orden la tomó el camino 2 y quedó confirmada antes de que el camino 1 la viera.
+- Arreglo propuesto (chico, requiere build): en la rama "lost-mode" de `App.tsx`, si `AppState.currentState !== "active"`, llamar también a `showFullScreenAlert("Ojo Guard — Modo perdido", cuerpo, true)` y anotarlo con `recordFullScreenAlertAttempt({reason:"lost-mode"...})`. Hipótesis fuerte, no probada: se comprueba con el build nuevo.
+- No tiene que ver con el diseño ni con Xiaomi (permisos todos concedidos).
