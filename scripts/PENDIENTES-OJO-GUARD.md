@@ -1434,3 +1434,10 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - **Mac**: macOS 14.8.9, Python 3.13; permisos de cámara/micrófono resueltos con OjoGuardCompu.app; ubicación exacta no se pudo (CoreLocation error 1).
 - **Notebook HP con Windows 10**: sin Windows Hello (sin rostro, huella ni PIN), por eso no puede crear passkey ahí.
 - Regla: antes de diagnosticar algo de un equipo, mirar esta ficha; si falta un dato, preguntarlo UNA vez y anotarlo acá.
+
+### Modo perdido en el Xiaomi de Luciano: lectura del diagnóstico (24/10/2026, app 0.9.1 build 170)
+- Permisos de Android: todos concedidos, ninguno rechazado, ubicación permanente, "Administrar la app si no se usa" apagado. Pantalla de permisos estándar de Android (sin "Otros permisos" de Xiaomi). "Avisos de pantalla completa: ya permitidos".
+- Registro técnico: **el último aviso de pantalla completa se disparó el 20/10/2026 15:54:14**; en la prueba de hoy (~10:25-10:32) NO se disparó ninguno. La notificación que se ve en el bloqueo hoy no es la de pantalla completa.
+- Sincronización en segundo plano por alarma exacta (appState=background, source=exact-alarm): 10:10:20 y 10:29:12 (cada ~19 min), con "commands-fetched: ninguna orden pendiente" a las 10:10:21 y 10:29:13. Entre 10:29:13 y 10:32:26 (cuando Luciano abrió la app) no hay ninguna lectura de órdenes: el aviso llegó pero la app no se despertó a leer la orden.
+- Hipótesis (sin confirmar): Modo perdido depende de la sincronización por alarma (~19 min) y no del aviso push; si la orden llega entre dos sincronizaciones, la pantalla completa se dispara recién en la siguiente. Prueba pendiente: activar Modo perdido anotando la hora y esperar ~20 min con el teléfono bloqueado sin tocarlo.
+- Mejora a evaluar (requiere build): que el aviso push despierte a la app para leer la orden al instante, y que el Dr. Ojo Guard muestre "última orden recibida / último aviso de pantalla completa".
