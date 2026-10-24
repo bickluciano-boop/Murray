@@ -65,14 +65,14 @@ foreach ($d in $descargas) {
 $tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path ($ruta + ".bak-pantallacompleta")) { Mal ("Ya existe " + $t + ".bak-pantallacompleta. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+    if (Test-Path ($ruta + ".bak-tiposarranque")) { Mal ("Ya existe " + $t + ".bak-tiposarranque. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
 }
 $respaldados = @()
 foreach ($t in $tocados) {
     $ruta = Join-Path $raiz $t
-    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-pantallacompleta"); $respaldados += $t }
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-tiposarranque"); $respaldados += $t }
 }
-Ok ("Respaldos creados (.bak-pantallacompleta): " + ($respaldados -join ", "))
+Ok ("Respaldos creados (.bak-tiposarranque): " + ($respaldados -join ", "))
 
 # --- Aplicar ---
 $esperado = @{}
@@ -105,7 +105,7 @@ if (-not $todoBien) {
     Mal "Algo no salio bien. Restauro todo desde los respaldos."
     foreach ($t in $tocados) {
         $ruta = Join-Path $raiz $t
-        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-pantallacompleta") -Destination $ruta -Force }
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-tiposarranque") -Destination $ruta -Force }
         elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
     }
     Mal "Restaurado. Mandame esta pantalla."
