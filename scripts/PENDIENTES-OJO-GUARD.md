@@ -1460,3 +1460,11 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - **native_d** no ejecutaba nada desde el 31/08/2026 y acumulaba 98 `auto-locate` pendientes (uno cada 15 min): **marcado `revoked` y pendientes borrados el 25/10/2026** (hecho a mano con `wrangler d1 execute`, solo ese equipo).
 - native_1 (58 pendientes) y native_4 (29) ejecutan cosas pero acumulan `auto-locate`: probablemente teléfonos que pasan horas apagados/sin datos (ej. el del papá). La limpieza automática los borra a los 2 días. Pendiente: identificar de quién es cada uno y **renombrar** los cuatro "Mi teléfono" (confunden). native_f (0 pendientes, último 25/10 07:30) y native_e (iPhone, 0) andan bien.
 - Nota: `wrangler d1 execute` dio una vez el error 7403 (cuenta no autorizada) con la sesión válida; reintentar sin cambios funcionó. Si se pega un comando cortado, PowerShell muestra `>>` (esperando): Ctrl+C.
+
+### Ficha de equipos (identificados el 25/10/2026, ids de la base `ojo-guard-ms`)
+- **native_f** = Android Luciano (Xiaomi), batería confirmada por Luciano; renombrado "Android Luciano (Xiaomi)".
+- **native_e** = iPhone de Luciano; renombrado "iPhone Luciano".
+- **native_1** = Android del papá de Luciano (creado el 18/10/2026); a renombrar "Android papa".
+- **native_4** = Samsung de Guido (hermano de Luciano), enlazado el 28/09/2026, sabe que la tiene instalada para hacer pruebas; a renombrar "Android Guido (Samsung)".
+- native_b y native_d: instalaciones viejas de Luciano, revocadas. win-d33d = Notebook LB (Windows). win-4455 = "marian", Mac de Mariana.
+- (Las direcciones de las últimas ubicaciones no se guardan en las notas.)
