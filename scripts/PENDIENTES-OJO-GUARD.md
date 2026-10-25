@@ -1468,3 +1468,4 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - **native_4** = Samsung de Guido (hermano de Luciano), enlazado el 28/09/2026, sabe que la tiene instalada para hacer pruebas; a renombrar "Android Guido (Samsung)".
 - native_b y native_d: instalaciones viejas de Luciano, revocadas. win-d33d = Notebook LB (Windows). win-4455 = "marian", Mac de Mariana.
 - (Las direcciones de las últimas ubicaciones no se guardan en las notas.)
+- **Renombrados en la base el 25/10/2026** (hecho): "Android Guido (Samsung)", "Android papa", "Android Luciano (Xiaomi)", "iPhone Luciano". Ya no queda ningún equipo activo llamado "Mi teléfono" (solo native_d, revocado). Los pedidos `auto-locate` que se acumulan en los teléfonos de papá y Guido cuando están apagados son esperables; la limpieza automática los borra.
