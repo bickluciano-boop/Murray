@@ -136,7 +136,7 @@ const URL_DESCARGA_APP = "https://ojoguard.app/descargar";'),
       }
       const tengo = Number.parseInt(String(APP_BUILD_LABEL), 10);
       const coincidencia = /\((\d+)\)\s*$/.exec(String(dato.version ?? ""));
-      const ultima = coincidencia ? Number.parseInt(coincidencia[1], 10) : Number.NaN;
+      const ultima = Number.parseInt(coincidencia?.[1] ?? "", 10);
       if (Number.isFinite(tengo) && Number.isFinite(ultima) && tengo >= ultima) {
         setActualizacionMsg(`Ya tenés la última versión (${APP_VERSION}, build ${APP_BUILD_LABEL}).`);
         return;
