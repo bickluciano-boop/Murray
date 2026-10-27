@@ -1,7 +1,7 @@
 ﻿# subir-apk-panel.ps1 - sube el APK de Android al panel para que se baje desde https://ojoguard.app/descargar
 # Uso (en la carpeta del PANEL, la que tiene wrangler.toml):
 #   .\subir-apk-panel.ps1 -Apk "C:\Users\...\Downloads\archivo.apk" -Version "0.9.2"
-# -Version es opcional (es solo el texto que se muestra en la pagina). Se repite en cada build nueva: reemplaza la version anterior.
+# -Version es opcional: es el texto que se muestra en la pagina. Poner el numero de build de Android entre parentesis, ej. "0.9.2 (163)": el boton "Actualizar version" de la app lo usa para saber si hay algo mas nuevo. Se repite en cada build nueva: reemplaza la version anterior.
 # Antes hay que haber aplicado aplicar-descarga-panel.ps1 y aplicar-descarga-kv-panel.ps1. No cambia ningun archivo del panel.
 # El APK se corta en partes de 16 MB (el KV acepta hasta 25 MB por valor) y se guarda como descargas/<id>/<n>; el dato descargas/version.json
 # se sube AL FINAL, asi la pagina nunca entrega un APK a medias ni mezclado con el anterior.
@@ -93,7 +93,7 @@ for ($i = 0; $i -lt $partes; $i++) {
 }
 Ok "Partes subidas"
 
-$info = '{"version":"' + ($Version -replace '[^0-9A-Za-z._ -]', '') + '","subido":"' + (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") + '","bytes":' + $bytes + ',"sha256":"' + $sha + '","partes":' + $partes + '}'
+$info = '{"version":"' + ($Version -replace '[^0-9A-Za-z._ ()-]', '') + '","subido":"' + (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") + '","bytes":' + $bytes + ',"sha256":"' + $sha + '","partes":' + $partes + '}'
 $archivoInfo = Join-Path $dir "version.json"
 [System.IO.File]::WriteAllText($archivoInfo, $info, (New-Object System.Text.UTF8Encoding($false)))
 if (-not (PutKv "descargas/version.json" $archivoInfo)) { Mal "Las partes quedaron subidas pero no el dato de la version. La pagina sigue con la anterior. Mandame esta pantalla."; Limpiar; return }
