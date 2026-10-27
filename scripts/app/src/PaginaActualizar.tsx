@@ -95,7 +95,7 @@ export function PaginaActualizar({ botones, version, build }: Props) {
   );
 }
 
-type LineaProps = { build: string; botones: Botones; onActualizar?: () => void };
+type LineaProps = { build: string; botones: Botones; onActualizar?: (() => void) | undefined };
 
 /** Arriba del Dr. Ojo Guard: si la app está al día o hay una versión nueva. Sin dato (sin conexión o nada publicado) no muestra nada. */
 export function LineaVersion({ build, botones, onActualizar }: LineaProps) {
