@@ -1,0 +1,132 @@
+﻿# aplicar-bajar-panel.ps1 - Ojo Guard MS: enlace unico https://ojoguard.app/bajar para mandar por WhatsApp o en un QR.
+# Desde un Android lleva a /descargar; desde un iPhone muestra la guia de 4 pasos con TestFlight; desde una compu muestra las dos opciones.
+# Luciano (28/10/2026): "no les puedo mandar un QR o un link?". Cambia SOLO src\index.ts (respaldo .bak-bajar). Va en la carpeta del PANEL (la que tiene wrangler.toml). Requiere aplicar-testflight-panel.ps1. Al final publica el panel solo.
+$ErrorActionPreference = "Continue"
+function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
+function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
+function Avi($t) { Write-Host ("AVISO " + $t) -ForegroundColor Yellow }
+$raiz = (Get-Location).Path
+function Contar([string]$donde, [string]$que) {
+    if ([string]::IsNullOrEmpty($que)) { return 0 }
+    $n = 0; $i = 0
+    while ($true) { $i = $donde.IndexOf($que, $i, [System.StringComparison]::Ordinal); if ($i -lt 0) { break }; $n = $n + 1; $i = $i + $que.Length }
+    return $n
+}
+function Leer([string]$ruta) {
+    $bytes = [System.IO.File]::ReadAllBytes($ruta)
+    $bom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+    $texto = [System.IO.File]::ReadAllText($ruta, [System.Text.Encoding]::UTF8)
+    return @{ texto = $texto; bom = $bom; crlf = $texto.Contains("`r`n") }
+}
+function Ajustar([string]$t, [bool]$crlf) { $x = ($t -replace "`r`n", "`n"); if ($crlf) { $x = $x -replace "`n", "`r`n" }; return $x }
+function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPath $ruta).Hash.ToLower() }
+
+if (-not (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta del PANEL (la que tiene wrangler.toml), no la de la app."; return }
+Ok "Carpeta correcta"
+if (-not (Test-Path (Join-Path $raiz "src\index.ts"))) { Mal "No encuentro src\index.ts en esta carpeta."; return }
+if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'function apkBajar') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'const URL_TESTFLIGHT') -eq 0) { Mal "Falta aplicar primero aplicar-testflight-panel.ps1. No toco nada."; return }
+$cambios = @(
+    @('src\index.ts', 'pagina del enlace unico /bajar', 'async function apkDescarga(request: Request, env: Env) {', '/** ojoguard.app/bajar: un solo enlace para todos. Desde un Android va a la descarga; desde un iPhone muestra la guia de TestFlight; desde una compu (o la vista previa de WhatsApp) muestra las dos. */
+function apkBajar(request: Request) {
+  const ua = request.headers.get("user-agent") ?? "";
+  if (/android/i.test(ua)) return Response.redirect(new URL("/descargar", request.url).toString(), 302);
+  const iphone = /iPhone|iPad|iPod/i.test(ua);
+  const guia = `<div class="tarjeta"><h2>En iPhone</h2><p>Se instala en 4 pasos con TestFlight, la app de Apple para probar versiones nuevas.</p><ol style="margin:8px 0 14px;padding-left:22px;line-height:1.65"><li>Toc&#225; <strong>Instalar en iPhone</strong>. Se abre la App Store con <strong>TestFlight</strong>, la app de Apple para probar versiones nuevas. Es normal: primero se instala esa.</li><li>Toc&#225; <strong>Obtener</strong> para instalar TestFlight y despu&#233;s volv&#233; a tocar <strong>Instalar en iPhone</strong>.</li><li>Acept&#225; los t&#233;rminos de TestFlight y toc&#225; <strong>Instalar</strong> en la pantalla de Ojo Guard. Si el bot&#243;n est&#225; gris, esper&#225; unos segundos.</li><li>Abr&#237; <strong>Ojo Guard</strong>: es el &#237;cono con un ojo dorado sobre fondo azul. Dej&#225; TestFlight instalada: es la que te avisa cuando hay versiones nuevas.</li></ol><p><a class="boton" href="${URL_TESTFLIGHT}">Instalar en iPhone</a></p></div>`;
+  const android = `<div class="tarjeta"><h2>En Android</h2><p>Se baja el instalador y se instala encima, sin tienda de por medio.</p><p><a class="boton" href="/descargar">Descargar para Android</a></p></div>`;
+  const cuerpo = iphone
+    ? `<h1>Ojo Guard para iPhone</h1>${guia}`
+    : `<h1>Bajar Ojo Guard</h1><p>Si abr&iacute;s este enlace desde tu celular, te lleva directo a la descarga que le corresponde. Desde ac&aacute; pod&eacute;s elegir:</p>${android}${guia}`;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Bajar Ojo Guard</title><meta property="og:title" content="Ojo Guard"><meta property="og:description" content="Funciona entre iPhone y Android. Toc&aacute; para bajar la app."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">${APK_ESTILO}<script>try{if(localStorage.getItem("ojo_ms_tema")==="oscuro")document.documentElement.classList.add("noche")}catch(e){}</script></head><body><main>${APK_LOGO}<span class="etiqueta">N\u00daCLEO \u00b7 EN VALIDACI\u00d3N</span>${cuerpo}</main></body></html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "vary": "user-agent", "referrer-policy": "no-referrer" } });
+}
+async function apkDescarga(request: Request, env: Env) {'),
+    @('src\index.ts', 'ruta /bajar', '      if (route === "GET /descargar") return apkPagina(env);', '      if (route === "GET /descargar") return apkPagina(env);
+      if (route === "GET /bajar") return apkBajar(request);')
+)
+$descargas = @()
+
+# --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
+$archivos = @{}
+foreach ($c in $cambios) {
+    $ruta = Join-Path $raiz $c[0]
+    if (-not (Test-Path $ruta)) { Mal ("No encuentro " + $c[0]); return }
+    if (-not $archivos.ContainsKey($c[0])) { $archivos[$c[0]] = Leer $ruta }
+}
+$ok = $true
+foreach ($c in $cambios) {
+    $f = $archivos[$c[0]]
+    $ancla = Ajustar $c[2] $f.crlf
+    $cuantos = Contar $f.texto $ancla
+    if ($cuantos -eq 1) { Ok ($c[0] + ": " + $c[1] + ": 1") } else { Mal ($c[0] + ": " + $c[1] + ": " + $cuantos + " (esperaba 1)"); $ok = $false }
+}
+if (-not $ok) { Mal "Alguna ancla no coincide. No toco nada. Mandame esta pantalla."; return }
+
+# --- Descargar archivos nuevos y verificar que llegaron completos ---
+foreach ($d in $descargas) {
+    $tmp = (Join-Path $raiz $d[1]) + ".descarga"
+    try { Invoke-WebRequest -UseBasicParsing $d[0] -OutFile $tmp } catch { }
+    if (-not (Test-Path $tmp) -or (Sha $tmp) -ne $d[2]) {
+        foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }
+        Mal ("No se pudo descargar bien " + $d[1] + ". No toque nada."); return
+    }
+    Ok ("Descargado y verificado: " + $d[1])
+}
+
+# --- Respaldos ---
+$tocados = @($archivos.Keys) + @($descargas | ForEach-Object { $_[1] })
+foreach ($t in $tocados) {
+    $ruta = Join-Path $raiz $t
+    if (Test-Path ($ruta + ".bak-bajar")) { Mal ("Ya existe " + $t + ".bak-bajar. No toco nada."); foreach ($x in $descargas) { $y = (Join-Path $raiz $x[1]) + ".descarga"; if (Test-Path $y) { Remove-Item -LiteralPath $y -Force } }; return }
+}
+$respaldados = @()
+foreach ($t in $tocados) {
+    $ruta = Join-Path $raiz $t
+    if (Test-Path $ruta) { Copy-Item -LiteralPath $ruta -Destination ($ruta + ".bak-bajar"); $respaldados += $t }
+}
+Ok ("Respaldos creados (.bak-bajar): " + ($respaldados -join ", "))
+
+# --- Aplicar ---
+$esperado = @{}
+foreach ($k in $archivos.Keys) { $esperado[$k] = $archivos[$k].texto.Length }
+$nuevos = @{}
+foreach ($k in $archivos.Keys) { $nuevos[$k] = $archivos[$k].texto }
+foreach ($c in $cambios) {
+    $f = $archivos[$c[0]]
+    $ancla = Ajustar $c[2] $f.crlf; $reemplazo = Ajustar $c[3] $f.crlf
+    $nuevos[$c[0]] = $nuevos[$c[0]].Replace($ancla, $reemplazo)
+    $esperado[$c[0]] = $esperado[$c[0]] + ($reemplazo.Length - $ancla.Length)
+}
+foreach ($k in $archivos.Keys) { [System.IO.File]::WriteAllText((Join-Path $raiz $k), $nuevos[$k], (New-Object System.Text.UTF8Encoding($archivos[$k].bom))) }
+foreach ($d in $descargas) { Move-Item -LiteralPath ((Join-Path $raiz $d[1]) + ".descarga") -Destination (Join-Path $raiz $d[1]) -Force }
+
+# --- Verificar ---
+$todoBien = $true
+function Chk([string]$que, [bool]$cond) { if ($cond) { Ok $que } else { Mal $que; $script:todoBien = $false } }
+foreach ($c in $cambios) {
+    $v = (Leer (Join-Path $raiz $c[0]))
+    Chk ($c[0] + ": " + $c[1] + " aplicado") ((Contar $v.texto (Ajustar $c[3] $v.crlf)) -eq 1)
+}
+foreach ($k in $archivos.Keys) {
+    $largo = (Leer (Join-Path $raiz $k)).texto.Length
+    Chk ($k + ": largo " + $largo + " (esperado " + $esperado[$k] + ")") ($largo -eq $esperado[$k])
+}
+foreach ($d in $descargas) { Chk ($d[1] + ": verificado") ((Sha (Join-Path $raiz $d[1])) -eq $d[2]) }
+
+if (-not $todoBien) {
+    Mal "Algo no salio bien. Restauro todo desde los respaldos."
+    foreach ($t in $tocados) {
+        $ruta = Join-Path $raiz $t
+        if ($respaldados -contains $t) { Copy-Item -LiteralPath ($ruta + ".bak-bajar") -Destination $ruta -Force }
+        elseif (Test-Path $ruta) { Remove-Item -LiteralPath $ruta -Force }
+    }
+    Mal "Restaurado. Mandame esta pantalla."
+    return
+}
+Write-Host ""
+Ok "Archivos listos. Ahora publico el panel..."
+& npx.cmd wrangler deploy
+if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
+Write-Host ""
+Ok "LISTO: ojoguard.app/bajar ya funciona."
+Write-Host ""
