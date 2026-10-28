@@ -46,6 +46,10 @@ $cambios = @(
   if (!respuesta.ok || !datos) {
     console.error("didit_failed", respuesta.status, texto.slice(0, 400));
     return json({ error: "identity_provider_error", status: respuesta.status }, 502);
+  }'),
+    @('src\index.ts', 'registro cuando falta la clave de Didit', '  if (!env.DIDIT_API_KEY) return json({ error: "identity_not_configured" }, 503);', '  if (!env.DIDIT_API_KEY) {
+    console.error("didit_sin_clave");
+    return json({ error: "identity_not_configured" }, 503);
   }')
 )
 $descargas = @()
