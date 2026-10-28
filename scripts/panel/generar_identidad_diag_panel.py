@@ -16,6 +16,9 @@ cambio('registro cuando no se puede llegar a Didit',
 cambio('registro de lo que contesta Didit cuando falla',
  '  const datos = await respuesta.json<Record<string, unknown>>().catch(() => null);\n  if (!respuesta.ok || !datos) {\n    console.error("didit_failed", respuesta.status);\n    return json({ error: "identity_provider_error", status: respuesta.status }, 502);\n  }',
  '  const texto = await respuesta.text().catch(() => "");\n  let datos: Record<string, unknown> | null = null;\n  try {\n    datos = JSON.parse(texto) as Record<string, unknown>;\n  } catch {\n    datos = null;\n  }\n  if (!respuesta.ok || !datos) {\n    console.error("didit_failed", respuesta.status, texto.slice(0, 400));\n    return json({ error: "identity_provider_error", status: respuesta.status }, 502);\n  }')
+cambio('registro cuando falta la clave de Didit',
+ '  if (!env.DIDIT_API_KEY) return json({ error: "identity_not_configured" }, 503);',
+ '  if (!env.DIDIT_API_KEY) {\n    console.error("didit_sin_clave");\n    return json({ error: "identity_not_configured" }, 503);\n  }')
 cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
 cabeza = '''# aplicar-identidad-diag-panel.ps1 - Ojo Guard MS: cuando Didit falla, el servidor anota el estado y el principio de su respuesta (no incluye claves ni la selfie), para poder ver la causa con "wrangler tail".
 # 28/10/2026: la verificacion de identidad mostro "El servicio de verificacion no esta disponible" con la clave de prueba (Sandbox). Cambia SOLO src\\index.ts (respaldo .bak-identidad-diag). Va en la carpeta del PANEL. Requiere aplicar-identidad-didit-panel.ps1. Al final publica el panel solo.
