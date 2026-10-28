@@ -39,7 +39,7 @@ filas = [('App.tsx', 'sin Guardar cambios en las paginas Verificar mi identidad 
 # Con un solo cambio hace falta la coma delante: sin ella PowerShell aplana la fila y lee "A" en vez de "App.tsx".
 cambios = "$cambios = @(\n" + ",".join("    ,@(%s, %s, %s, %s)\n" % tuple(psq(x) for x in f) for f in filas[:1]) + (',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas[1:]) + "\n" if len(filas) > 1 else "") + ")\n"
 url = lambda ruta: 'https://raw.githubusercontent.com/bickluciano-boop/Murray/%s/scripts/app/%s' % (COMMIT_ARCHIVOS, ruta)
-descargas = "$descargas = @(\n    @(%s, %s, %s)\n)\n" % (psq(url('src/VerificarIdentidad.tsx')), psq('src\\VerificarIdentidad.tsx'), psq(SHA_VERIFICAR))
+descargas = "$descargas = @(\n    ,@(%s, %s, %s)\n)\n" % (psq(url('src/VerificarIdentidad.tsx')), psq('src\\VerificarIdentidad.tsx'), psq(SHA_VERIFICAR))
 cabeza = '''# aplicar-identidad2-app.ps1 - App (PROXIMA build): la selfie se saca con la camara DENTRO de la app; Configuracion > Verificar mi identidad sin titulo repetido ni botones Guardar.
 # Luciano (28/10/2026, Xiaomi): con la camara del sistema la app volvia sola a la pantalla del codigo (le pasa tambien en Android al adjuntar fotos en otras apps: el sistema cierra la app por memoria).
 # Ahora la selfie usa la camara de la propia app (como la evidencia): no se sale de la app. Tambien: en Verificar mi identidad y Actualizar Ojo Guard ya no aparecen "Guardar cambios" ni "Volver sin guardar".

@@ -54,7 +54,7 @@ $cambios = @(
 ')
 )
 $descargas = @(
-    @('https://raw.githubusercontent.com/bickluciano-boop/Murray/904ada28b91316d4ee5f5fccf0cfa8c63fb4b80f/scripts/app/src/VerificarIdentidad.tsx', 'src\VerificarIdentidad.tsx', '9bf115a6b95ef4a697fd8a4b5cfdd0493a208a4ccefc7d222d3c274a06b1dec8')
+    ,@('https://raw.githubusercontent.com/bickluciano-boop/Murray/904ada28b91316d4ee5f5fccf0cfa8c63fb4b80f/scripts/app/src/VerificarIdentidad.tsx', 'src\VerificarIdentidad.tsx', '9bf115a6b95ef4a697fd8a4b5cfdd0493a208a4ccefc7d222d3c274a06b1dec8')
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
