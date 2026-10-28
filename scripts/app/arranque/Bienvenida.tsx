@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Icono, type NombreIcono } from "./Iconos";
 
-// Bienvenida: 13 diapositivas que se muestran una sola vez, antes de pedir
+// Bienvenida: 7 laminas (13 explicaciones, juntadas de a dos) que se muestran una sola vez, antes de pedir
 // el acceso. Todo esta dibujado con vistas de React Native (sin imagenes ni
 // librerias nuevas), con los colores de la paleta de la app, asi que sigue al
 // modo claro/noche.
@@ -32,7 +32,7 @@ export type PaletaBienvenida = {
 const DORADO = "#D4A94D";
 const ROJO = "#C9402F";
 
-type Colores = {
+export type Colores = {
   p: PaletaBienvenida;
   noche: boolean;
   azul: string;
@@ -41,7 +41,7 @@ type Colores = {
   sombra: object;
 };
 
-function armarColores(p: PaletaBienvenida, noche: boolean): Colores {
+export function armarColores(p: PaletaBienvenida, noche: boolean): Colores {
   return {
     p,
     noche,
@@ -457,7 +457,7 @@ function IlusLogo({ c }: { c: Colores }) {
 
 type Diapo = { titulo: string; texto: string; ilus: (c: Colores) => ReactNode; boton: string };
 
-export const DIAPOSITIVAS: Diapo[] = [
+const TEMAS: Diapo[] = [
   { titulo: "Bienvenido a Ojo Guard", texto: "Ojo Guard es un ecosistema: la app en tu teléfono, el panel en la computadora y tus dispositivos trabajan juntos para cuidar a los tuyos. Te mostramos qué podés hacer.", ilus: (c) => <IlusEcosistema c={c} />, boton: "Empezar" },
   { titulo: "Mirá dónde están los tuyos", texto: "Mapa en vivo de tu círculo, con filtros En vivo, Hoy y 7 días. Cada persona es Adulto, Menor o Amigo, y cada uno ve solo lo que le corresponde.", ilus: (c) => <IlusMapa c={c} />, boton: "Siguiente" },
   { titulo: "Camino seguro con Modo Guardián", texto: "Elegís a dónde vas y cuánto tardás. Si no llegás a tiempo, les avisamos a tus referentes con tu última ubicación. Al llegar, tocás «Llegué».", ilus: (c) => <IlusGuardian c={c} />, boton: "Siguiente" },
@@ -472,6 +472,74 @@ export const DIAPOSITIVAS: Diapo[] = [
   { titulo: "Tu panel en la computadora", texto: "Ojo Guard MS: el mapa de la familia, tus equipos, las evidencias y los ajustes en una pantalla grande. Es parte del mismo ecosistema que tu app.", ilus: (c) => <IlusPanel c={c} />, boton: "Siguiente" },
   { titulo: "Todo listo para empezar", texto: "Falta darle a Ojo Guard dos permisos para poder avisarte a tiempo. Te los pedimos uno por uno, con una explicación cada vez.", ilus: (c) => <IlusListo c={c} />, boton: "Continuar" },
 ];
+
+type Lamina = { temas: Diapo[]; boton: string };
+
+// Las 13 explicaciones se mantienen tal cual; se juntan de a dos para pasar menos laminas (13 -> 7). Lo que decian no cambia.
+const AGRUPAR: number[][] = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12]];
+export const DIAPOSITIVAS: Lamina[] = AGRUPAR.map((ids) => {
+  const temas = ids.map((i) => TEMAS[i]).filter((t): t is Diapo => t !== undefined);
+  return { temas, boton: temas.length === 1 ? (temas[0]?.boton ?? "Continuar") : "Siguiente" };
+});
+
+/** Una lamina: con un tema usa el dibujo grande; con dos, los dos dibujos chicos lado a lado y los dos textos uno abajo del otro. */
+export function LaminaBienvenida({ lamina, c, ancho, diseno = "minis" }: { lamina: Lamina; c: Colores; ancho: number; diseno?: "minis" | "una" }) {
+  const paleta = c.p;
+  const [a, b] = lamina.temas;
+  const bloque = (t: Diapo, color: string, chico: boolean) => (
+    <View style={{ marginTop: chico ? 16 : 22 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+        {chico ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} /> : null}
+        <Text accessibilityRole="header" style={{ flex: 1, color: paleta.texto, fontSize: chico ? 20 : 26, fontWeight: "700", letterSpacing: -0.3, lineHeight: chico ? 25 : 31 }}>
+          {t.titulo}
+        </Text>
+      </View>
+      <Text style={{ color: paleta.textoMedio, fontSize: chico ? 14.5 : 15, lineHeight: chico ? 21 : 23, marginTop: chico ? 5 : 10 }}>{t.texto}</Text>
+    </View>
+  );
+  if (!a) return null;
+  const escalaUna = Math.min(1, (ancho - 24) / 320);
+  if (!b) {
+    return (
+      <>
+        <View style={{ transform: [{ scale: escalaUna }], height: 270 * escalaUna, justifyContent: "center" }}>{a.ilus(c)}</View>
+        <View style={{ width: Math.min(ancho - 48, 420) }}>{bloque(a, c.azul, false)}</View>
+      </>
+    );
+  }
+  const ancha = Math.min(ancho - 40, 440);
+  if (diseno === "una") {
+    const esc = Math.min(0.82, (ancho - 24) / 320);
+    return (
+      <>
+        <View style={{ transform: [{ scale: esc }], height: 270 * esc, justifyContent: "center" }}>{a.ilus(c)}</View>
+        <View style={{ width: ancha, marginTop: 4 }}>
+          {bloque(a, c.azul, true)}
+          {bloque(b, DORADO, true)}
+        </View>
+      </>
+    );
+  }
+  const celda = (ancha - 12) / 2;
+  const esc = celda / 320;
+  const mini = (t: Diapo, color: string) => (
+    <View style={{ width: celda, height: 270 * esc + 4, alignItems: "center", justifyContent: "center", borderRadius: 18, borderWidth: 2, borderColor: color, overflow: "hidden", backgroundColor: c.tarjeta }}>
+      <View style={{ width: 320, height: 270, transform: [{ scale: esc }] }}>{t.ilus(c)}</View>
+    </View>
+  );
+  return (
+    <>
+      <View style={{ width: ancha, flexDirection: "row", gap: 12, marginTop: 4 }}>
+        {mini(a, c.azul)}
+        {mini(b, DORADO)}
+      </View>
+      <View style={{ width: ancha }}>
+        {bloque(a, c.azul, true)}
+        {bloque(b, DORADO, true)}
+      </View>
+    </>
+  );
+}
 
 export function Bienvenida({
   paleta,
@@ -520,15 +588,7 @@ export function Bienvenida({
       >
         {DIAPOSITIVAS.map((d, i) => (
           <ScrollView key={i} style={{ width }} contentContainerStyle={{ alignItems: "center", paddingTop: 12, paddingBottom: 12 }}>
-            <View style={{ transform: [{ scale: Math.min(1, (width - 24) / 320) }], height: 270 * Math.min(1, (width - 24) / 320), justifyContent: "center" }}>
-              {d.ilus(c)}
-            </View>
-            <View style={{ width: Math.min(width - 48, 420), marginTop: 22 }}>
-              <Text accessibilityRole="header" style={{ color: paleta.texto, fontSize: 26, fontWeight: "700", letterSpacing: -0.4, lineHeight: 31 }}>
-                {d.titulo}
-              </Text>
-              <Text style={{ color: paleta.textoMedio, fontSize: 15, lineHeight: 23, marginTop: 10 }}>{d.texto}</Text>
-            </View>
+            <LaminaBienvenida lamina={d} c={c} ancho={width} />
           </ScrollView>
         ))}
       </ScrollView>
@@ -543,7 +603,7 @@ export function Bienvenida({
           onPress={() => (ultima ? onTerminar() : irA(indice + 1))}
           style={{ height: 54, borderRadius: 27, backgroundColor: paleta.doradoRelleno, alignItems: "center", justifyContent: "center" }}
         >
-          <Text style={{ color: paleta.sobreDorado, fontSize: 16, fontWeight: "800" }}>{DIAPOSITIVAS[indice].boton}</Text>
+          <Text style={{ color: paleta.sobreDorado, fontSize: 16, fontWeight: "800" }}>{DIAPOSITIVAS[indice]?.boton ?? "Siguiente"}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
