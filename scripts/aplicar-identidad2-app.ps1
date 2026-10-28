@@ -27,7 +27,7 @@ Ok "Carpeta correcta"
 foreach ($f in @("App.tsx", "src\VerificarIdentidad.tsx")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta. Falta aplicar aplicar-identidad-app.ps1."); return } }
 if ((Contar (Leer (Join-Path $raiz "App.tsx")).texto 'grupoActual === "identidad" || grupoActual === "actualizacion"') -ne 0) { Avi "Esto ya estaba aplicado en la app. No toco nada."; return }
 $cambios = @(
-    @('App.tsx', 'sin Guardar cambios en las paginas Verificar mi identidad y Actualizar', '          <Pressable onPress={onSave} style={styles.primaryButton}>
+    ,@('App.tsx', 'sin Guardar cambios en las paginas Verificar mi identidad y Actualizar', '          <Pressable onPress={onSave} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>
               {firstRun ? "Activar Ojo Guard" : "Guardar cambios"}
             </Text>

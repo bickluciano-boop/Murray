@@ -36,7 +36,8 @@ nuevo = '''          {grupoActual === "identidad" || grupoActual === "actualizac
 '''
 assert app.count(viejo) == 1, app.count(viejo)
 filas = [('App.tsx', 'sin Guardar cambios en las paginas Verificar mi identidad y Actualizar', viejo, nuevo)]
-cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
+# Con un solo cambio hace falta la coma delante: sin ella PowerShell aplana la fila y lee "A" en vez de "App.tsx".
+cambios = "$cambios = @(\n" + ",".join("    ,@(%s, %s, %s, %s)\n" % tuple(psq(x) for x in f) for f in filas[:1]) + (',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas[1:]) + "\n" if len(filas) > 1 else "") + ")\n"
 url = lambda ruta: 'https://raw.githubusercontent.com/bickluciano-boop/Murray/%s/scripts/app/%s' % (COMMIT_ARCHIVOS, ruta)
 descargas = "$descargas = @(\n    @(%s, %s, %s)\n)\n" % (psq(url('src/VerificarIdentidad.tsx')), psq('src\\VerificarIdentidad.tsx'), psq(SHA_VERIFICAR))
 cabeza = '''# aplicar-identidad2-app.ps1 - App (PROXIMA build): la selfie se saca con la camara DENTRO de la app; Configuracion > Verificar mi identidad sin titulo repetido ni botones Guardar.
