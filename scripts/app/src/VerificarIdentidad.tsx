@@ -165,6 +165,8 @@ export function VerificarIdentidad({
   const azulSuave = noche ? "#1A2757" : "#E4EBFC";
   const tarjeta = noche ? "#16203F" : "#FFFFFF";
   const DORADO = "#D4A94D";
+  // En Configuracion la pagina ya trae su propio titulo y su bajada ("Verificar mi identidad"): repetirlos aca se veia redundante.
+  const sinTituloPropio = revisarEstado;
 
   useEffect(() => {
     if (!revisarEstado) return;
@@ -295,11 +297,13 @@ export function VerificarIdentidad({
     ];
     return (
       <View style={{ gap: 6 }}>
-        {titulo("Verificá tu identidad")}
-        {parrafo(
-          "Confirmamos que sos vos con tu DNI y una selfie. Es opcional por ahora, pero hasta que lo hagas no vas a poder pedir foto y audio a otras personas de tu familia.",
-        )}
-        <Text style={{ color: paleta.textoDebil, fontSize: 13, lineHeight: 19, marginTop: 8 }}>
+        {sinTituloPropio ? null : titulo("Verificá tu identidad")}
+        {sinTituloPropio
+          ? null
+          : parrafo(
+              "Confirmamos que sos vos con tu DNI y una selfie. Es opcional por ahora, pero hasta que lo hagas no vas a poder pedir foto y audio a otras personas de tu familia.",
+            )}
+        <Text style={{ color: paleta.textoDebil, fontSize: 13, lineHeight: 19, marginTop: sinTituloPropio ? 0 : 8 }}>
           Ojo Guard no guarda tu selfie ni tu número completo de DNI. Se comparan con el registro oficial (RENAPER) mediante un servicio de verificación (Didit).
         </Text>
         <Text style={{ color: paleta.texto, fontSize: 14, fontWeight: "700", marginTop: 18 }}>Número de DNI</Text>
