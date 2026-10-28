@@ -13,9 +13,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { clearPendingSystemActivity, markPendingSystemActivity } from "./pendingSystemActivity";
 import { Icono } from "./Iconos";
-import { VerificarIdentidad, type EtapaIdentidad, type PaletaIdentidad } from "./VerificarIdentidad";
+import { avisarCamaraAbierta, soltarAvisoCamara, VerificarIdentidad, type EtapaIdentidad, type PaletaIdentidad } from "./VerificarIdentidad";
 
 // Despues de abrir la cuenta: la foto de perfil (obligatoria) y la verificacion de identidad (opcional: DNI + sexo + selfie, ver
 // VerificarIdentidad.tsx). La foto del documento ya no se pide: el numero de DNI se comprueba contra RENAPER y no se guarda ninguna
@@ -110,7 +109,7 @@ export function ArranqueIdentidad({
         }
       }
       // Abrir la camara manda la app a segundo plano: se avisa para que la guardia no lo tome por una salida de la app.
-      markPendingSystemActivity();
+      avisarCamaraAbierta();
       const resultado = galeria
         ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 })
         : await ImagePicker.launchCameraAsync({
@@ -123,7 +122,7 @@ export function ArranqueIdentidad({
     } catch {
       setAviso("No se pudo abrir la cámara. Probá de nuevo.");
     } finally {
-      clearPendingSystemActivity();
+      soltarAvisoCamara();
       setOcupado(false);
     }
   }

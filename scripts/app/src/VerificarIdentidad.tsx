@@ -17,6 +17,25 @@ import { Icono } from "./Iconos";
 
 const URL_API = "https://ojo-guard-ms-api.bickluciano.workers.dev";
 
+/**
+ * Abrir la camara manda la app a segundo plano. Android devuelve la foto (onActivityResult) ANTES de avisar que la app volvio al
+ * frente (onResume): si el aviso de "pantalla del sistema abierta" se baja apenas llega la foto, esa vuelta tardia se toma por una salida
+ * real y la app pide el codigo de nuevo (paso el 28/10/2026 en el Xiaomi al sacar la selfie). Por eso el aviso se mantiene unos segundos
+ * despues de que vuelve la foto. La marca evita que una camara abierta de nuevo enseguida pierda el aviso por un temporizador viejo.
+ */
+const PAUSA_CAMARA_MS = 5000;
+let marcaCamara = 0;
+export function avisarCamaraAbierta() {
+  marcaCamara += 1;
+  markPendingSystemActivity();
+}
+export function soltarAvisoCamara() {
+  const esta = marcaCamara;
+  setTimeout(() => {
+    if (marcaCamara === esta) clearPendingSystemActivity();
+  }, PAUSA_CAMARA_MS);
+}
+
 export type PaletaIdentidad = {
   fondo: string;
   superficie: string;
@@ -180,7 +199,7 @@ export function VerificarIdentidad({
         return;
       }
       // Abrir la cámara manda la app a segundo plano: se avisa para que la guardia no lo tome por una salida de la app.
-      markPendingSystemActivity();
+      avisarCamaraAbierta();
       const foto = await ImagePicker.launchCameraAsync({
         mediaTypes: ["images"],
         quality: 0.5,
@@ -191,7 +210,7 @@ export function VerificarIdentidad({
     } catch {
       setAviso("No se pudo abrir la cámara. Probá de nuevo.");
     } finally {
-      clearPendingSystemActivity();
+      soltarAvisoCamara();
       setOcupado(false);
     }
   }
