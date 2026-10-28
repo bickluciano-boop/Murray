@@ -80,3 +80,28 @@ export async function marcarFotoSubida(uri: string): Promise<void> {
     // Si no se pudo anotar, la tarjeta de Perfil vuelve a ofrecer compartirla: no pasa nada.
   }
 }
+
+/** Borra la foto del servidor: desde ese momento nadie del circulo la ve. La foto sigue guardada en este telefono. */
+export async function dejarDeCompartirFoto(): Promise<boolean> {
+  try {
+    const enrollment = await loadNativeEnrollment();
+    if (!enrollment) return false;
+    const control = new AbortController();
+    const corte = setTimeout(() => control.abort(), 20_000);
+    try {
+      const respuesta = await fetch(`${URL_API}/api/native/profile-photo/delete`, {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/json", authorization: `Bearer ${enrollment.accessToken}` },
+        body: JSON.stringify({ deviceId: enrollment.deviceId }),
+        signal: control.signal,
+      });
+      if (!respuesta.ok) return false;
+    } finally {
+      clearTimeout(corte);
+    }
+    await AsyncStorage.removeItem(CLAVE_SUBIDA).catch(() => undefined);
+    return true;
+  } catch {
+    return false;
+  }
+}

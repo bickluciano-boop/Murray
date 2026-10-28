@@ -3,7 +3,7 @@ import { ActivityIndicator, Image, Linking, Pressable, Text, View } from "react-
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { cargarIdentidad, guardarPerfil } from "./ArranqueIdentidad";
-import { fotoSubida, marcarFotoSubida, subirFotoPerfil } from "./fotoPerfilServidor";
+import { dejarDeCompartirFoto, fotoSubida, marcarFotoSubida, subirFotoPerfil } from "./fotoPerfilServidor";
 import { Icono } from "./Iconos";
 import { avisarCamaraAbierta, soltarAvisoCamara, type PaletaIdentidad } from "./VerificarIdentidad";
 
@@ -140,6 +140,19 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
     }
   }
 
+  async function dejarDeCompartir() {
+    if (ocupado) return;
+    setOcupado(true);
+    setAviso("");
+    try {
+      const listo = await dejarDeCompartirFoto();
+      if (listo) setCompartida(false);
+      setAviso(listo ? "Listo: tu círculo ya no ve tu foto. Sigue guardada en este teléfono y la podés volver a compartir cuando quieras." : "No se pudo dejar de compartir. Revisá la conexión y probá de nuevo.");
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   const boton = (texto: string, onPress: () => void, opciones: { principal?: boolean; deshabilitado?: boolean } = {}) => (
     <Pressable
       accessibilityRole="button"
@@ -208,6 +221,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
             {boton(perfilUri ? "Cambiar con la cámara" : "Sacarme una foto", () => void abrirCamara(), { principal: !(perfilUri && !compartida), deshabilitado: ocupado || cargando })}
             {boton("Elegir de la galería", () => void elegirDeGaleria(), { deshabilitado: ocupado || cargando })}
             {perfilUri && !compartida ? boton("Compartir con mi círculo", () => void compartirAhora(), { principal: true, deshabilitado: ocupado }) : null}
+            {perfilUri && compartida ? boton("Dejar de compartir mi foto", () => void dejarDeCompartir(), { deshabilitado: ocupado }) : null}
             {sinPermiso ? boton("Abrir ajustes del teléfono", () => void Linking.openSettings()) : null}
           </>
         )}
