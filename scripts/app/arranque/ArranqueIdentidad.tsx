@@ -70,6 +70,24 @@ async function guardarFoto(origen: string, nombre: string): Promise<string> {
   return destino;
 }
 
+/** Cambia la foto de perfil guardada en este telefono (la deja como unica y borra la anterior). */
+export async function guardarPerfil(origen: string): Promise<IdentidadGuardada | null> {
+  try {
+    const actual = await cargarIdentidad();
+    const destino = await guardarFoto(origen, "perfil");
+    const nueva: IdentidadGuardada = {
+      perfilUri: destino,
+      estado: actual?.estado ?? "pendiente",
+      creadaEn: actual?.creadaEn ?? new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(CLAVE_IDENTIDAD, JSON.stringify(nueva));
+    if (actual && actual.perfilUri !== destino) await FileSystem.deleteAsync(actual.perfilUri, { idempotent: true }).catch(() => undefined);
+    return nueva;
+  } catch {
+    return null;
+  }
+}
+
 const TOTAL_PASOS = 6;
 const PRIMER_PASO = 3;
 const DORADO = "#D4A94D";
@@ -251,7 +269,7 @@ export function ArranqueIdentidad({
           Tu foto de perfil
         </Text>
         <Text style={{ color: paleta.textoMedio, fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 22 }}>
-          Es la foto que ve tu círculo al lado de tu nombre. Podés usar una de la galería o sacarte una ahora.
+          Es tu foto dentro de Ojo Guard y se guarda en este teléfono. Podés usar una de la galería o sacarte una ahora. Después la podés cambiar desde Perfil.
         </Text>
         <View style={{ alignItems: "center" }}>
           {camaraAbierta ? (
