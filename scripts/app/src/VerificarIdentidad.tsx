@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, Text, TextInput, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImageManipulator from "expo-image-manipulator";
 import { clearPendingSystemActivity, markPendingSystemActivity } from "./pendingSystemActivity";
 import { loadNativeEnrollment } from "./remoteStorage";
 import { Icono } from "./Iconos";
@@ -104,6 +105,41 @@ function textoError(codigo: string): { mensaje: string; volverA: "datos" | "self
       return { mensaje: "Sin conexión. Revisá internet y probá de nuevo.", volverA: "selfie" };
     default:
       return { mensaje: "El servicio de verificación no está disponible ahora. Probá más tarde.", volverA: "selfie" };
+  }
+}
+
+/**
+ * Didit corta la conexion cuando el pedido pasa de unos 100-300 KB (se midio el 28/10/2026: 100 KB pasa, 300 KB se corta) y la camara entrega ~600 KB.
+ * Para comparar una cara alcanza con una foto chica: se achica a 600 px de ancho y se comprime (queda en unas decenas de KB).
+ * Se usa la API vieja (manipulateAsync) o la nueva (manipulate) segun la version de expo-image-manipulator que traiga el proyecto.
+ */
+const ANCHO_SELFIE = 600;
+type ResultadoReduccion = { uri: string; base64?: string | undefined };
+type OpcionesGuardado = { compress: number; format: string; base64: boolean };
+type ManipuladorCompat = {
+  manipulateAsync?: (uri: string, acciones: Array<{ resize: { width: number } }>, opciones: OpcionesGuardado) => Promise<ResultadoReduccion>;
+  manipulate?: (uri: string) => {
+    resize: (tam: { width: number }) => unknown;
+    renderAsync: () => Promise<{ saveAsync: (opciones: OpcionesGuardado) => Promise<ResultadoReduccion> }>;
+  };
+};
+
+async function reducirSelfie(uri: string): Promise<{ uri: string; base64: string } | null> {
+  try {
+    const m = ImageManipulator as unknown as ManipuladorCompat;
+    const opciones: OpcionesGuardado = { compress: 0.6, format: "jpeg", base64: true };
+    let r: ResultadoReduccion | null = null;
+    if (typeof m.manipulateAsync === "function") {
+      r = await m.manipulateAsync(uri, [{ resize: { width: ANCHO_SELFIE } }], opciones);
+    } else if (typeof m.manipulate === "function") {
+      const contexto = m.manipulate(uri);
+      contexto.resize({ width: ANCHO_SELFIE });
+      const imagen = await contexto.renderAsync();
+      r = await imagen.saveAsync(opciones);
+    }
+    return r?.base64 ? { uri: r.uri, base64: r.base64 } : null;
+  } catch {
+    return null;
   }
 }
 
@@ -215,17 +251,24 @@ export function VerificarIdentidad({
     setOcupado(true);
     setAviso("");
     try {
-      const sacar = () => camaraRef.current?.takePictureAsync({ base64: true, quality: 0.6, skipProcessing: false });
+      const sacar = () => camaraRef.current?.takePictureAsync({ base64: false, quality: 0.7, skipProcessing: false });
       // En iPhone la camara avisa "lista" un instante antes de poder sacar y a veces la primera falla: se reintenta una vez.
       let foto = await Promise.resolve(sacar()).catch(() => null);
-      if (!foto?.base64) {
+      if (!foto?.uri) {
         await new Promise<void>((listo) => setTimeout(listo, 700));
         foto = await Promise.resolve(sacar()).catch(() => null);
       }
-      if (foto?.base64 && foto.uri) {
-        setSelfieUri(foto.uri);
-        setSelfieBase64(foto.base64);
-        setCamaraAbierta(false);
+      if (foto?.uri) {
+        const chica = await reducirSelfie(foto.uri);
+        // La foto original (varios cientos de KB) ya no hace falta: se borra apenas se achica.
+        void FileSystem.deleteAsync(foto.uri, { idempotent: true }).catch(() => undefined);
+        if (chica) {
+          setSelfieUri(chica.uri);
+          setSelfieBase64(chica.base64);
+          setCamaraAbierta(false);
+        } else {
+          setAviso("No se pudo preparar la foto. Probá de nuevo.");
+        }
       } else {
         setAviso("No se pudo sacar la foto. Probá de nuevo.");
       }
