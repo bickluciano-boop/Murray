@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, Text, TextInput, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
-import * as ImagePicker from "expo-image-picker";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { clearPendingSystemActivity, markPendingSystemActivity } from "./pendingSystemActivity";
 import { loadNativeEnrollment } from "./remoteStorage";
 import { Icono } from "./Iconos";
@@ -13,6 +13,9 @@ import { Icono } from "./Iconos";
  *
  * Es opcional: se puede omitir y usar la app igual. Mientras no esté verificada, la persona no puede pedir foto y audio a OTRAS personas
  * de la familia (lo controla el servidor, no esta pantalla). Se usa en el arranque (ArranqueIdentidad) y en Configuración.
+ *
+ * La selfie se saca con la camara DENTRO de la app (expo-camera), no con la app de camara del telefono: en el Xiaomi, al abrir la camara del
+ * sistema Android cerraba la app por memoria y al volver pedia el codigo de nuevo (28/10/2026). Asi la app nunca se va al fondo.
  */
 
 const URL_API = "https://ojo-guard-ms-api.bickluciano.workers.dev";
@@ -104,15 +107,9 @@ function textoError(codigo: string): { mensaje: string; volverA: "datos" | "self
   }
 }
 
-async function enviarVerificacion(documento: string, sexo: Sexo, selfieUri: string): Promise<Resultado> {
+async function enviarVerificacion(documento: string, sexo: Sexo, selfieBase64: string): Promise<Resultado> {
   const enrollment = await loadNativeEnrollment();
   if (!enrollment) return { ok: false, ...textoError("unauthorized") };
-  let selfieBase64: string;
-  try {
-    selfieBase64 = await FileSystem.readAsStringAsync(selfieUri, { encoding: FileSystem.EncodingType.Base64 });
-  } catch {
-    return { ok: false, ...textoError("invalid_selfie") };
-  }
   const control = new AbortController();
   const corte = setTimeout(() => control.abort(), 45_000);
   try {
@@ -155,6 +152,11 @@ export function VerificarIdentidad({
   const [documento, setDocumento] = useState("");
   const [sexo, setSexo] = useState<Sexo | null>(null);
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
+  const [selfieBase64, setSelfieBase64] = useState<string | null>(null);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
+  const [camaraLista, setCamaraLista] = useState(false);
+  const [permisoCamara, pedirPermisoCamara] = useCameraPermissions();
+  const camaraRef = useRef<CameraView>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
   const [sinPermiso, setSinPermiso] = useState(false);
@@ -188,46 +190,62 @@ export function VerificarIdentidad({
   const numero = documento.replace(/\D/g, "");
   const datosListos = numero.length >= 7 && numero.length <= 8 && sexo !== null;
 
-  async function sacarSelfie() {
+  async function abrirCamara() {
     if (ocupado) return;
-    setOcupado(true);
     setAviso("");
     setSinPermiso(false);
+    setSelfieUri(null);
+    setSelfieBase64(null);
+    let concedido = permisoCamara?.granted === true;
+    if (!concedido) {
+      const r = await pedirPermisoCamara().catch(() => null);
+      concedido = r?.granted === true;
+    }
+    if (!concedido) {
+      setSinPermiso(true);
+      setAviso("Necesitamos la cámara para la selfie. Activala en los ajustes del teléfono y volvé.");
+      return;
+    }
+    setCamaraLista(false);
+    setCamaraAbierta(true);
+  }
+
+  async function sacarSelfie() {
+    if (ocupado || !camaraLista) return;
+    setOcupado(true);
+    setAviso("");
     try {
-      const permiso = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permiso.granted) {
-        setSinPermiso(true);
-        setAviso("Necesitamos la cámara para la selfie. Activala en los ajustes del teléfono y volvé.");
-        return;
+      const sacar = () => camaraRef.current?.takePictureAsync({ base64: true, quality: 0.6, skipProcessing: false });
+      // En iPhone la camara avisa "lista" un instante antes de poder sacar y a veces la primera falla: se reintenta una vez.
+      let foto = await Promise.resolve(sacar()).catch(() => null);
+      if (!foto?.base64) {
+        await new Promise<void>((listo) => setTimeout(listo, 700));
+        foto = await Promise.resolve(sacar()).catch(() => null);
       }
-      // Abrir la cámara manda la app a segundo plano: se avisa para que la guardia no lo tome por una salida de la app.
-      avisarCamaraAbierta();
-      const foto = await ImagePicker.launchCameraAsync({
-        mediaTypes: ["images"],
-        quality: 0.5,
-        cameraType: ImagePicker.CameraType.front,
-      });
-      const uri = foto.canceled ? null : (foto.assets[0]?.uri ?? null);
-      if (uri) setSelfieUri(uri);
-    } catch {
-      setAviso("No se pudo abrir la cámara. Probá de nuevo.");
+      if (foto?.base64 && foto.uri) {
+        setSelfieUri(foto.uri);
+        setSelfieBase64(foto.base64);
+        setCamaraAbierta(false);
+      } else {
+        setAviso("No se pudo sacar la foto. Probá de nuevo.");
+      }
     } finally {
-      soltarAvisoCamara();
       setOcupado(false);
     }
   }
 
   async function verificar() {
-    if (!selfieUri || !sexo || ocupado) return;
+    if (!selfieBase64 || !sexo || ocupado) return;
     setOcupado(true);
     setAviso("");
     const uri = selfieUri;
     try {
-      const r = await enviarVerificacion(numero, sexo, uri);
+      const r = await enviarVerificacion(numero, sexo, selfieBase64);
       setResultado(r);
-      // La selfie no se conserva: se borra del teléfono ya sea que haya salido bien o no.
+      // La selfie no se conserva: se borra del telefono y de la memoria ya sea que haya salido bien o no.
       setSelfieUri(null);
-      void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+      setSelfieBase64(null);
+      if (uri) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
       irA("resultado");
     } finally {
       setOcupado(false);
@@ -352,7 +370,11 @@ export function VerificarIdentidad({
         {titulo("Ahora, tu selfie")}
         {parrafo("Una foto con buena luz, de frente y sin lentes oscuros. La comparamos con la foto que el registro oficial tiene de tu DNI.")}
         <View style={{ alignItems: "center", marginTop: 20 }}>
-          {selfieUri ? (
+          {camaraAbierta ? (
+            <View style={{ width: 240, height: 290, borderRadius: 120, overflow: "hidden", borderWidth: 4, borderColor: DORADO, backgroundColor: "#000" }}>
+              <CameraView ref={camaraRef} facing="front" animateShutter={false} onCameraReady={() => setCamaraLista(true)} style={{ flex: 1 }} />
+            </View>
+          ) : selfieUri ? (
             <Image source={{ uri: selfieUri }} resizeMode="cover" style={{ width: 240, height: 290, borderRadius: 120, borderWidth: 4, borderColor: DORADO }} />
           ) : (
             <View style={{ width: 230, height: 280, borderRadius: 115, backgroundColor: azulSuave, borderWidth: 2, borderStyle: "dashed", borderColor: DORADO, alignItems: "center", justifyContent: "center" }}>
@@ -365,26 +387,31 @@ export function VerificarIdentidad({
             {aviso}
           </Text>
         ) : null}
-        {ocupado ? (
+        {ocupado && selfieUri ? (
           <View style={{ alignItems: "center", marginTop: 14, gap: 6 }}>
             <ActivityIndicator color={azul} />
-            {selfieUri ? <Text style={{ color: paleta.textoMedio, fontSize: 13.5 }}>Verificando… puede tardar unos segundos.</Text> : null}
+            <Text style={{ color: paleta.textoMedio, fontSize: 13.5 }}>Verificando… puede tardar unos segundos.</Text>
           </View>
         ) : null}
         <View style={{ gap: 10, marginTop: 22 }}>
-          {selfieUri ? (
+          {camaraAbierta ? (
+            <>
+              {boton(camaraLista ? "Sacar la foto" : "Preparando la cámara…", () => void sacarSelfie(), { principal: true, deshabilitado: ocupado || !camaraLista })}
+              {boton("Cancelar", () => setCamaraAbierta(false), { deshabilitado: ocupado })}
+            </>
+          ) : selfieUri ? (
             <>
               {boton("Verificar mi identidad", () => void verificar(), { principal: true, deshabilitado: ocupado })}
-              {boton("Sacar otra", () => void sacarSelfie(), { deshabilitado: ocupado })}
+              {boton("Sacar otra", () => void abrirCamara(), { deshabilitado: ocupado })}
             </>
           ) : (
             <>
-              {boton("Sacarme la selfie", () => void sacarSelfie(), { principal: true, deshabilitado: ocupado })}
+              {boton("Sacarme la selfie", () => void abrirCamara(), { principal: true, deshabilitado: ocupado })}
               {sinPermiso ? boton("Abrir ajustes del teléfono", () => void Linking.openSettings()) : null}
             </>
           )}
-          {enlace("Volver a los datos", () => irA("datos"))}
-          {permitirOmitir ? enlace("Omitir por ahora", () => onListo("omitida")) : null}
+          {camaraAbierta ? null : enlace("Volver a los datos", () => irA("datos"))}
+          {permitirOmitir && !camaraAbierta ? enlace("Omitir por ahora", () => onListo("omitida")) : null}
         </View>
       </View>
     );
