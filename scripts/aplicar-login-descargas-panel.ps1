@@ -1,6 +1,7 @@
-﻿# aplicar-login-descargas-panel.ps1 - Ojo Guard MS: botones "Android" e "iPhone" (Descargar) en la pagina de entrada de https://ojoguard.app, la que pide el codigo.
-# Luciano (27/10/2026): "por que no le ponemos en la pagina de la consola con el icono de Android, icono de Apple y descargar" - "donde se entra con el codigo, porque es la primera que uno ve".
-# Android abre https://ojoguard.app/descargar; iPhone abre el enlace publico de TestFlight. Cambia SOLO src\panel-index.html (respaldo .bak-login-descargas). Va en la carpeta del PANEL (la que tiene wrangler.toml). Al final publica el panel solo.
+﻿# aplicar-login-descargas-panel.ps1 - Ojo Guard MS: botones "Android" e "iPhone" (Descargar) en la pagina de entrada de https://ojoguard.app y guia de 4 pasos para instalar en iPhone.
+# Luciano (27/10/2026): "por que no le ponemos en la pagina de la consola con el icono de Android, icono de Apple y descargar". 28/10/2026: su mama (iPhone) no vio como bajarla y se confundio con TestFlight ("se descarga este TestFlight, no se descarga el Ojo Guard").
+# Android abre https://ojoguard.app/descargar; iPhone abre el enlace publico de TestFlight. La guia (Obtener TestFlight, volver al enlace, aceptar e Instalar, abrir el ojo) aparece en la pagina de entrada, en /descargar y en /unirme.
+# Cambia src\panel-index.html y src\index.ts (respaldo .bak-login-descargas). Va en la carpeta del PANEL (la que tiene wrangler.toml). Requiere aplicar-testflight-panel.ps1. Al final publica el panel solo.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
 function Mal($t) { Write-Host ("MAL   " + $t) -ForegroundColor Red }
@@ -23,8 +24,9 @@ function Sha([string]$ruta) { return (Get-FileHash -Algorithm SHA256 -LiteralPat
 
 if (-not (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta del PANEL (la que tiene wrangler.toml), no la de la app."; return }
 Ok "Carpeta correcta"
-if (-not (Test-Path (Join-Path $raiz "src\panel-index.html"))) { Mal "No encuentro src\panel-index.html en esta carpeta."; return }
+foreach ($f in @("src\panel-index.html", "src\index.ts")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta."); return } }
 if ((Contar (Leer (Join-Path $raiz "src\panel-index.html")).texto 'acceso-apps') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'const URL_TESTFLIGHT') -eq 0) { Mal "Falta aplicar primero aplicar-testflight-panel.ps1. No toco nada."; return }
 $cambios = @(
     @('src\panel-index.html', 'estilo de los botones de descarga', '@media (min-width:1280px) and (max-width:1699px){
   nav.bottom-tabs{left:max(300px, calc(50vw - 300px)) !important;transform:none !important}
@@ -40,16 +42,22 @@ $cambios = @(
 #access a.acceso-app svg{width:26px;height:26px;flex:none;fill:currentColor}
 #access a.acceso-app span{display:block}
 #access a.acceso-app small{display:block;font-weight:600;color:var(--e-azul-link) !important}
+#access .acceso-guia{margin-top:14px}
+#access .acceso-guia ol{margin:0;padding-left:22px;line-height:1.65;color:var(--e-texto2)}
+#access .acceso-guia li{margin-bottom:8px}
 @media (max-width:420px){#access .acceso-apps-fila{grid-template-columns:1fr}}
     </style>'),
-    @('src\panel-index.html', 'botones Android e iPhone en la pagina de entrada', '<section id="passkey-setup" class="hidden">', '<div class="acceso-apps">
+    @('src\panel-index.html', 'botones Android e iPhone y guia de iPhone en la pagina de entrada', '<section id="passkey-setup" class="hidden">', '<div class="acceso-apps">
           <p class="acceso-apps-t">&#191;Todav&#237;a no ten&#233;s la app?</p>
           <div class="acceso-apps-fila">
             <a class="acceso-app" href="/descargar"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/></svg><span>Android<small>Descargar</small></span></a>
             <a class="acceso-app" href="https://testflight.apple.com/join/QcWAsHkG"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg><span>iPhone<small>Descargar</small></span></a>
           </div>
+          <details class="acceso-guia"><summary>&#191;C&#243;mo se instala en iPhone?</summary><ol><li>Toc&#225; <strong>Instalar en iPhone</strong>. Se abre la App Store con <strong>TestFlight</strong>, la app de Apple para probar versiones nuevas. Es normal: primero se instala esa.</li><li>Toc&#225; <strong>Obtener</strong> para instalar TestFlight y despu&#233;s volv&#233; a tocar <strong>Instalar en iPhone</strong>.</li><li>Acept&#225; los t&#233;rminos de TestFlight y toc&#225; <strong>Instalar</strong> en la pantalla de Ojo Guard. Si el bot&#243;n est&#225; gris, esper&#225; unos segundos.</li><li>Abr&#237; <strong>Ojo Guard</strong>: es el &#237;cono con un ojo dorado sobre fondo azul. Dej&#225; TestFlight instalada: es la que te avisa cuando hay versiones nuevas.</li></ol></details>
         </div>
-        <section id="passkey-setup" class="hidden">')
+        <section id="passkey-setup" class="hidden">'),
+    @('src\index.ts', 'pagina de descarga: guia de 4 pasos para iPhone', '<div class="tarjeta"><h2>En iPhone</h2><p>Se instala con TestFlight, la app de Apple para probar versiones nuevas. Si no la ten&eacute;s, el enlace te lleva a bajarla.</p><p><a class="boton" href="${URL_TESTFLIGHT}">Instalar en iPhone</a></p></div>', '<div class="tarjeta"><h2>En iPhone</h2><p>Se instala en 4 pasos con TestFlight, la app de Apple para probar versiones nuevas.</p><ol style="margin:8px 0 14px;padding-left:22px;line-height:1.65"><li>Toc&#225; <strong>Instalar en iPhone</strong>. Se abre la App Store con <strong>TestFlight</strong>, la app de Apple para probar versiones nuevas. Es normal: primero se instala esa.</li><li>Toc&#225; <strong>Obtener</strong> para instalar TestFlight y despu&#233;s volv&#233; a tocar <strong>Instalar en iPhone</strong>.</li><li>Acept&#225; los t&#233;rminos de TestFlight y toc&#225; <strong>Instalar</strong> en la pantalla de Ojo Guard. Si el bot&#243;n est&#225; gris, esper&#225; unos segundos.</li><li>Abr&#237; <strong>Ojo Guard</strong>: es el &#237;cono con un ojo dorado sobre fondo azul. Dej&#225; TestFlight instalada: es la que te avisa cuando hay versiones nuevas.</li></ol><p><a class="boton" href="${URL_TESTFLIGHT}">Instalar en iPhone</a></p></div>'),
+    @('src\index.ts', 'pagina de invitacion: guia de 4 pasos para iPhone', '<div class="tarjeta"><h2>&iquest;Ten&eacute;s iPhone?</h2><p>Se instala con TestFlight, la app de Apple para probar versiones nuevas.</p><p><a class="boton" href="${URL_TESTFLIGHT}">Instalar en iPhone</a></p></div>', '<div class="tarjeta"><h2>&iquest;Ten&eacute;s iPhone?</h2><p>Se instala en 4 pasos con TestFlight, la app de Apple para probar versiones nuevas.</p><ol style="margin:8px 0 14px;padding-left:22px;line-height:1.65"><li>Toc&#225; <strong>Instalar en iPhone</strong>. Se abre la App Store con <strong>TestFlight</strong>, la app de Apple para probar versiones nuevas. Es normal: primero se instala esa.</li><li>Toc&#225; <strong>Obtener</strong> para instalar TestFlight y despu&#233;s volv&#233; a tocar <strong>Instalar en iPhone</strong>.</li><li>Acept&#225; los t&#233;rminos de TestFlight y toc&#225; <strong>Instalar</strong> en la pantalla de Ojo Guard. Si el bot&#243;n est&#225; gris, esper&#225; unos segundos.</li><li>Abr&#237; <strong>Ojo Guard</strong>: es el &#237;cono con un ojo dorado sobre fondo azul. Dej&#225; TestFlight instalada: es la que te avisa cuando hay versiones nuevas.</li></ol><p><a class="boton" href="${URL_TESTFLIGHT}">Instalar en iPhone</a></p></div>')
 )
 $descargas = @()
 
@@ -135,5 +143,5 @@ Ok "Archivos listos. Ahora publico el panel..."
 & npx.cmd wrangler deploy
 if ($LASTEXITCODE -ne 0) { Mal "No se pudo publicar el panel. Mandame esta pantalla."; return }
 Write-Host ""
-Ok "LISTO: la pagina de entrada de ojoguard.app ya tiene los botones de Android e iPhone."
+Ok "LISTO: la pagina de entrada, la descarga y la invitacion ya tienen los botones y la guia para iPhone."
 Write-Host ""
