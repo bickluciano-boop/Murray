@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,11 +12,12 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { Icono } from "./Iconos";
 import { avisarCamaraAbierta, soltarAvisoCamara, VerificarIdentidad, type EtapaIdentidad, type PaletaIdentidad } from "./VerificarIdentidad";
 
-// Despues de abrir la cuenta: la foto de perfil (obligatoria) y la verificacion de identidad (opcional: DNI + sexo + selfie, ver
+// Despues de abrir la cuenta: la foto de perfil (obligatoria; se saca con la camara propia de la app porque en algunos Android, como Xiaomi, abrir la camara del sistema mata la app) y la verificacion de identidad (opcional: DNI + sexo + selfie, ver
 // VerificarIdentidad.tsx). La foto del documento ya no se pide: el numero de DNI se comprueba contra RENAPER y no se guarda ninguna
 // foto del documento. Sin verificar se puede usar la app, pero no se puede pedir foto y audio a otras personas (lo controla el servidor).
 
@@ -88,39 +89,70 @@ export function ArranqueIdentidad({
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
   const [sinPermiso, setSinPermiso] = useState(false);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
+  const [camaraLista, setCamaraLista] = useState(false);
+  const [permisoCamara, pedirPermisoCamara] = useCameraPermissions();
+  const camaraRef = useRef<CameraView>(null);
 
   const azul = noche ? "#7C9CFF" : paleta.doradoRelleno;
   const azulSuave = noche ? "#1A2757" : "#E4EBFC";
   // Perfil = paso 3; datos del DNI = paso 4; selfie y resultado = paso 5 (el paso 6 es la pantalla siguiente).
   const pasoActual = etapa === "perfil" ? PRIMER_PASO : etapa === "datos" ? PRIMER_PASO + 1 : PRIMER_PASO + 2;
 
-  async function sacarFoto(galeria: boolean) {
+  async function abrirCamara() {
+    if (ocupado) return;
+    setAviso("");
+    setSinPermiso(false);
+    let concedido = permisoCamara?.granted === true;
+    if (!concedido) {
+      const respuesta = await pedirPermisoCamara().catch(() => null);
+      concedido = respuesta?.granted === true;
+    }
+    if (!concedido) {
+      setSinPermiso(true);
+      setAviso("Necesitamos la cámara para este paso. Activala en los ajustes del teléfono y volvé.");
+      return;
+    }
+    setCamaraLista(false);
+    setCamaraAbierta(true);
+  }
+
+  async function sacarConCamara() {
+    if (ocupado || !camaraLista) return;
+    setOcupado(true);
+    setAviso("");
+    try {
+      const sacar = () => camaraRef.current?.takePictureAsync({ base64: false, quality: 0.7, skipProcessing: false });
+      // En iPhone la camara avisa "lista" un instante antes de poder sacar y a veces la primera falla: se reintenta una vez.
+      let foto = await Promise.resolve(sacar()).catch(() => null);
+      if (!foto?.uri) {
+        await new Promise<void>((listo) => setTimeout(listo, 700));
+        foto = await Promise.resolve(sacar()).catch(() => null);
+      }
+      if (foto?.uri) {
+        setPerfilUri(foto.uri);
+        setCamaraAbierta(false);
+      } else {
+        setAviso("No se pudo sacar la foto. Probá de nuevo.");
+      }
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function elegirDeGaleria() {
     if (ocupado) return;
     setOcupado(true);
     setAviso("");
     setSinPermiso(false);
     try {
-      if (!galeria) {
-        const permiso = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permiso.granted) {
-          setSinPermiso(true);
-          setAviso("Necesitamos la cámara para este paso. Activala en los ajustes del teléfono y volvé.");
-          return;
-        }
-      }
-      // Abrir la camara manda la app a segundo plano: se avisa para que la guardia no lo tome por una salida de la app.
+      // La galeria del sistema tambien manda la app a segundo plano: se avisa para que la guardia no lo tome por una salida de la app.
       avisarCamaraAbierta();
-      const resultado = galeria
-        ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 })
-        : await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            quality: 0.85,
-            cameraType: ImagePicker.CameraType.front,
-          });
+      const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
       const uri = resultado.canceled ? null : (resultado.assets[0]?.uri ?? null);
       if (uri) setPerfilUri(uri);
     } catch {
-      setAviso("No se pudo abrir la cámara. Probá de nuevo.");
+      setAviso("No se pudo abrir la galería. Probá de nuevo.");
     } finally {
       soltarAvisoCamara();
       setOcupado(false);
@@ -222,7 +254,11 @@ export function ArranqueIdentidad({
           Es la foto que ve tu círculo al lado de tu nombre. Podés usar una de la galería o sacarte una ahora.
         </Text>
         <View style={{ alignItems: "center" }}>
-          {perfilUri ? (
+          {camaraAbierta ? (
+            <View style={{ width: 220, height: 220, borderRadius: 110, overflow: "hidden", borderWidth: 4, borderColor: DORADO, backgroundColor: "#000" }}>
+              <CameraView ref={camaraRef} facing="front" animateShutter={false} onCameraReady={() => setCamaraLista(true)} style={{ flex: 1 }} />
+            </View>
+          ) : perfilUri ? (
             <Image source={{ uri: perfilUri }} resizeMode="cover" style={{ width: 220, height: 220, borderRadius: 110, borderWidth: 4, borderColor: DORADO }} />
           ) : (
             <View style={{ width: 200, height: 200, borderRadius: 100, backgroundColor: azulSuave, borderWidth: 2, borderStyle: "dashed", borderColor: DORADO, alignItems: "center", justifyContent: "center" }}>
@@ -238,15 +274,20 @@ export function ArranqueIdentidad({
         {ocupado ? <ActivityIndicator color={azul} style={{ marginTop: 16 }} /> : null}
       </ScrollView>
       <View style={{ paddingHorizontal: 24, paddingBottom: 22, gap: 10 }}>
-        {perfilUri ? (
+        {camaraAbierta ? (
+          <>
+            {boton(camaraLista ? "Sacar la foto" : "Preparando la cámara…", () => void sacarConCamara(), { principal: true, deshabilitado: ocupado || !camaraLista })}
+            {boton("Cancelar", () => setCamaraAbierta(false), { deshabilitado: ocupado })}
+          </>
+        ) : perfilUri ? (
           <>
             {boton("Usar esta foto", () => void usarPerfil(), { principal: true, deshabilitado: ocupado })}
-            {boton("Sacar otra", () => setPerfilUri(null), { deshabilitado: ocupado })}
+            {boton("Sacar otra", () => { setPerfilUri(null); void abrirCamara(); }, { deshabilitado: ocupado })}
           </>
         ) : (
           <>
-            {boton("Sacarme una foto", () => void sacarFoto(false), { principal: true, deshabilitado: ocupado })}
-            {boton("Elegir de la galería", () => void sacarFoto(true), { deshabilitado: ocupado })}
+            {boton("Sacarme una foto", () => void abrirCamara(), { principal: true, deshabilitado: ocupado })}
+            {boton("Elegir de la galería", () => void elegirDeGaleria(), { deshabilitado: ocupado })}
             {sinPermiso ? boton("Abrir ajustes del teléfono", () => void Linking.openSettings()) : null}
           </>
         )}
