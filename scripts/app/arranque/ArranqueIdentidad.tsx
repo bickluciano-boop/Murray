@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import { marcarFotoSubida, subirFotoPerfil } from "./fotoPerfilServidor";
 import { Icono } from "./Iconos";
 import { avisarCamaraAbierta, soltarAvisoCamara, VerificarIdentidad, type EtapaIdentidad, type PaletaIdentidad } from "./VerificarIdentidad";
 
@@ -187,6 +188,8 @@ export function ArranqueIdentidad({
         creadaEn: new Date().toISOString(),
       };
       await AsyncStorage.setItem(CLAVE_IDENTIDAD, JSON.stringify(identidad));
+      // Se comparte con el circulo en segundo plano: si no hay conexion, Perfil ofrece compartirla despues.
+      void subirFotoPerfil(identidad.perfilUri).then((subida) => (subida ? marcarFotoSubida(identidad.perfilUri) : undefined));
       setGuardada(identidad);
       setAviso("");
       setEtapa("datos");
@@ -269,7 +272,7 @@ export function ArranqueIdentidad({
           Tu foto de perfil
         </Text>
         <Text style={{ color: paleta.textoMedio, fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 22 }}>
-          Es tu foto dentro de Ojo Guard y se guarda en este teléfono. Podés usar una de la galería o sacarte una ahora. Después la podés cambiar desde Perfil.
+          Es tu foto dentro de Ojo Guard: la ven las personas con las que compartís (tu círculo), en el mapa y en la lista. Podés usar una de la galería o sacarte una ahora, y cambiarla después desde Perfil.
         </Text>
         <View style={{ alignItems: "center" }}>
           {camaraAbierta ? (

@@ -3,16 +3,19 @@ import { ActivityIndicator, Image, Linking, Pressable, Text, View } from "react-
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { cargarIdentidad, guardarPerfil } from "./ArranqueIdentidad";
+import { fotoSubida, marcarFotoSubida, subirFotoPerfil } from "./fotoPerfilServidor";
 import { Icono } from "./Iconos";
 import { avisarCamaraAbierta, soltarAvisoCamara, type PaletaIdentidad } from "./VerificarIdentidad";
 
 // Tarjeta "Mi foto de perfil" dentro de Perfil: ver la foto, cambiarla con la camara de la app (en algunos Android, como Xiaomi, la camara del
-// sistema saca a la app) o elegir otra de la galeria. La foto se guarda solo en este telefono.
+// sistema saca a la app) o elegir otra de la galeria. La foto se guarda en el telefono y se comparte con el circulo (el servidor se la muestra
+// solo a quienes ya ven a esta persona en la lista de familia).
 
 const DORADO = "#D4A94D";
 
 export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: boolean }) {
   const [perfilUri, setPerfilUri] = useState<string | null>(null);
+  const [compartida, setCompartida] = useState(true);
   const [nuevaUri, setNuevaUri] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [camaraAbierta, setCamaraAbierta] = useState(false);
@@ -31,6 +34,9 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
     void cargarIdentidad().then((identidad) => {
       if (!vivo) return;
       setPerfilUri(identidad?.perfilUri ?? null);
+      void fotoSubida().then((subida) => {
+        if (vivo) setCompartida(!identidad?.perfilUri || subida === identidad.perfilUri);
+      });
       setCargando(false);
     });
     return () => {
@@ -107,11 +113,28 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
       const guardada = await guardarPerfil(nuevaUri);
       if (guardada) {
         setPerfilUri(guardada.perfilUri);
+        const subida = await subirFotoPerfil(guardada.perfilUri);
+        if (subida) await marcarFotoSubida(guardada.perfilUri);
+        setCompartida(subida);
         setNuevaUri(null);
-        setAviso("Listo, tu foto de perfil quedó guardada.");
+        setAviso(subida ? "Listo, tu foto de perfil quedó guardada y tu círculo ya la ve." : "Tu foto quedó guardada en este teléfono, pero no se pudo compartir con tu círculo. Revisá la conexión y tocá Compartir con mi círculo.");
       } else {
         setAviso("No se pudo guardar la foto. Revisá que el teléfono tenga espacio y probá de nuevo.");
       }
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function compartirAhora() {
+    if (!perfilUri || ocupado) return;
+    setOcupado(true);
+    setAviso("");
+    try {
+      const subida = await subirFotoPerfil(perfilUri);
+      if (subida) await marcarFotoSubida(perfilUri);
+      setCompartida(subida);
+      setAviso(subida ? "Listo, tu círculo ya ve tu foto." : "No se pudo compartir. Revisá la conexión y probá de nuevo.");
     } finally {
       setOcupado(false);
     }
@@ -145,7 +168,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
         Mi foto de perfil
       </Text>
       <Text style={{ color: paleta.textoMedio, fontSize: 14, lineHeight: 21, marginTop: 6 }}>
-        Es tu foto dentro de Ojo Guard. Se guarda solo en este teléfono y la podés cambiar cuando quieras.
+        Es tu foto dentro de Ojo Guard. La ven las personas con las que compartís (tu círculo), en el mapa y en la lista, y la podés cambiar cuando quieras.
       </Text>
       <View style={{ alignItems: "center", marginTop: 16 }}>
         {cargando ? (
@@ -182,8 +205,9 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
           </>
         ) : (
           <>
-            {boton(perfilUri ? "Cambiar con la cámara" : "Sacarme una foto", () => void abrirCamara(), { principal: true, deshabilitado: ocupado || cargando })}
+            {boton(perfilUri ? "Cambiar con la cámara" : "Sacarme una foto", () => void abrirCamara(), { principal: !(perfilUri && !compartida), deshabilitado: ocupado || cargando })}
             {boton("Elegir de la galería", () => void elegirDeGaleria(), { deshabilitado: ocupado || cargando })}
+            {perfilUri && !compartida ? boton("Compartir con mi círculo", () => void compartirAhora(), { principal: true, deshabilitado: ocupado }) : null}
             {sinPermiso ? boton("Abrir ajustes del teléfono", () => void Linking.openSettings()) : null}
           </>
         )}
