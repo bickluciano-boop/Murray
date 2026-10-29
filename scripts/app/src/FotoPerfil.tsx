@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { cargarIdentidad, guardarPerfil } from "./ArranqueIdentidad";
+import { cargarIdentidad, guardarPerfil, mismoArchivo } from "./ArranqueIdentidad";
 import { dejarDeCompartirFoto, fotoSubida, marcarFotoSubida, subirFotoPerfil } from "./fotoPerfilServidor";
 import { Icono } from "./Iconos";
 import { avisarCamaraAbierta, soltarAvisoCamara, type PaletaIdentidad } from "./VerificarIdentidad";
@@ -16,6 +16,7 @@ const DORADO = "#D4A94D";
 export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: boolean }) {
   const [perfilUri, setPerfilUri] = useState<string | null>(null);
   const [compartida, setCompartida] = useState(true);
+  const [fotoRota, setFotoRota] = useState(false);
   const [nuevaUri, setNuevaUri] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [camaraAbierta, setCamaraAbierta] = useState(false);
@@ -35,7 +36,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
       if (!vivo) return;
       setPerfilUri(identidad?.perfilUri ?? null);
       void fotoSubida().then((subida) => {
-        if (vivo) setCompartida(!identidad?.perfilUri || subida === identidad.perfilUri);
+        if (vivo) setCompartida(!identidad?.perfilUri || (subida !== null && mismoArchivo(subida, identidad.perfilUri)));
       });
       setCargando(false);
     });
@@ -77,6 +78,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
       }
       if (foto?.uri) {
         setNuevaUri(foto.uri);
+        setFotoRota(false);
         setCamaraAbierta(false);
       } else {
         setAviso("No se pudo sacar la foto. Probá de nuevo.");
@@ -96,7 +98,10 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
       avisarCamaraAbierta();
       const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
       const uri = resultado.canceled ? null : (resultado.assets[0]?.uri ?? null);
-      if (uri) setNuevaUri(uri);
+      if (uri) {
+        setNuevaUri(uri);
+        setFotoRota(false);
+      }
     } catch {
       setAviso("No se pudo abrir la galería. Probá de nuevo.");
     } finally {
@@ -113,6 +118,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
       const guardada = await guardarPerfil(nuevaUri);
       if (guardada) {
         setPerfilUri(guardada.perfilUri);
+        setFotoRota(false);
         const subida = await subirFotoPerfil(guardada.perfilUri);
         if (subida) await marcarFotoSubida(guardada.perfilUri);
         setCompartida(subida);
@@ -174,6 +180,7 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
   );
 
   const mostrada = nuevaUri ?? perfilUri;
+  const sinFoto = !mostrada || (fotoRota && !nuevaUri);
 
   return (
     <View style={{ backgroundColor: paleta.superficie, borderRadius: 18, borderWidth: 1, borderColor: paleta.borde, padding: 18, marginBottom: 14 }}>
@@ -190,14 +197,19 @@ export function FotoPerfil({ paleta, noche }: { paleta: PaletaIdentidad; noche: 
           <View style={{ width: 200, height: 200, borderRadius: 100, overflow: "hidden", borderWidth: 4, borderColor: DORADO, backgroundColor: "#000" }}>
             <CameraView ref={camaraRef} facing="front" animateShutter={false} onCameraReady={() => setCamaraLista(true)} style={{ flex: 1 }} />
           </View>
-        ) : mostrada ? (
-          <Image source={{ uri: mostrada }} resizeMode="cover" style={{ width: 160, height: 160, borderRadius: 80, borderWidth: 4, borderColor: DORADO }} />
+        ) : !sinFoto ? (
+          <Image onError={() => setFotoRota(true)} source={{ uri: mostrada ?? "" }} resizeMode="cover" style={{ width: 160, height: 160, borderRadius: 80, borderWidth: 4, borderColor: DORADO }} />
         ) : (
           <View style={{ width: 150, height: 150, borderRadius: 75, backgroundColor: azulSuave, borderWidth: 2, borderStyle: "dashed", borderColor: DORADO, alignItems: "center", justifyContent: "center" }}>
             <Icono nombre="persona" color={azul} tam={64} />
           </View>
         )}
       </View>
+      {fotoRota && !nuevaUri && perfilUri ? (
+        <Text style={{ color: paleta.textoMedio, fontSize: 13.5, lineHeight: 19, marginTop: 12, textAlign: "center" }}>
+          No encontramos tu foto en este teléfono. Sacá o elegí una nueva para que vuelva a verse.
+        </Text>
+      ) : null}
       {aviso ? (
         <Text accessibilityLiveRegion="polite" style={{ color: sinPermiso ? paleta.peligro : paleta.textoMedio, fontSize: 13.5, lineHeight: 19, marginTop: 12, textAlign: "center" }}>
           {aviso}

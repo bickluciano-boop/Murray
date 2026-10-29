@@ -34,6 +34,22 @@ const CLAVE_IDENTIDAD = "ojo_identidad_v1";
 const CARPETA = "ojo-identidad";
 
 /**
+ * En iPhone el identificador de la carpeta de datos de la app puede cambiar al actualizar (TestFlight) y una ruta guardada con el identificador
+ * viejo deja de existir: la foto "desaparece". Se rearma la ruta con la carpeta actual usando solo el nombre del archivo.
+ */
+export function rutaActual(uri: string): string {
+  const base = FileSystem.documentDirectory;
+  const marca = `/${CARPETA}/`;
+  const posicion = uri.lastIndexOf(marca);
+  return base && posicion >= 0 ? `${base}${CARPETA}/${uri.slice(posicion + marca.length)}` : uri;
+}
+
+/** Dos rutas son la misma foto aunque difieran en la carpeta de datos (se compara por el nombre del archivo). */
+export function mismoArchivo(a: string, b: string): boolean {
+  return a.slice(a.lastIndexOf("/") + 1) === b.slice(b.lastIndexOf("/") + 1);
+}
+
+/**
  * La identidad guardada en este telefono, o null si todavia no se hizo el arranque. Las versiones anteriores guardaban ademas una foto
  * del documento y una de la cara: ya no se usan y son datos sensibles, asi que se borran del telefono apenas se las encuentra.
  */
@@ -46,7 +62,7 @@ export async function cargarIdentidad(): Promise<IdentidadGuardada | null> {
     const viejas = [dato.documentoUri, dato.caraUri].filter((u): u is string => typeof u === "string" && u.length > 0);
     const estadoViejo = String(dato.estado ?? "");
     const estado: IdentidadGuardada["estado"] = estadoViejo === "verificada" || estadoViejo === "omitida" ? estadoViejo : "pendiente";
-    const limpia: IdentidadGuardada = { perfilUri: dato.perfilUri, estado, creadaEn: String(dato.creadaEn ?? new Date().toISOString()) };
+    const limpia: IdentidadGuardada = { perfilUri: rutaActual(dato.perfilUri), estado, creadaEn: String(dato.creadaEn ?? new Date().toISOString()) };
     if (viejas.length > 0 || dato.documentoUri !== undefined || dato.caraUri !== undefined) {
       for (const uri of viejas) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
       await AsyncStorage.setItem(CLAVE_IDENTIDAD, JSON.stringify(limpia));
