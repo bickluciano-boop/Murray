@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, BackHandler, Modal, Platform, Pressable, SafeAreaView, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import { clearEvidenceHistory } from "./evidenceHistory";
@@ -75,18 +75,32 @@ export function BorrarCuenta({ paleta, noche }: { paleta: PaletaIdentidad; noche
   const tarjeta = { backgroundColor: paleta.superficie, borderRadius: 18, borderWidth: 1, borderColor: paleta.borde, padding: 18, marginBottom: 14 } as const;
 
   if (terminado) {
+    const mensaje =
+      (terminado === "parcial"
+        ? "Se borró casi todo. Si querés que revisemos que no quede nada, escribinos a soporte@ojoguard.app. "
+        : "Borramos tus equipos, ubicaciones, evidencias, familia, avisos y foto de perfil. ") +
+      (Platform.OS === "android" ? "Cerrá Ojo Guard para terminar." : "Deslizá hacia arriba para cerrar Ojo Guard.");
     return (
-      <View style={tarjeta}>
-        <Text accessibilityRole="header" style={{ color: paleta.texto, fontSize: 19, fontWeight: "800" }}>
-          Tu cuenta se borró
-        </Text>
-        <Text style={{ color: paleta.textoMedio, fontSize: 14, lineHeight: 21, marginTop: 8 }}>
-          {terminado === "parcial"
-            ? "Se borró casi todo. Si querés que revisemos que no quede nada, escribinos a soporte@ojoguard.app. "
-            : "Borramos tus equipos, ubicaciones, evidencias, familia, avisos y foto de perfil. "}
-          Cerrá Ojo Guard y volvé a abrirla para empezar de nuevo.
-        </Text>
-      </View>
+      <Modal animationType="fade" onRequestClose={() => undefined} presentationStyle="fullScreen" visible>
+        <SafeAreaView style={{ flex: 1, backgroundColor: paleta.fondo, justifyContent: "center", paddingHorizontal: 28 }}>
+          <Text accessibilityRole="header" style={{ color: paleta.texto, fontSize: 28, fontWeight: "700", letterSpacing: -0.5 }}>
+            Tu cuenta se borró
+          </Text>
+          <Text style={{ color: paleta.textoMedio, fontSize: 16, lineHeight: 24, marginTop: 14 }}>{mensaje}</Text>
+          <Text style={{ color: paleta.textoDebil, fontSize: 13.5, lineHeight: 20, marginTop: 12 }}>
+            Para volver a usar Ojo Guard, abrila de nuevo y creá una cuenta nueva.
+          </Text>
+          {Platform.OS === "android" ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => BackHandler.exitApp()}
+              style={{ height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", backgroundColor: paleta.doradoRelleno, marginTop: 28 }}
+            >
+              <Text style={{ color: paleta.sobreDorado, fontSize: 16, fontWeight: "800" }}>Cerrar Ojo Guard</Text>
+            </Pressable>
+          ) : null}
+        </SafeAreaView>
+      </Modal>
     );
   }
 
