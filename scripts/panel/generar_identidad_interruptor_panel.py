@@ -15,7 +15,9 @@ async function identidadVerificada(env: Env, email: string) {
   await idTabla(env);
 '''
 filas = [('src\\index.ts', 'interruptor de identidad obligatoria', a1, b1)]
-cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
+# Con UNA sola fila PowerShell aplana @(@(...)): hace falta la coma delante (,@(...)) para que siga siendo una lista de filas.
+assert len(filas) == 1
+cambios = "$cambios = @(\n" + "    ,@(%s, %s, %s, %s)" % tuple(psq(x) for x in filas[0]) + "\n)\n"
 cabeza = '''# aplicar-identidad-interruptor-panel.ps1 - Ojo Guard MS: interruptor IDENTIDAD_OBLIGATORIA (queda en false). Mientras Didit no ande y se prueba entre amigos y conocidos, pedir foto y audio a otra persona no exige verificar la identidad.
 # Idea de Luciano (30/10/2026). Cambia SOLO src\\index.ts (respaldo .bak-identidad-interruptor). IMPORTANTE: volver a true antes de abrirlo al publico. Va en la carpeta del PANEL (la que tiene wrangler.toml). Al final publica el panel solo.
 '''

@@ -25,7 +25,7 @@ Ok "Carpeta correcta"
 if (-not (Test-Path (Join-Path $raiz "src\index.ts"))) { Mal "No encuentro src\index.ts en esta carpeta."; return }
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'IDENTIDAD_OBLIGATORIA') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 $cambios = @(
-    @('src\index.ts', 'interruptor de identidad obligatoria', 'async function identidadVerificada(env: Env, email: string) {
+    ,@('src\index.ts', 'interruptor de identidad obligatoria', 'async function identidadVerificada(env: Env, email: string) {
   await idTabla(env);
 ', '// INTERRUPTOR (30/10/2026): mientras la verificacion de identidad (Didit) no funcione y se prueba entre amigos y conocidos, en false se deja pedir foto y audio a otra persona
 // sin verificar. Es una regla de privacidad: VOLVER A true antes de abrir Ojo Guard al publico o de mandarlo a revision de Apple.
