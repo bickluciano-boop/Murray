@@ -15,7 +15,7 @@ CSS_NUEVO = ('#og-mapa .ogm-dia{position:absolute;z-index:3;top:72px;left:18px;d
              '#og-mapa .ogm-dia input{flex:none;width:132px;min-width:0;height:34px;padding:0 6px;border-radius:10px;border:1px solid var(--ogm-linea);background:transparent;color:var(--ogm-texto);font:inherit;font-size:.82rem;color-scheme:dark light}'
              '#og-mapa .ogm-dia-txt{flex-basis:100%;font-size:.76rem;color:var(--ogm-suave);padding:0 6px 3px}'
              '#og-mapa .ogm-dia-txt:empty{display:none}'
-             '@media (max-width:899px){#og-mapa .ogm-dia{top:calc(max(12px, env(safe-area-inset-top)) + 56px);left:12px;max-width:calc(100% - 82px)}#og-mapa .ogm-seg{max-width:calc(100% - 80px)}#og-mapa .ogm-seg button{padding:8px 7px;font-size:.78rem;gap:5px}}')
+             '@media (max-width:899px){#og-mapa .ogm-dia{top:calc(max(12px, env(safe-area-inset-top)) + 56px);left:12px;max-width:calc(100% - 112px)}#og-mapa .ogm-seg{max-width:calc(100% - 80px)}#og-mapa .ogm-seg button{padding:8px 7px;font-size:.78rem;gap:5px}}')
 a1 = '<style id="ogm-dia-css">' + CSS_VIEJO + '</style>'
 b1 = '<style id="ogm-dia-css">' + CSS_NUEVO + '</style>'
 a2 = '<button type="button" data-rango="dia">Otro día</button>'
@@ -34,7 +34,7 @@ motor_ini = tpl[i:j]
 guardas = '''if (-not (Test-Path (Join-Path $raiz "wrangler.toml"))) { Mal "Abri PowerShell en la carpeta del PANEL (la que tiene wrangler.toml), no la de la app."; return }
 Ok "Carpeta correcta"
 foreach ($f in @("src\\panel-mapa.txt", "src\\panel-index.html")) { if (-not (Test-Path (Join-Path $raiz $f))) { Mal ("No encuentro " + $f + " en esta carpeta."); return } }
-if ((Contar (Leer (Join-Path $raiz "src\\panel-mapa.txt")).texto 'max-width:calc(100% - 96px)') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
+if ((Contar (Leer (Join-Path $raiz "src\\panel-mapa.txt")).texto 'max-width:calc(100% - 96px)') -ne 0) { Avi "Esto ya estaba aplicado (o ya aplicaste la version anterior del selector chico: avisame y lo ajusto). No toco nada."; return }
 if ((Contar (Leer (Join-Path $raiz "src\\panel-index.html")).texto '/mapa-v1.js?v=5') -ne 1) { Mal "El mapa no esta en v=5 (falta aplicar primero aplicar-mapa-otro-dia-panel.ps1). No toco nada."; return }
 '''
 cola = tpl[tpl.index('$descargas = @()'):].replace('.bak-audioandroid', '.bak-otrodia2')
