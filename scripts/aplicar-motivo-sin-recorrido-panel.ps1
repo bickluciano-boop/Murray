@@ -1,5 +1,5 @@
 ﻿# aplicar-motivo-sin-recorrido-panel.ps1 - Ojo Guard MS: cuando una persona no muestra recorrido, el mapa dice por que.
-# Motivo (01/11/2026, Luciano: "toque a Luli y no hay datos"; su tarjeta decia "Sin conexion, hace 8 h"): el mapa no dibujaba nada y no explicaba nada. Ahora un cartel de 7 segundos dice: ubicacion pausada, sin permiso para ver ese recorrido, o sin recorrido guardado en ese periodo (y si el telefono figura sin conexion).
+# Motivo (01/11/2026, Luciano: "toque a Luli y no hay datos"; su tarjeta decia "Sin conexion, hace 8 h"): el mapa no dibujaba nada y no explicaba nada. Ahora un cartel de 7 segundos dice: ubicacion pausada, sin permiso para ver ese recorrido, o sin recorrido guardado en ese periodo (y si el telefono figura sin conexion), con la ultima ubicacion conocida y hace cuanto.
 # Cambia SOLO src\panel-mapa.txt y src\panel-index.html (v=13). Respaldo .bak-motivo. Va en la carpeta del PANEL. Sin build.
 $ErrorActionPreference = "Continue"
 function Ok($t)  { Write-Host ("OK    " + $t) -ForegroundColor Green }
@@ -49,10 +49,11 @@ $cambios = @(
 function avisarSinRecorrido() {
   const e = equipoElegido();
   if (!e || e.tipo !== "persona" || estado.rango === "vivo") return;
+  const ultima = e.lat !== null ? ` Última ubicación: ${e.direccion || `${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}`} (${textoHace(e)}).` : "";
   let texto = "";
   if (e.pausado) texto = `${e.nombre} tiene la ubicación pausada: no se ve su recorrido.`;
-  else if (!e.conRecorrido) texto = `No podés ver el recorrido de ${e.nombre}. Lo ven el titular y los adultos de la familia, y solo el de los menores (el titular también ve el de los adultos).`;
-  else if (!puntosDelRango().length && !estado.cargandoDia) texto = `No hay recorrido guardado de ${e.nombre} en este período.${e.enLinea ? "" : ` Su teléfono figura sin conexión (${textoHace(e)}).`}`;
+  else if (!e.conRecorrido) texto = `No podés ver el recorrido de ${e.nombre}. Lo ven el titular y los adultos de la familia, y solo el de los menores (el titular también ve el de los adultos).${ultima}`;
+  else if (!puntosDelRango().length && !estado.cargandoDia) texto = `No hay recorrido guardado de ${e.nombre} en este período.${e.enLinea ? "" : " Su teléfono figura sin conexión."}${ultima}`;
   aviso(texto);
   clearTimeout(estado.temporizadorMotivo);
   if (texto) estado.temporizadorMotivo = setTimeout(() => aviso(""), 7000);
