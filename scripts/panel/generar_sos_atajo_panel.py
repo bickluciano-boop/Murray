@@ -111,11 +111,10 @@ mirar();
 r2a = '/** El panel: quien recibio un SOS lo marca como atendido. */\nasync function remoteFamilySos(request: Request, env: Env) {\n'
 r2b = FUNCIONES + r2a
 # --- 3) Rutas ---
-r3a = '      if (route === "GET /descargar") return apkPagina(env);\n'
-r3b = (r3a +
-       '      if (route === "GET /atajo-sos") return sosAtajoPagina();\n'
+r3a = '      if (route === "GET /camino") return gdPaginaCamino();\n'
+r3b = ('      if (route === "GET /atajo-sos") return sosAtajoPagina();\n'
        '      if (route === "GET /api/remote/sos-atajo" || route === "POST /api/remote/sos-atajo") return remoteSosAtajo(request, env);\n'
-       '      if (request.method === "POST" && url.pathname.startsWith("/api/sos/atajo/")) return sosAtajoDisparar(request, env, url.pathname.slice("/api/sos/atajo/".length));\n')
+       '      if (request.method === "POST" && url.pathname.startsWith("/api/sos/atajo/")) return sosAtajoDisparar(request, env, url.pathname.slice("/api/sos/atajo/".length));\n' + r3a)
 filas = [('src\\index.ts', 'SOS: el SOS en si pasa a una funcion reutilizable', r1a, r1b),
          ('src\\index.ts', 'SOS del reloj: funciones y pagina', r2a, r2b),
          ('src\\index.ts', 'SOS del reloj: rutas', r3a, r3b)]

@@ -134,11 +134,11 @@ mirar();
 /** El panel: quien recibio un SOS lo marca como atendido. */
 async function remoteFamilySos(request: Request, env: Env) {
 '),
-    @('src\index.ts', 'SOS del reloj: rutas', '      if (route === "GET /descargar") return apkPagina(env);
-', '      if (route === "GET /descargar") return apkPagina(env);
-      if (route === "GET /atajo-sos") return sosAtajoPagina();
+    @('src\index.ts', 'SOS del reloj: rutas', '      if (route === "GET /camino") return gdPaginaCamino();
+', '      if (route === "GET /atajo-sos") return sosAtajoPagina();
       if (route === "GET /api/remote/sos-atajo" || route === "POST /api/remote/sos-atajo") return remoteSosAtajo(request, env);
       if (request.method === "POST" && url.pathname.startsWith("/api/sos/atajo/")) return sosAtajoDisparar(request, env, url.pathname.slice("/api/sos/atajo/".length));
+      if (route === "GET /camino") return gdPaginaCamino();
 ')
 )
 $descargas = @()
