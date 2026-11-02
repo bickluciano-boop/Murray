@@ -1686,3 +1686,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Pruebas hechas por simulación: 401/403, crear/revocar, clave inválida o revocada = 404, ubicación vacía/ inválida ignorada, crear nuevo revoca el anterior. NO probado: que "Obtener contenido de URL" ande en el Apple Watch con la watchOS actual (se prueba mostrando el atajo en el reloj de Luciano).
 - Antes de probar: avisar a la familia (suena la sirena real).
 - Luego: detección de caídas (HealthKit) y app propia de reloj quedan como pasos aparte.
+
+### SOS por Atajos: resultado de la prueba (02/11/2026)
+- Instalador aplicado (Worker 861b46ab). Desde el iPhone el atajo "SOS GUARD" (POST al enlace) FUNCIONA: el servidor respondió `{"repeated":true,"id":"sos_..."}`.
+- En el Apple Watch (Series 5, 40 mm, watchOS 10.6.2) el atajo NO llegó, ni siquiera un atajo de prueba con "Mostrar notificación": es un problema de sincronización iPhone -> reloj (iCloud Atajos activo; reinicios del reloj; apagar/prender "Mostrar en Apple Watch" y "hoja de compartir"). Una vez apareció en gris y sin poder tocarse; después desapareció. Causa no determinada.
+- Pendiente: (1) revocar/crear enlace nuevo en ojoguard.app/atajo-sos (el actual y uno anterior se vieron en capturas de pantalla); (2) borrar atajo "Prueba reloj"; (3) decidir: reintentar sincronización más adelante, o app propia de Apple Watch (proyecto grande, también serviría para detección de caídas).
+- Mientras tanto, el mismo atajo sirve en el iPhone: "Oye Siri", botón de Acción, Toque trasero (Ajustes > Accesibilidad > Tocar > Tocar atrás), o la pantalla de inicio.
