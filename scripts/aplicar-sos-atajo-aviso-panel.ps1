@@ -27,7 +27,7 @@ if (-not (Test-Path (Join-Path $raiz "src\index.ts"))) { Mal "No encuentro src\i
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'sos_atajo_aviso_failed') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'async function sosAtajoDisparar') -ne 1) { Mal "Primero hay que aplicar el instalador del SOS del reloj (aplicar-sos-atajo-panel)."; return }
 $cambios = @(
-    @('src\index.ts', 'SOS del reloj: confirmacion a quien lo dispara', '  return ejecutarFamilySos(env, fila.email, fila.deviceId, { action: body.action === "cancel" ? "cancel" : "send", location });
+    ,@('src\index.ts', 'SOS del reloj: confirmacion a quien lo dispara', '  return ejecutarFamilySos(env, fila.email, fila.deviceId, { action: body.action === "cancel" ? "cancel" : "send", location });
 }
 ', '  const respuesta = await ejecutarFamilySos(env, fila.email, fila.deviceId, { action: body.action === "cancel" ? "cancel" : "send", location });
   // Quien dispara el SOS (el reloj no muestra nada) recibe la confirmacion en su propio telefono; el iPhone la repite en el reloj si esta bloqueado.

@@ -29,7 +29,7 @@ reemplazo = (
 '  }\n'
 '  return respuesta;\n}\n')
 filas = [('src\\index.ts', 'SOS del reloj: confirmacion a quien lo dispara', ancla, reemplazo)]
-cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
+cambios = "$cambios = @(\n" + ',\n'.join("    ,@(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
 cabeza = '''# aplicar-sos-atajo-aviso-panel.ps1 - Ojo Guard MS: el SOS por enlace del reloj/atajo confirma a quien lo dispara (aviso en su telefono, que el iPhone repite en el reloj).
 # Idea de Luciano (01/11/2026): que el ecosistema (iPhone, Android, Mac, reloj) conviva. PRUEBA: hay que ver en el reloj de Luciano si "Obtener contenido de URL" anda en la watchOS actual.
 # Pagina para crear/revocar el enlace: ojoguard.app/atajo-sos (con la sesion del panel). Endpoint: POST /api/sos/atajo/<clave> (solo se guarda el hash). Cambia SOLO src\\index.ts (el SOS del telefono se parte en dos funciones, sin cambiar lo que hace). Respaldo .bak-sosatajoaviso. Va en la carpeta del PANEL. Sin build. Al final publica el panel solo.
