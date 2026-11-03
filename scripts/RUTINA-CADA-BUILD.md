@@ -12,16 +12,17 @@ Carpeta de la APP (tiene `app.json`): `C:\Users\ng\Downloads\CARPETA PRINCIPAL O
 En la salida sale "Incremented versionCode from X to **Y**": Y es el número de build de Android. Luciano baja el APK del enlace de la build a Descargas.
 No correr instaladores que toquen la carpeta de la app mientras la build está comprimiendo o subiendo.
 
-## 2. Subir el APK al panel (el comando que le paso, cambiando solo Y)
+## 2. Subir el APK al panel (el comando que le paso, cambiando solo Y e ID8)
 
 Va en cualquier PowerShell (entra solo a la carpeta del PANEL, la que tiene `wrangler.toml`: `C:\Users\ng\Downloads\CARPETA PRINCIPAL OJO GUARD MS\OJOGUARDMSV30completo2608\OJO-GUARD-MS-V30`).
 
 ```powershell
-cd "C:\Users\ng\Downloads\CARPETA PRINCIPAL OJO GUARD MS\OJOGUARDMSV30completo2608\OJO-GUARD-MS-V30"; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/bickluciano-boop/Murray/b31aca23437d7cde146e592f6695e4785d84e334/scripts/subir-apk-panel.ps1' -OutFile .\subir-apk-panel.ps1; if ((Get-FileHash .\subir-apk-panel.ps1 -Algorithm SHA256).Hash.ToLower() -ne '8ffbe4883a407e6319aedb8aa01ddebecc650e1f42c8bf9164e92290579428b8') { Write-Host 'El archivo no coincide, no lo ejecuto.' -ForegroundColor Red } else { $apk = Get-ChildItem (Join-Path $env:USERPROFILE 'Downloads') -Filter *.apk -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if (-not $apk) { Write-Host 'No encuentro ningun .apk en la carpeta Descargas.' -ForegroundColor Red } elseif ($apk.LastWriteTime -lt (Get-Date).AddDays(-1)) { Write-Host ('El APK mas nuevo de Descargas es de hace mas de un dia (' + $apk.Name + '). No subo nada.') -ForegroundColor Red } else { Write-Host ('Subo: ' + $apk.Name + ' (' + [math]::Round($apk.Length / 1MB, 1) + ' MB, ' + $apk.LastWriteTime + ')'); .\subir-apk-panel.ps1 -Apk $apk.FullName -Version '0.9.1 (Y)' } }
+cd "C:\Users\ng\Downloads\CARPETA PRINCIPAL OJO GUARD MS\OJOGUARDMSV30completo2608\OJO-GUARD-MS-V30"; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/bickluciano-boop/Murray/b31aca23437d7cde146e592f6695e4785d84e334/scripts/subir-apk-panel.ps1' -OutFile .\subir-apk-panel.ps1; if ((Get-FileHash .\subir-apk-panel.ps1 -Algorithm SHA256).Hash.ToLower() -ne '8ffbe4883a407e6319aedb8aa01ddebecc650e1f42c8bf9164e92290579428b8') { Write-Host 'El archivo no coincide, no lo ejecuto.' -ForegroundColor Red } else { $apk = Get-ChildItem (Join-Path $env:USERPROFILE 'Downloads') -Filter '*ID8*.apk' -File | Select-Object -First 1; if (-not $apk) { Write-Host 'No encuentro en Descargas el APK de esta build (application-ID8-....apk). Bajalo del enlace de la build y volve a pegar el comando.' -ForegroundColor Red } else { Write-Host ('Subo: ' + $apk.Name + ' (' + [math]::Round($apk.Length / 1MB, 1) + ' MB, ' + $apk.LastWriteTime + ')'); .\subir-apk-panel.ps1 -Apk $apk.FullName -Version '0.9.1 (Y)' } }
 ```
 
+- **ID8** = los 8 primeros caracteres del id de la build (el enlace de EAS termina en `/builds/<id>`; el APK baja como `application-<id>.apk`). El comando busca ESE archivo en Descargas: así nunca sube por error el APK de una build vieja (pasó el riesgo con la 188: la 187 seguía en Descargas).
 - `-Version '0.9.1 (Y)'` va SIEMPRE fijo y con el número de build entre paréntesis: la app compara con ese número. Nunca usar `Read-Host` (con la 176 el Enter del pegado lo contestó en blanco y se subió la versión vieja).
-- Toma el `.apk` más nuevo de Descargas; si no hay o es de hace más de un día, no sube nada.
+- Si el APK de esa build no está en Descargas, no sube nada y lo dice.
 - Tarda unos minutos (~146 MB en partes de 16 MB). Al final verifica por huella que lo que baja la gente de la página es exactamente ese APK, borra las partes de la versión anterior (la página guarda solo la última) y dice "LISTO: el link para pasarle a tu familia es https://ojoguard.app/descargar".
 - Requiere haber aplicado antes `aplicar-descarga-panel.ps1` y `aplicar-descarga-kv-panel.ps1` (ya hecho).
 
