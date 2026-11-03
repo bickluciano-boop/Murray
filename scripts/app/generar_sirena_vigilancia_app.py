@@ -7,7 +7,7 @@ SHA_VIEJO = 'cd4c622ca494d6bc9e46e847e881d39e5c6991671995e511ca5b14a49ec1db17'  
 base = open(R + 'aplicar-version-captura-app.ps1', encoding='utf-8-sig').read().replace('\r\n', '\n')
 def psq(s): return "'" + s.replace("'", "''") + "'"
 url = 'https://raw.githubusercontent.com/bickluciano-boop/Murray/%s/scripts/familia/sosTask.ts' % COMMIT
-descargas = "$descargas = @(\n    @(%s, %s, %s)\n)\n" % (psq(url), psq('src\\sosTask.ts'), psq(SHA_NUEVO))
+descargas = "$descargas = @(\n    ,@(%s, %s, %s)\n)\n" % (psq(url), psq('src\\sosTask.ts'), psq(SHA_NUEVO))
 filas = [('src\\backgroundFetchTask.ts', 'import de la vigilancia de la sirena', 'import { vigilarGesto } from "./sosTask";\n', 'import { vigilarGesto, vigilarSirena } from "./sosTask";\n'),
          ('src\\backgroundFetchTask.ts', 'vigilar la sirena en el trabajo de fondo', '      await vigilarGesto().catch(() => undefined);\n', '      await vigilarGesto().catch(() => undefined);\n      await vigilarSirena().catch(() => undefined);\n')]
 cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"

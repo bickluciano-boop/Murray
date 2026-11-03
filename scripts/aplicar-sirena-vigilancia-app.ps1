@@ -36,7 +36,7 @@ $cambios = @(
 ')
 )
 $descargas = @(
-    @('https://raw.githubusercontent.com/bickluciano-boop/Murray/6845725a48622309b9eb3c426effd1dbf2e758a3/scripts/familia/sosTask.ts', 'src\sosTask.ts', 'da2b4a5e457860493d9fde3220c5847359dfe1d6464be315ce55e588fef822fe')
+    ,@('https://raw.githubusercontent.com/bickluciano-boop/Murray/6845725a48622309b9eb3c426effd1dbf2e758a3/scripts/familia/sosTask.ts', 'src\sosTask.ts', 'da2b4a5e457860493d9fde3220c5847359dfe1d6464be315ce55e588fef822fe')
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---
