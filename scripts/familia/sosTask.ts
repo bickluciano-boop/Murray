@@ -31,6 +31,8 @@ const CLAVE_ENLACE = "ojo-guard-sos-link-key-v1";
 const CLAVE_USO_ATAJO = "ojo-guard-sos-atajo-uso-v1";
 const CLAVE_AVISO_GESTO = "ojo-guard-sos-gesto-aviso-v1";
 const AVISO_GESTO_CADA_MS = 12 * 3_600_000;
+const CLAVE_AVISO_SIRENA = "ojo-guard-sos-sirena-aviso-v1";
+const AVISO_SIRENA_CADA_MS = 12 * 3_600_000;
 const GESTO_INTENTOS = 3;
 const GESTO_ESPERA_MS = 3_000;
 
@@ -196,10 +198,50 @@ export async function vigilarGesto() {
   }
 }
 
+/**
+ * Android: avisa si el canal "SOS de la familia" quedó silenciado (importancia por debajo de "alta" o sin sonido). Android deja que el
+ * sistema o la persona lo bajen, y la app no puede volver a subirlo: sin aviso, el SOS de la familia llegaría sin sirena y nadie
+ * se enteraría hasta necesitarlo. Se mira al abrir la app, al volver al frente y con el trabajo periódico de fondo. Como mucho
+ * un aviso cada 12 horas; si el canal vuelve a estar bien, el aviso se retira y se borra el recuerdo. Si todavía no existe el
+ * canal (se crea al abrir la app) no dice nada.
+ */
+export async function vigilarSirena() {
+  if (Platform.OS !== "android") return;
+  const canal = await Notifications.getNotificationChannelAsync(SOS_CHANNEL).catch(() => null);
+  if (!canal) return;
+  if (canal.importance >= Notifications.AndroidImportance.HIGH && Boolean(canal.sound)) {
+    await AsyncStorage.removeItem(CLAVE_AVISO_SIRENA).catch(() => undefined);
+    await Notifications.dismissNotificationAsync("ojo-guard-sos-sirena").catch(() => undefined);
+    return;
+  }
+  const ultimoAviso = Number(await AsyncStorage.getItem(CLAVE_AVISO_SIRENA).catch(() => null)) || 0;
+  if (Date.now() - ultimoAviso < AVISO_SIRENA_CADA_MS) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: "ojo-guard-sos-sirena",
+      content: {
+        title: "La sirena del SOS está silenciada",
+        body: "Si alguien de tu familia pide ayuda, este teléfono no va a sonar. Entrá a Ojo Guard, Configuración > Familia, y tocá el botón de la sirena en el Dr. Ojo Guard para arreglarlo.",
+        sound: "default",
+      },
+      trigger: { channelId: CANAL },
+    });
+    await AsyncStorage.setItem(CLAVE_AVISO_SIRENA, String(Date.now())).catch(() => undefined);
+  } catch {
+    // Sin permiso de notificaciones no hay cómo avisar: el chequeo del Dr. Ojo Guard lo muestra igual.
+  }
+}
+
 if (Platform.OS === "android") {
-  if (AppState.currentState === "active") void vigilarGesto();
+  if (AppState.currentState === "active") {
+    void vigilarGesto();
+    void vigilarSirena();
+  }
   AppState.addEventListener("change", (estado) => {
-    if (estado === "active") void vigilarGesto();
+    if (estado === "active") {
+      void vigilarGesto();
+      void vigilarSirena();
+    }
   });
 }
 
