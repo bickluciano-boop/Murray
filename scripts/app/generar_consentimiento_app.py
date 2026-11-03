@@ -59,6 +59,7 @@ a5 = '  const [yaVerificada, setYaVerificada] = useState<boolean | null>(revisar
 b5 = a5 + '''  // "leyendo" mientras se mira si ya acepto el consentimiento en este telefono; "pendiente" muestra el texto; "aceptado" sigue con los datos.
   const [consentimiento, setConsentimiento] = useState<"leyendo" | "pendiente" | "aceptado">("leyendo");
   const [casilla, setCasilla] = useState(false);
+  const [verDetalle, setVerDetalle] = useState(false);
 
   useEffect(() => {
     let vigente = true;
@@ -89,7 +90,7 @@ b6 = '''  if (etapa === "datos" && consentimiento !== "aceptado") {
       );
     }
     const punto = (rotulo: string, texto: string) => (
-      <Text style={{ color: paleta.textoMedio, fontSize: 14.5, lineHeight: 21 }}>
+      <Text style={{ color: paleta.textoMedio, fontSize: 14, lineHeight: 20 }}>
         <Text style={{ color: paleta.texto, fontWeight: "800" }}>{rotulo} </Text>
         {texto}
       </Text>
@@ -97,27 +98,36 @@ b6 = '''  if (etapa === "datos" && consentimiento !== "aceptado") {
     return (
       <View style={{ gap: 6 }}>
         {sinTituloPropio ? null : titulo("Antes de verificarte")}
-        {parrafo("Para confirmar que sos vos te vamos a pedir tu número de DNI, el sexo que figura en él y una selfie. Leé cómo usamos esos datos y, si estás de acuerdo, aceptá.")}
-        <View style={{ gap: 12, marginTop: 14, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: paleta.borde, backgroundColor: tarjeta }}>
-          {punto("Qué usamos.", "Tu número de DNI, tu sexo y una foto de tu cara. La foto de tu cara es un dato biométrico.")}
-          {punto("Para qué.", "Para compararla con la foto que el registro oficial (RENAPER) tiene de tu DNI y confirmar que sos vos. Solo para eso: no usamos tus datos para publicidad ni los vendemos.")}
-          {punto("Quién los procesa.", "Didit, la empresa que hace la verificación, y RENAPER. Didit puede procesar los datos fuera de Argentina.")}
-          {punto("Qué guardamos nosotros.", "La selfie no. Guardamos el resultado, el puntaje de la comparación, los últimos 3 números del DNI, una huella que no permite recuperar el número y la fecha en que aceptaste esto.")}
-          {punto("Cuánto tiempo.", "Didit guarda los datos de la consulta 1 mes (el plazo que le pedimos) y después los elimina.")}
-          {punto("Tus derechos.", "Es opcional: podés omitirlo y usar Ojo Guard igual. Podés pedir que borremos tus datos cuando quieras, desde Perfil > Borrar mi cuenta o escribiendo a soporte@ojoguard.app.")}
-        </View>
+        {parrafo("Para confirmar que sos vos, vamos a comparar tu selfie con la foto de tu DNI en el registro oficial (RENAPER). La compara Didit, una empresa de verificación.")}
+        {parrafo("Ojo Guard no guarda tu selfie. Podés pedir que borremos tus datos cuando quieras.")}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: verDetalle }}
+          onPress={() => setVerDetalle(!verDetalle)}
+          style={{ paddingVertical: 12, marginTop: 4 }}
+        >
+          <Text style={{ color: azul, fontSize: 15, fontWeight: "700" }}>{verDetalle ? "Ocultar el detalle" : "Ver el detalle"}</Text>
+        </Pressable>
+        {verDetalle ? (
+          <View style={{ gap: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: paleta.borde, backgroundColor: tarjeta }}>
+            {punto("Qué usamos.", "Tu número de DNI, tu sexo y una foto de tu cara. La foto de tu cara es un dato biométrico.")}
+            {punto("Para qué.", "Solo para confirmar que sos vos. No usamos tus datos para publicidad ni los vendemos.")}
+            {punto("Quién los procesa.", "Didit y RENAPER. Didit puede procesar los datos fuera de Argentina.")}
+            {punto("Qué guardamos nosotros.", "La selfie no. Guardamos el resultado, el puntaje de la comparación, los últimos 3 números del DNI, una huella que no permite recuperar el número y la fecha en que aceptaste esto.")}
+            {punto("Cuánto tiempo.", "Didit guarda los datos de la consulta 1 mes (el plazo que le pedimos) y después los elimina.")}
+            {punto("Tus derechos.", "Es opcional: podés omitirlo y usar Ojo Guard igual. Para borrar tus datos: Perfil > Borrar mi cuenta, o escribí a soporte@ojoguard.app.")}
+          </View>
+        ) : null}
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: casilla }}
           onPress={() => setCasilla(!casilla)}
-          style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 18 }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}
         >
-          <View style={{ width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: azul, backgroundColor: casilla ? azul : "transparent", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
+          <View style={{ width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: azul, backgroundColor: casilla ? azul : "transparent", alignItems: "center", justifyContent: "center" }}>
             {casilla ? <Icono nombre="check" color="#fff" tam={18} /> : null}
           </View>
-          <Text style={{ flex: 1, color: paleta.texto, fontSize: 15, lineHeight: 22 }}>
-            Soy mayor de 18 años y acepto que Ojo Guard use mi DNI y mi selfie para verificar mi identidad, como se explica arriba.
-          </Text>
+          <Text style={{ flex: 1, color: paleta.texto, fontSize: 15, lineHeight: 22 }}>Acepto que usen mi DNI y mi selfie para verificar mi identidad.</Text>
         </Pressable>
         <View style={{ gap: 10, marginTop: 20 }}>
           {boton("Aceptar y seguir", () => void aceptarConsentimiento(), { principal: true, deshabilitado: !casilla })}
@@ -147,8 +157,8 @@ if os.path.isdir(carpeta):
     open(S + 'VerificarIdentidad.consentimiento.tsx', 'w', encoding='utf-8').write(nuevo)
 
 cambios = "$cambios = @(\n" + ',\n'.join(("    ,@(%s, %s, %s, %s)" if len(filas) == 1 else "    @(%s, %s, %s, %s)") % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
-cabeza = '''# aplicar-consentimiento-app.ps1 - App (PROXIMA build): antes de pedir el DNI y la selfie, la pantalla de verificacion de identidad muestra el consentimiento biometrico y pide aceptarlo (casilla "Soy mayor de 18 anios y acepto...").
-# Qué dice: que datos se usan (DNI, sexo, selfie = dato biometrico), para que, quien los procesa (Didit y RENAPER), que guarda Ojo Guard (no la selfie), cuanto tiempo (Didit 1 mes), y como pedir el borrado. La version aceptada (%s) se guarda en el telefono y se manda al servidor con cada verificacion.
+cabeza = '''# aplicar-consentimiento-app.ps1 - App (PROXIMA build): antes de pedir el DNI y la selfie, la pantalla de verificacion de identidad muestra un consentimiento corto (2 frases + "Ver el detalle") y una casilla "Acepto que usen mi DNI y mi selfie para verificar mi identidad."
+# A la vista: para que se usa la selfie (compararla con la foto del DNI en RENAPER, a cargo de Didit), que Ojo Guard no la guarda y que se puede pedir el borrado. En "Ver el detalle": que datos se usan (DNI, sexo, selfie = dato biometrico), quien los procesa, que guarda Ojo Guard, cuanto tiempo (Didit 1 mes) y los derechos. Luciano (03/11/2026): "demasiada informacion": se saco la declaracion de mayor de 18 anios y se acorto lo que se ve. La version aceptada (%s) se guarda en el telefono y se manda al servidor con cada verificacion.
 # Cambia SOLO src\\VerificarIdentidad.tsx (respaldo .bak-consentimiento) con anclas exactas, sin reemplazar el archivo: respeta los cambios de la camara y del espejo. Va en la carpeta de la APP (la que tiene app.json). Si la revision de tipos falla, deja todo como estaba.
 # Conviene instalar antes aplicar-identidad-consentimiento-panel.ps1 (el servidor que guarda la version). Sale en la PROXIMA build.
 ''' % VERSION
