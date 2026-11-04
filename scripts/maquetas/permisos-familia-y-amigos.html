@@ -1,0 +1,71 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--fondo:#0B1020;--sup:#121A33;--borde:#26304F;--texto:#F5F0E6;--claro:#B9C2DB;--debil:#8791B0;--dorado:#FFC247;--doradoFondo:#211C12;--doradoBorde:#7A5F22;--ok:#82d896;--peligro:#f0b8b8;--peligroFondo:#2a1517;--peligroBorde:#6e2d33;--campo:#0E1630}
+*{box-sizing:border-box}body{margin:0;background:#05070f;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--texto);padding:24px;display:flex;gap:28px;justify-content:center;align-items:flex-start}
+.tel{width:390px;background:var(--fondo);border-radius:34px;padding:18px 16px 26px;border:1px solid var(--borde)}
+.rotulo{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado);font-weight:800;margin:0 0 10px 4px}
+h1{font-size:22px;margin:4px 4px 6px;font-weight:800}
+.etq{color:var(--debil);font-size:12px;font-weight:800;letter-spacing:1.1px;margin:20px 0 8px 2px}
+.card{background:var(--sup);border:1px solid var(--borde);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.ayuda{color:var(--claro);font-size:14px;line-height:20px;margin:0}
+.fila{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.fila b{display:block;font-size:15px;font-weight:700}.fila small{display:block;color:var(--debil);font-size:12.5px;line-height:17px;margin-top:2px}
+.sw{flex:none;width:46px;height:28px;border-radius:14px;background:#2a3454;position:relative}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#cfd6ea}
+.sw.on{background:var(--dorado)}.sw.on::after{left:21px;background:#1a1405}
+.sw.fijo{opacity:.55}
+hr{border:0;border-top:1px solid var(--borde);margin:0}
+.pers{display:flex;align-items:center;gap:10px}
+.av{width:36px;height:36px;border-radius:50%;background:var(--campo);border:1px solid var(--borde);display:grid;place-items:center;font-weight:800;color:var(--dorado)}
+.pers b{font-size:16px}.chip{font-size:11.5px;color:var(--claro);border:1px solid var(--borde);border-radius:99px;padding:2px 8px;margin-left:auto}
+.sub{color:var(--debil);font-size:11.5px;font-weight:800;letter-spacing:1px;margin:4px 0 -2px}
+.cartel{border-radius:12px;padding:10px 12px;font-size:13px;line-height:18px}
+.cartel.rojo{background:var(--peligroFondo);border:1px solid var(--peligroBorde);color:var(--peligro)}
+.cartel.dor{background:var(--doradoFondo);border:1px solid var(--doradoBorde);color:var(--texto)}
+.btn{align-self:flex-start;border:1px solid var(--doradoBorde);color:var(--dorado);border-radius:12px;padding:9px 14px;font-weight:700;font-size:14px}
+.nota{color:var(--debil);font-size:12px;text-align:center;margin-top:14px}
+</style></head><body>
+
+<div class="tel"><p class="rotulo">Maqueta · caso normal</p><h1>Familia y amigos</h1>
+<div class="etq">MI UBICACIÓN</div>
+<div class="card"><p class="ayuda">Te ven: Papá, Guido y Mariana. Podés pausarlo un rato y volver a compartir cuando quieras.</p></div>
+
+<div class="etq">PERMISOS</div>
+<div class="card">
+  <div class="fila"><div><b>Compartir mi ubicación</b><small>Apagarla corta con todos a la vez</small></div><div class="sw on"></div></div>
+  <hr>
+  <div class="pers"><div class="av">P</div><b>Papá</b><span class="chip">Adulto</span></div>
+  <div class="sub">MI LADO</div>
+  <div class="fila"><div><b>Le comparto mi ubicación</b><small>Papá te ve en su mapa</small></div><div class="sw on"></div></div>
+  <div class="fila"><div><b>Le suena mi SOS</b><small>Recibe tu SOS con sirena</small></div><div class="sw on"></div></div>
+  <div class="sub">SU LADO</div>
+  <div class="fila"><div><b>Veo su ubicación</b><small>Papá aparece en tu mapa</small></div><div class="sw on"></div></div>
+  <div class="fila"><div><b>Recibo su SOS</b><small>Apagalo si estás en el cine o de viaje</small></div><div class="sw"></div></div>
+  <div class="cartel dor">Papá recibe aviso cada vez que cambiás una llave: «Luciano dejó de recibir tu SOS».</div>
+  <hr>
+  <div class="pers"><div class="av">G</div><b>Guido</b><span class="chip">Adulto</span><span style="color:var(--debil);font-size:20px;margin-left:6px">›</span></div>
+  <div class="pers"><div class="av">M</div><b>Mariana</b><span class="chip">Amiga</span><span style="color:var(--debil);font-size:20px;margin-left:6px">›</span></div>
+  <hr>
+  <div class="fila"><div><b>Usar mi DNI y selfie</b><small>Consentimiento para verificar mi identidad</small></div><div class="sw on"></div></div>
+  <div class="btn">Verificar ahora</div>
+</div>
+</div>
+
+<div class="tel"><p class="rotulo">Maqueta · el único que recibe el SOS</p><h1>Familia y amigos</h1>
+<div class="etq">SOS Y AYUDA</div>
+<div class="card"><p class="ayuda">Tu SOS les suena en la app a: Guido.</p></div>
+
+<div class="etq">PERMISOS</div>
+<div class="card">
+  <div class="pers"><div class="av">G</div><b>Guido</b><span class="chip">Adulto</span></div>
+  <div class="sub">SU LADO</div>
+  <div class="fila"><div><b>Recibo su SOS</b><small>Guido tiene a una sola persona que recibe su SOS: vos</small></div><div class="sw on fijo"></div></div>
+  <div class="cartel rojo">Sos la única persona que recibe el SOS de Guido. Pedile que sume a otra antes de apagarlo.</div>
+  <hr>
+  <div class="sub">CUANDO A LUCIANO NO LE LLEGA A NADIE</div>
+  <div class="cartel rojo"><b>Tu SOS hoy no le llega a nadie.</b><br>Sumá a alguien desde el mapa del Inicio para quedar protegido.</div>
+  <div class="cartel dor">Aviso que recibirías: «Papá dejó de recibir tu SOS. Ahora solo le llega a Guido.»</div>
+</div>
+<p class="nota">Regla: siempre queda al menos una persona que recibe tu SOS.</p>
+</div>
+</body></html>
