@@ -1,0 +1,54 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--fondo:#0B1020;--sup:#121A33;--borde:#26304F;--texto:#F5F0E6;--claro:#B9C2DB;--debil:#8791B0;--dorado:#FFC247;--doradoFondo:#211C12;--doradoBorde:#7A5F22;--ok:#5fd38a;--okFondo:#10261a;--rojo:#ff6b6b;--rojoFondo:#2a1517;--rojoBorde:#6e2d33;--campo:#0E1630}
+*{box-sizing:border-box}body{margin:0;background:#05070f;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--texto);padding:24px;display:flex;gap:28px;justify-content:center;align-items:flex-start}
+.tel{width:390px;background:var(--fondo);border-radius:34px;padding:18px 16px 26px;border:1px solid var(--borde)}
+.rotulo{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado);font-weight:800;margin:0 0 10px 4px}
+.etq{color:var(--debil);font-size:12px;font-weight:800;letter-spacing:1.1px;margin:14px 0 8px 2px}
+.card{background:var(--sup);border:1px solid var(--borde);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.pers{display:flex;align-items:center;gap:10px}.av{width:36px;height:36px;border-radius:50%;background:var(--campo);border:1px solid var(--borde);display:grid;place-items:center;font-weight:800;color:var(--dorado)}
+.pers b{font-size:17px}.chip{font-size:11.5px;color:var(--claro);border:1px solid var(--borde);border-radius:99px;padding:2px 8px;margin-left:auto}
+.fila{display:flex;align-items:center;gap:12px}
+.ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--borde);background:var(--campo)}
+.ic.on{border-color:#2f7a52;background:var(--okFondo)}.ic.off{border-color:var(--rojoBorde);background:var(--rojoFondo)}
+.fila .t{flex:1;min-width:0}.fila b{display:block;font-size:15px;font-weight:700}.fila small{display:block;color:var(--debil);font-size:12.5px;line-height:17px;margin-top:1px}
+.est{flex:none;font-size:12.5px;font-weight:800;border-radius:99px;padding:5px 10px;display:flex;gap:6px;align-items:center}
+.est.on{color:var(--ok);background:var(--okFondo);border:1px solid #2f7a52}.est.off{color:var(--rojo);background:var(--rojoFondo);border:1px solid var(--rojoBorde)}
+.d{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.sep{display:flex;align-items:center;gap:8px;color:var(--debil);font-size:11.5px;font-weight:800;letter-spacing:1px;margin:2px 0}.sep::before,.sep::after{content:"";flex:1;border-top:1px solid var(--borde)}
+.cartel{border-radius:12px;padding:10px 12px;font-size:13px;line-height:18px;background:var(--rojoFondo);border:1px solid var(--rojoBorde);color:#f0b8b8}
+.nota{color:var(--debil);font-size:12px;text-align:center;margin-top:12px}
+svg{display:block}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="ojo" viewBox="0 0 24 24"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></symbol>
+<symbol id="ojoc" viewBox="0 0 24 24"><path d="M2 14c2.5 3.5 6 5 10 5s7.500-1.500 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 17.500l-2 2.500M12 19.500V22M19 17.500l2 2.500" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="sos" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/><path d="M12 2v2M3.500 6l1.400 1.400M20.500 6l-1.400 1.400" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="sosx" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="2.400" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<div class="tel"><p class="rotulo">Opción A · ojo abierto / ojo cerrado</p>
+<div class="etq">PERMISOS</div>
+<div class="card">
+  <div class="pers"><div class="av">P</div><b>Papá</b><span class="chip">Adulto</span></div>
+  <div class="sep">PAPÁ → VOS</div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#ojo"/></svg></div><div class="t"><b>Te ve</b><small>Mira tu ubicación</small></div><div class="est on"><span class="d"></span>Sí</div></div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#sos"/></svg></div><div class="t"><b>Recibe tu SOS</b><small>Le suena la sirena</small></div><div class="est on"><span class="d"></span>Sí</div></div>
+  <div class="sep">VOS → PAPÁ</div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#ojo"/></svg></div><div class="t"><b>Lo ves</b><small>Aparece en tu mapa</small></div><div class="est on"><span class="d"></span>Sí</div></div>
+  <div class="fila"><div class="ic off" style="color:var(--rojo)"><svg width="26" height="26"><use href="#sosx"/></svg></div><div class="t"><b>Recibís su SOS</b><small>Apagado: no te suena (cine, viaje)</small></div><div class="est off"><span class="d"></span>No</div></div>
+</div></div>
+
+<div class="tel"><p class="rotulo">Opción B · luz verde / luz roja, con el caso del último</p>
+<div class="etq">PERMISOS</div>
+<div class="card">
+  <div class="pers"><div class="av">G</div><b>Guido</b><span class="chip">Adulto</span></div>
+  <div class="sep">GUIDO → VOS</div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#ojo"/></svg></div><div class="t"><b>Te ve</b></div><div class="est on"><span class="d"></span>Verde</div></div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#sos"/></svg></div><div class="t"><b>Recibe tu SOS</b></div><div class="est on"><span class="d"></span>Verde</div></div>
+  <div class="sep">VOS → GUIDO</div>
+  <div class="fila"><div class="ic off" style="color:var(--rojo)"><svg width="26" height="26"><use href="#ojoc"/></svg></div><div class="t"><b>Lo ves</b><small>Lo dejaste de mirar</small></div><div class="est off"><span class="d"></span>Rojo</div></div>
+  <div class="fila"><div class="ic on" style="color:var(--ok)"><svg width="26" height="26"><use href="#sos"/></svg></div><div class="t"><b>Recibís su SOS</b><small>Bloqueado: sos el único</small></div><div class="est on" style="opacity:.6"><span class="d"></span>Verde</div></div>
+  <div class="cartel">Sos la única persona que recibe el SOS de Guido. Pedile que sume a otra antes de apagarlo.</div>
+</div></div>
+</body></html>
