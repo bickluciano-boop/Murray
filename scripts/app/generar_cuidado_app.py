@@ -181,7 +181,7 @@ B4 = '      {enrollment ? <TarjetaCuidado P={P} enrollment={enrollment} botones=
 # ---- App.tsx: tocar el aviso del Buen dia lo contesta ----
 A5 = '      suscripciones.push(notifications.addNotificationResponseReceivedListener(() => stopPhoneAlarmTone()));\n'
 B5 = '''      // Tocar el aviso del "Buen dia" es contestar que esta bien (el aviso trae el dia: el de ayer no cuenta hoy).
-      const contestarBuenDia = (respuesta: { notification: { request: { content: { data: unknown } } } } | null | undefined) => {
+      const contestarBuenDia = (respuesta: { notification: { request: { content: { data?: unknown } } } } | null | undefined) => {
         const datos = respuesta?.notification.request.content.data as { type?: string; day?: string } | null | undefined;
         if (datos?.type !== "buen-dia") return;
         void loadNativeEnrollment()

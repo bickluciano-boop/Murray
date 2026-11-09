@@ -203,7 +203,7 @@ function TarjetaCuidado({ P, enrollment, botones }: { P: Paleta; enrollment: Nat
 '),
     @('App.tsx', 'cuidado: tocar el aviso del Buen dia lo contesta', '      suscripciones.push(notifications.addNotificationResponseReceivedListener(() => stopPhoneAlarmTone()));
 ', '      // Tocar el aviso del "Buen dia" es contestar que esta bien (el aviso trae el dia: el de ayer no cuenta hoy).
-      const contestarBuenDia = (respuesta: { notification: { request: { content: { data: unknown } } } } | null | undefined) => {
+      const contestarBuenDia = (respuesta: { notification: { request: { content: { data?: unknown } } } } | null | undefined) => {
         const datos = respuesta?.notification.request.content.data as { type?: string; day?: string } | null | undefined;
         if (datos?.type !== "buen-dia") return;
         void loadNativeEnrollment()
