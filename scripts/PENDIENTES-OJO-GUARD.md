@@ -1782,3 +1782,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 ## 09/11/2026 - "VOS" en Familia y amigos
 - Luciano no entendia cual era su familia (veia "Lucho (Titular)" y "Lu ipone (Adulto)"). Se agrega una tarjeta "VOS" arriba: tu nombre, "Este telefono · Android/iPhone" y tu rol en cada familia ("Titular de tu propia familia" / "Adulto en la familia de X"). Cada persona de la lista muestra rol + tipo de telefono.
 - Servidor: GET /api/native/family/me (aplicar-familia-vos-panel.ps1). App: aplicar-familia-vos-app.ps1 (proxima build). Pendiente preguntar quien es "Lu ipone".
+- 10/11/2026: Luciano pide que DESPUES del estado de SOS/Cuidado en el panel vengan los recordatorios de remedios (y similares) dentro de Cuidado. Opt-in, los activa la persona.
+
+## 10/11/2026 - Panel: estado de Cuidado por persona
+- Servidor: cada persona de la lista (panel y app) trae `cuidado` {sosApagado, bateria, bateriaBaja, sinSenal, buenDia, buenDiaHora, buenDiaHoy} SOLO si quien mira recibe el SOS de esa persona (titular y adultos; el titular tambien ve el de un amigo; el menor y el amigo no ven el de nadie). Solo lee.
+- Panel (mapa y tarjeta dentro de la app): bloque "Cuidado de X" con puntos rojo/verde/gris. Instalador aplicar-cuidado-estado-panel.ps1 (cambia index.ts y panel-mapa.txt; sin build). Prueba con SQLite real: estado-test.cjs 18/18.
+- Siguiente (pedido por Luciano): recordatorios de remedios dentro de Cuidado.
