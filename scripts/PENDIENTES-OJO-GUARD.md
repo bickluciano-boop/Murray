@@ -1799,3 +1799,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Luciano: la pantalla de acceso pedia el correo varias veces. aplicar-entrada-metodos-panel.ps1: un correo arriba + 3 opciones (Codigo por correo / App de verificacion / Huella o Face ID), se acuerda de la ultima, emergencia abajo. Solo src\panel-index.html. REEMPLAZA a aplicar-entrada-clara-panel.ps1 (nunca se aplico; no aplicar los dos). Probado en Chromium (19 comprobaciones), estilos con !important para ganarle a los temas.
 - Service worker viejo (sw.js, 5/10/2026) en el Chrome de la PC de Luciano hacia fallar pedidos (ERR_FAILED); lo saco con Unregister. No esta en el codigo actual. Posible kill-switch en /sw.js para otros navegadores.
 - Mapa lento en celulares (iPhone 8 s, Android 13 s): sin explicar aun (descartados servidor y cambio del latido).
+
+## 12/11/2026 - El mapa tardaba por /api/remote/family (~5 s por pedido)
+- Con F12 (Network, filtro "family") Luciano vio que cada pedido tardaba 5,2 s. familyPeopleFor hacia ~55-65 consultas a D1 en fila (en una familia de 4 personas). Causa: viene de antes, y Cuidado sumo 4 consultas por persona.
+- aplicar-family-rapido-panel.ps1: cada persona en paralelo + consultas de arranque juntas + lugares/avisos/SOS arrancan con las personas + cuidadoVista con consultas juntas. Resultado identico (10 comparaciones contra la version anterior, mismas respuestas); con 50 ms por consulta: 3,7 s -> 0,76 s. Solo src\index.ts.
+- Pendiente de medir en el real: volver a mirar "family" en Network. Si sigue lento, siguiente paso: batch de D1 / cachear por pedido.
+- Descartado como causa: el latido nuevo (el iPhone con la app vieja tambien tardaba) y el servidor en frio (350 ms a 1,8 s).
