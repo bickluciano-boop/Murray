@@ -18,6 +18,9 @@ IMPERATIVOS = {  # vos -> tu (mandato)
  'decile':'dile','contame':'cuéntame','mandame':'mándame','decime':'dime','escribime':'escríbeme','pasame':'pásame','dejame':'déjame','llamame':'llámame',
  'acordate':'acuérdate','asegurate':'asegúrate','ponete':'ponte','quedate':'quédate','andate':'vete','sumate':'súmate','esperame':'espérame','contanos':'cuéntanos',
  'elegilo':'elígelo','escribila':'escríbela','hacela':'hazla','llamala':'llámala','mostrales':'muéstrales','ponele':'ponle','prendelo':'enciéndelo','revisala':'revísala','tocala':'tócala','tocandola':'tocándola','usalo':'úsalo',
+ 'anotá':'anota','compará':'compara','comprá':'compra','consultá':'consulta','contestá':'contesta','deslizá':'desliza','destildá':'desmarca','marcá':'marca','reintentá':'reintenta',
+ 'soltá':'suelta','vinculalo':'vincúlalo','tildá':'marca','chequeá':'revisa','mantené':'mantén','pulsá':'pulsa','presioná':'presiona','empezá':'empieza','comenzá':'comienza',
+ 'terminá':'termina','aguardá':'aguarda','intentalo':'inténtalo','agregalo':'agrégalo','sacalo':'sácalo','ponelo':'ponlo','hacelo':'hazlo','dejalo':'déjalo','mostralo':'muéstralo',
  'escribile':'escríbele','avisales':'avísales','mirá':'mira','miralo':'míralo','pedinos':'pídenos','llamanos':'llámanos','mandanos':'mándanos','copialo':'cópialo',
 }
 PRESENTES = {  # vos -> tu (presente)
@@ -107,8 +110,8 @@ def aplicar(texto, tabla=None):
         texto = comp.sub(cambiar, texto)
     return texto, total
 
-BUENAS = set('está será habrá podrá verá hará dará irá tendrá quedará llegará deberá estará aquí así allí sí ahí allá más además demás atrás detrás después qué quizá mamá papá café sofá aún algún según país mié esté estés estás llegué tomé entré encontré cuándo cómo dónde quién cuál también tomé puedo'.split())
-BUENAS_ENCLITICAS = set('autocomplete caminos cancela cancelo candidate carrete cautela cercanos create deactivate delete destinos duplicate escala filename hostname instala invite limite locate mobile paralelo pathname permite private profile promete rename repite revalidate rotate satelite scheme template titila tranquilo translate vibrate'.split())
+BUENAS = set('abrirá actualizará habilitará caché nomás revés está será habrá podrá verá hará dará irá tendrá quedará llegará deberá estará aquí así allí sí ahí allá más además demás atrás detrás después qué quizá mamá papá café sofá aún algún según país mié esté estés estás llegué tomé entré encontré cuándo cómo dónde quién cuál también tomé puedo'.split())
+BUENAS_ENCLITICAS = set('acredite authenticate estilo grayscale intervalo satellite username autocomplete caminos cancela cancelo candidate carrete cautela cercanos create deactivate delete destinos duplicate escala filename hostname instala invite limite locate mobile paralelo pathname permite private profile promete rename repite revalidate rotate satelite scheme template titila tranquilo translate vibrate'.split())
 def restos(texto):
     """Palabras que todavia parecen voseo (para revisar a mano)."""
     t = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), texto)

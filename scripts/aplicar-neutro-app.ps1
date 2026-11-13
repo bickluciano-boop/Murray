@@ -172,6 +172,33 @@ $reglas = @(
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))tocala(?![A-Za-zÀ-ÿ0-9_])', 'tócala', 0),
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))tocandola(?![A-Za-zÀ-ÿ0-9_])', 'tocándola', 0),
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))usalo(?![A-Za-zÀ-ÿ0-9_])', 'úsalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))anot(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'anota', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))compar(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'compara', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))compr(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'compra', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))consult(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'consulta', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))contest(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'contesta', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))desliz(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'desliza', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))destild(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'desmarca', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))marc(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'marca', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))reintent(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'reintenta', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))solt(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'suelta', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))vinculalo(?![A-Za-zÀ-ÿ0-9_])', 'vincúlalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))tild(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'marca', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))cheque(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'revisa', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))manten(?:é|\\u00e9)(?![A-Za-zÀ-ÿ0-9_])', 'mantén', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))puls(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'pulsa', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))presion(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'presiona', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))empez(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'empieza', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))comenz(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'comienza', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))termin(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'termina', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))aguard(?:á|\\u00e1)(?![A-Za-zÀ-ÿ0-9_])', 'aguarda', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))intentalo(?![A-Za-zÀ-ÿ0-9_])', 'inténtalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))agregalo(?![A-Za-zÀ-ÿ0-9_])', 'agrégalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))sacalo(?![A-Za-zÀ-ÿ0-9_])', 'sácalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))ponelo(?![A-Za-zÀ-ÿ0-9_])', 'ponlo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))hacelo(?![A-Za-zÀ-ÿ0-9_])', 'hazlo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))dejalo(?![A-Za-zÀ-ÿ0-9_])', 'déjalo', 0),
+    @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))mostralo(?![A-Za-zÀ-ÿ0-9_])', 'muéstralo', 0),
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))escribile(?![A-Za-zÀ-ÿ0-9_])', 'escríbele', 0),
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))avisales(?![A-Za-zÀ-ÿ0-9_])', 'avísales', 0),
     @('(?:(?<![A-Za-zÀ-ÿ0-9_])|(?<=\\[nrt])|(?<=\\u00bf)|(?<=\\u00a1)|(?<=\\u00ab)|(?<=\\u00bb)|(?<=\\u201[cC89]))miralo(?![A-Za-zÀ-ÿ0-9_])', 'míralo', 0),
@@ -263,8 +290,8 @@ $reglas = @(
     @('(?-i:(?<![A-Za-zÀ-ÿ0-9_.])Sos(?= [a-zà-ÿ¿]))', 'eres', 0),
     @('(?<![A-Za-zÀ-ÿ0-9_.])sos(?= (?:el|la|los|las|un|una|tu|su|mi|titular|menor|tutor|alguien|referente|quien|más|muy)(?![A-Za-zÀ-ÿ0-9_]))', 'eres', 0)
 )
-$buenas = @('además', 'ahí', 'algún', 'allá', 'allí', 'aquí', 'así', 'atrás', 'aún', 'café', 'cuál', 'cuándo', 'cómo', 'dará', 'deberá', 'demás', 'después', 'detrás', 'dónde', 'encontré', 'entré', 'estará', 'está', 'estás', 'esté', 'estés', 'habrá', 'hará', 'irá', 'llegará', 'llegué', 'mamá', 'mié', 'más', 'papá', 'país', 'podrá', 'puedo', 'quedará', 'quizá', 'quién', 'qué', 'según', 'será', 'sofá', 'sí', 'también', 'tendrá', 'tomé', 'verá')
-$buenasEncl = @('autocomplete', 'caminos', 'cancela', 'cancelo', 'candidate', 'carrete', 'cautela', 'cercanos', 'create', 'deactivate', 'delete', 'destinos', 'duplicate', 'escala', 'filename', 'hostname', 'instala', 'invite', 'limite', 'locate', 'mobile', 'paralelo', 'pathname', 'permite', 'private', 'profile', 'promete', 'rename', 'repite', 'revalidate', 'rotate', 'satelite', 'scheme', 'template', 'titila', 'tranquilo', 'translate', 'vibrate')
+$buenas = @('abrirá', 'actualizará', 'además', 'ahí', 'algún', 'allá', 'allí', 'aquí', 'así', 'atrás', 'aún', 'caché', 'café', 'cuál', 'cuándo', 'cómo', 'dará', 'deberá', 'demás', 'después', 'detrás', 'dónde', 'encontré', 'entré', 'estará', 'está', 'estás', 'esté', 'estés', 'habilitará', 'habrá', 'hará', 'irá', 'llegará', 'llegué', 'mamá', 'mié', 'más', 'nomás', 'papá', 'país', 'podrá', 'puedo', 'quedará', 'quizá', 'quién', 'qué', 'revés', 'según', 'será', 'sofá', 'sí', 'también', 'tendrá', 'tomé', 'verá')
+$buenasEncl = @('acredite', 'authenticate', 'autocomplete', 'caminos', 'cancela', 'cancelo', 'candidate', 'carrete', 'cautela', 'cercanos', 'create', 'deactivate', 'delete', 'destinos', 'duplicate', 'escala', 'estilo', 'filename', 'grayscale', 'hostname', 'instala', 'intervalo', 'invite', 'limite', 'locate', 'mobile', 'paralelo', 'pathname', 'permite', 'private', 'profile', 'promete', 'rename', 'repite', 'revalidate', 'rotate', 'satelite', 'satellite', 'scheme', 'template', 'titila', 'tranquilo', 'translate', 'username', 'vibrate')
 
 $opciones = [System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
 $script:rx = @()

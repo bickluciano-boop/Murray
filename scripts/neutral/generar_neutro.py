@@ -158,5 +158,11 @@ cab_app = '''# aplicar-neutro-app.ps1 - App Ojo Guard (PROXIMA build): pasa los 
 # Revisa App.tsx, app.json y src\\ (.ts, .tsx) y cambia solo palabras sueltas de una lista, sin tocar nombres de variables. Respaldo .bak-neutro de cada archivo cambiado. Si la revision de tipos falla, deja todo como estaba.
 # Va en la carpeta de la APP (la que tiene app.json).
 '''
-print('panel', armar('panel', tpl_panel, 'aplicar-neutro-panel.ps1', 'neutro', cab_panel))
-print('app', armar('app', tpl_app, 'aplicar-neutro-app.ps1', 'neutro', cab_app))
+# Uso: python3 generar_neutro.py panel | panel2 | app   (panel2 = segunda vuelta del panel, con respaldo .bak-neutro2)
+for destino in sys.argv[1:]:
+    if destino == 'panel':
+        print(destino, armar('panel', tpl_panel, 'aplicar-neutro-panel.ps1', 'neutro', cab_panel))
+    elif destino == 'panel2':
+        print(destino, armar('panel', tpl_panel, 'aplicar-neutro2-panel.ps1', 'neutro2', cab_panel.replace('aplicar-neutro-panel.ps1', 'aplicar-neutro2-panel.ps1').replace('# Luciano (13/11/2026)', '# SEGUNDA VUELTA (palabras que quedaron en la primera). Luciano (13/11/2026)')))
+    elif destino == 'app':
+        print(destino, armar('app', tpl_app, 'aplicar-neutro-app.ps1', 'neutro', cab_app))
