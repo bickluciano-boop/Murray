@@ -21,6 +21,9 @@ IMPERATIVOS = {  # vos -> tu (mandato)
  'anotá':'anota','compará':'compara','comprá':'compra','consultá':'consulta','contestá':'contesta','deslizá':'desliza','destildá':'desmarca','marcá':'marca','reintentá':'reintenta',
  'soltá':'suelta','vinculalo':'vincúlalo','tildá':'marca','chequeá':'revisa','mantené':'mantén','pulsá':'pulsa','presioná':'presiona','empezá':'empieza','comenzá':'comienza',
  'terminá':'termina','aguardá':'aguarda','intentalo':'inténtalo','agregalo':'agrégalo','sacalo':'sácalo','ponelo':'ponlo','hacelo':'hazlo','dejalo':'déjalo','mostralo':'muéstralo',
+ 'apagá':'apaga','autorizá':'autoriza','bloqueá':'bloquea','evitá':'evita','llegá':'llega','mejorá':'mejora','prendé':'prende','protegé':'protege','silenciá':'silencia',
+ 'abrila':'ábrela','activala':'actívala','cancelalo':'cancélalo','comparala':'compárala','invitalo':'invítalo','mantenelo':'mantenlo','tocalo':'tócalo','ubicalo':'ubícalo','volvelo':'vuélvelo',
+ 'apagala':'apágala','apagalo':'apágalo','prendela':'enciéndela','prendelo':'enciéndelo','cargala':'cárgala','borrala':'bórrala','cerrala':'ciérrala','mandala':'mándala','mandalo':'mándalo',
  'escribile':'escríbele','avisales':'avísales','mirá':'mira','miralo':'míralo','pedinos':'pídenos','llamanos':'llámanos','mandanos':'mándanos','copialo':'cópialo',
 }
 PRESENTES = {  # vos -> tu (presente)
@@ -31,7 +34,7 @@ PRESENTES = {  # vos -> tu (presente)
  'usás':'usas','mirás':'miras','andás':'vas','vivís':'vives','sentís':'sientes','escribís':'escribes','abrís':'abres','entrás':'entras','mandás':'mandas','volvés':'vuelves',
  'pasás':'pasas','buscás':'buscas','decidís':'decides','confirmás':'confirmas','activás':'activas','movés':'mueves','cerrás':'cierras','llamás':'llamas','esperás':'esperas',
  'intentás':'intentas','agregás':'agregas','borrás':'borras','guardás':'guardas','configurás':'configuras','instalás':'instalas','tomás':'tomas','desactivás':'desactivas',
- 'pagás':'pagas','elegís':'eliges','dejás':'dejas','sacás':'sacas','encendés':'enciendes','conectás':'conectas','conocés':'conoces','pensás':'piensas','perdés':'pierdes',
+ 'pagás':'pagas','acabás':'acabas','bajás':'bajas','apagás':'apagas','bloqueás':'bloqueas','evitás':'evitas','protegés':'proteges','mejorás':'mejoras','elegís':'eliges','dejás':'dejas','sacás':'sacas','encendés':'enciendes','conectás':'conectas','conocés':'conoces','pensás':'piensas','perdés':'pierdes',
  'sumás':'sumas','avisás':'avisas','recordás':'recuerdas','cambiás':'cambias','quitás':'quitas','ocupás':'ocupas','verificás':'verificas','completás':'completas',
 }
 LEXICO = {'acá':'aquí'}
@@ -110,8 +113,8 @@ def aplicar(texto, tabla=None):
         texto = comp.sub(cambiar, texto)
     return texto, total
 
-BUENAS = set('abrirá actualizará habilitará caché nomás revés está será habrá podrá verá hará dará irá tendrá quedará llegará deberá estará aquí así allí sí ahí allá más además demás atrás detrás después qué quizá mamá papá café sofá aún algún según país mié esté estés estás llegué tomé entré encontré cuándo cómo dónde quién cuál también tomé puedo'.split())
-BUENAS_ENCLITICAS = set('acredite authenticate estilo grayscale intervalo satellite username autocomplete caminos cancela cancelo candidate carrete cautela cercanos create deactivate delete destinos duplicate escala filename hostname instala invite limite locate mobile paralelo pathname permite private profile promete rename repite revalidate rotate satelite scheme template titila tranquilo translate vibrate'.split())
+BUENAS = set('disparé mandé miré volví mostrará volverá través abrirá actualizará habilitará caché nomás revés está será habrá podrá verá hará dará irá tendrá quedará llegará deberá estará aquí así allí sí ahí allá más además demás atrás detrás después qué quizá mamá papá café sofá aún algún según país mié esté estés estás llegué tomé entré encontré cuándo cómo dónde quién cuál también tomé puedo'.split())
+BUENAS_ENCLITICAS = set('comprime congela coordinate estimate incomplete interpolate manipulate mochila modelo paquete polite rescate vigila acredite authenticate estilo grayscale intervalo satellite username autocomplete caminos cancela cancelo candidate carrete cautela cercanos create deactivate delete destinos duplicate escala filename hostname instala invite limite locate mobile paralelo pathname permite private profile promete rename repite revalidate rotate satelite scheme template titila tranquilo translate vibrate'.split())
 def restos(texto):
     """Palabras que todavia parecen voseo (para revisar a mano)."""
     t = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), texto)

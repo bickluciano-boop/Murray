@@ -164,5 +164,9 @@ for destino in sys.argv[1:]:
         print(destino, armar('panel', tpl_panel, 'aplicar-neutro-panel.ps1', 'neutro', cab_panel))
     elif destino == 'panel2':
         print(destino, armar('panel', tpl_panel, 'aplicar-neutro2-panel.ps1', 'neutro2', cab_panel.replace('aplicar-neutro-panel.ps1', 'aplicar-neutro2-panel.ps1').replace('# Luciano (13/11/2026)', '# SEGUNDA VUELTA (palabras que quedaron en la primera). Luciano (13/11/2026)')))
+    elif destino == 'panel3':
+        print(destino, armar('panel', tpl_panel, 'aplicar-neutro3-panel.ps1', 'neutro3', cab_panel.replace('aplicar-neutro-panel.ps1', 'aplicar-neutro3-panel.ps1').replace('# Luciano (13/11/2026)', '# TERCERA VUELTA (reglas ampliadas; sirve haya o no corrido las anteriores). Luciano (13/11/2026)')))
+    elif destino == 'app2':
+        print(destino, armar('app', tpl_app, 'aplicar-neutro2-app.ps1', 'neutro2', cab_app.replace('aplicar-neutro-app.ps1', 'aplicar-neutro2-app.ps1').replace('# Luciano (13/11/2026)', '# SEGUNDA VUELTA (palabras que quedaron en la primera). Luciano (13/11/2026)')))
     elif destino == 'app':
         print(destino, armar('app', tpl_app, 'aplicar-neutro-app.ps1', 'neutro', cab_app))
