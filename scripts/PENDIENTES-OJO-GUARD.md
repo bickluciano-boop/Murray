@@ -1878,3 +1878,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 ## 14/11/2026 - Rueda de horas (horas4)
 - `aplicar-horas4-app.ps1`: las horas de los medicamentos y la del "Buen dia" se eligen con una rueda (horas 00-23 y minutos 00/15/30/45) como el reloj del iPhone. Reemplaza la tira horizontal y los botones -/+. Requiere horas3. Sale en la PROXIMA build (Android 206 e iPhone).
 - La rueda del Buen dia guarda una sola vez, 0,7 s despues de dejar de girar.
+
+## 14/11/2026 - Orden por horario y sonido de los avisos (orden-sonido)
+- `aplicar-orden-sonido-app.ps1`: MIS MEDICAMENTOS se ordena por horario y se separa en MAÑANA (05-11:59), TARDE (12-19:59) y NOCHE (20-04:59), segun la primera hora de cada medicamento. En Android se crea el canal "ojo-medicamentos" (sonido corto por defecto, vibracion suave).
+- `aplicar-orden-sonido-panel.ps1`: los avisos de medicamentos y el Buen dia salen por ese canal. Causa del silencio en Android: salian por "ojo-familia-aviso", canal silencioso. iPhone ya sonaba.
+- Pendiente de decidir: los avisos a la familia ("X todavia no confirmo su medicamento", cuidadoAvisar) siguen por el canal silencioso.
+- Orden: instalador de la app + build Android/iPhone primero, despues el del panel.
