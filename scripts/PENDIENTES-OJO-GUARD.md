@@ -1884,3 +1884,8 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - `aplicar-orden-sonido-panel.ps1`: los avisos de medicamentos y el Buen dia salen por ese canal. Causa del silencio en Android: salian por "ojo-familia-aviso", canal silencioso. iPhone ya sonaba.
 - Pendiente de decidir: los avisos a la familia ("X todavia no confirmo su medicamento", cuidadoAvisar) siguen por el canal silencioso.
 - Orden: instalador de la app + build Android/iPhone primero, despues el del panel.
+
+## 15/11/2026 - Medicamentos sin confirmar siguen PENDIENTES (pendientes)
+- Luciano: "porque poner mas tarde? El que no se tomo tiene que aparecer pendiente hasta que lo tome". Causa: la tarjeta solo miraba HOY; a medianoche desaparecian las tomas de ayer que avisaron y no se confirmaron.
+- `aplicar-medicamentos-pendientes-panel.ps1` (servidor: `atrasadas` = tomas de dias anteriores, con aviso enviado y sin confirmar, hasta 3 dias) y `aplicar-medicamentos-pendientes-app.ps1` (seccion PENDIENTES arriba de HOY: "De ayer, sin confirmar" + Lo tome).
+- Pendiente de decidir: boton "No la tome / omitir" para sacar una toma pendiente sin marcarla como tomada (hoy se va sola a los 3 dias). Las tomas de HOY cuya hora paso antes de cargarlas siguen sin contarse.
