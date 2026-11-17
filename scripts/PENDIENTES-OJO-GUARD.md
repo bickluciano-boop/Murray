@@ -1895,3 +1895,10 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - `aplicar-medicamentos-privados-panel.ps1`: tabla `med_dueno (item_id, device_id)`; cada medicamento es del telefono que lo cargo (GET lista, atrasadas, cron, recordatorio, editar, borrar, limite de 8 por telefono). Antes de publicar asigna los existentes a "Android Luciano (Xiaomi)" e "iPhone Luciano". Sin dueno no avisa a nadie.
 - Pendiente (mismo tipo de problema, NO arreglado): Cuidado ("Buen dia", bateria baja/sin senal) y sus preferencias tambien van por CORREO de la cuenta: se mandan a todos los telefonos de la cuenta (pushTokensOf) y las preferencias son compartidas. Mismo problema de fondo que #48 (Guido y papa con cuenta propia).
 - Probado con node:sqlite (20 comprobaciones). NO se pudo simular el instalador en PowerShell (el entorno bloqueo ejecutar el pwsh descargado): revisado a mano; el motor del instalador deja todo como estaba si un ancla falla.
+
+## 17/11/2026 - Verificado: medicamentos privados + PENDIENTES
+- Guido confirmo que hoy NO le llego ningun aviso de medicamentos (hubo avisos a las 10:45 en el Xiaomi y el iPhone de Luciano). Incidente cerrado. "Avisar a mi familia" estaba apagado.
+- PENDIENTES verificado en iPhone (build nueva) y en Android (build 209, APK publicado 17/11 18:10): "Lo tome" confirma la toma exacta y la saca de la lista (10 confirmaciones seguidas en D1, 18:31).
+- Leccion: el instalador de PENDIENTES de la app no se habia aplicado cuando Luciano dijo "ok, listo" (no se vio la salida); costo una build extra. Pedir SIEMPRE la salida antes de hacer una build.
+- Abierto: el 16/11 no se generaron tomas para la cuenta lubick@me.com (iPhone); el 15 y el 17 si. Sin causa conocida. Si se repite, revisar logs (wrangler tail) en el minuto de la toma.
+- Abierto (mismo problema de fondo que medicamentos, NO arreglado): "Buen dia" y bateria baja/sin senal se mandan a todos los telefonos de la cuenta y sus preferencias son por correo.
