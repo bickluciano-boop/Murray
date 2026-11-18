@@ -11,7 +11,9 @@ V = 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: 
 N = 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: "ojo-medicamentos-2", interruptionLevel: "time-sensitive", data })'
 filas = [('src\\index.ts', 'alerta: el aviso de medicamentos usa el canal nuevo y es time-sensitive en iPhone', V, N)]
 def cambios_ps(fs):
-    return "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in fs) + "\n)\n"
+    # Con UNA sola fila, PowerShell aplana @(@(...)) y $c[0] pasa a ser la primera letra: hay que anteponer una coma (,@(...)).
+    pref = "    ," if len(fs) == 1 else "    "
+    return "$cambios = @(\n" + ',\n'.join(pref + "@(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in fs) + "\n)\n"
 i0 = tpl.index('$ErrorActionPreference'); j0 = tpl.index('if (-not (Test-Path (Join-Path $raiz "wrangler.toml")))')
 cola = tpl[tpl.index('$descargas = @()'):].replace('.bak-audioandroid', '.bak-alerta')
 cola = re.sub(r'foreach \(\$k in \$archivos\.Keys\) \{ Chk \(\$k \+ ": huella final"\).*\n', '', cola)

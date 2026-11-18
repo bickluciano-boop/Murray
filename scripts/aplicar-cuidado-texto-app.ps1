@@ -25,7 +25,7 @@ Ok "Carpeta correcta"
 if (-not (Test-Path (Join-Path $raiz "src\FamiliaPantalla.tsx"))) { Mal "No encuentro src\FamiliaPantalla.tsx en esta carpeta."; return }
 if ((Contar (Leer (Join-Path $raiz "src\FamiliaPantalla.tsx")).texto '24 h si estabas en un lugar guardado') -ne 0) { Avi "Esto ya estaba aplicado en la app. No toco nada."; return }
 $cambios = @(
-    @('src\FamiliaPantalla.tsx', 'cuidado: texto de bateria baja y sin senal', 'detalle="Avisa si tu batería baja de 15% o si pasan 3 horas sin señal."', 'detalle="Te avisa a ti si tu batería baja de 15%. Avisa a tu familia si pasan 6 horas sin señal (24 h si estabas en un lugar guardado)."')
+    ,@('src\FamiliaPantalla.tsx', 'cuidado: texto de bateria baja y sin senal', 'detalle="Avisa si tu batería baja de 15% o si pasan 3 horas sin señal."', 'detalle="Te avisa a ti si tu batería baja de 15%. Avisa a tu familia si pasan 6 horas sin señal (24 h si estabas en un lugar guardado)."')
 )
 $descargas = @()
 

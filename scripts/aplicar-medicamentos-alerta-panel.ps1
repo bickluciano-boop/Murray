@@ -26,7 +26,7 @@ if (-not (Test-Path (Join-Path $raiz "src\index.ts"))) { Mal "No encuentro src\i
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'ojo-medicamentos-2') -ne 0) { Avi "Esto ya estaba aplicado. No toco nada."; return }
 if ((Contar (Leer (Join-Path $raiz "src\index.ts")).texto 'async function medAvisarA') -eq 0) { Mal "Falta aplicar primero aplicar-medicamentos-privados-panel.ps1."; return }
 $cambios = @(
-    @('src\index.ts', 'alerta: el aviso de medicamentos usa el canal nuevo y es time-sensitive en iPhone', 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: "ojo-medicamentos", data })', 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: "ojo-medicamentos-2", interruptionLevel: "time-sensitive", data })')
+    ,@('src\index.ts', 'alerta: el aviso de medicamentos usa el canal nuevo y es time-sensitive en iPhone', 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: "ojo-medicamentos", data })', 'sendExpoNoticeLogged(env, f.pushToken, titulo, texto, motivo, { channelId: "ojo-medicamentos-2", interruptionLevel: "time-sensitive", data })')
 )
 $descargas = @()
 

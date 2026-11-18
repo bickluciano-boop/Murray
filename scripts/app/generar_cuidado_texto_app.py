@@ -8,7 +8,8 @@ def psq(s):
 V = 'detalle="Avisa si tu batería baja de 15% o si pasan 3 horas sin señal."'
 N = 'detalle="Te avisa a ti si tu batería baja de 15%. Avisa a tu familia si pasan 6 horas sin señal (24 h si estabas en un lugar guardado)."'
 filas = [('src\\FamiliaPantalla.tsx', 'cuidado: texto de bateria baja y sin senal', V, N)]
-cambios = "$cambios = @(\n" + ',\n'.join("    @(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
+# Con UNA sola fila, PowerShell aplana @(@(...)) y $c[0] pasa a ser la primera letra: hay que anteponer una coma (,@(...)).
+cambios = "$cambios = @(\n" + ',\n'.join(("    ," if len(filas) == 1 else "    ") + "@(%s, %s, %s, %s)" % tuple(psq(x) for x in f) for f in filas) + "\n)\n"
 i0 = base.index('$ErrorActionPreference'); j0 = base.index('Ok "Carpeta correcta"')
 cola = base[base.index('$descargas = @()'):].replace('.bak-version', '.bak-cuidadotexto')
 MENSAJE = 'LISTO: la app compila bien. El texto de Bateria baja y sin senal dice lo que hace (sale en la PROXIMA build, Android e iPhone).'
