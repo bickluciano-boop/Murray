@@ -38,7 +38,7 @@ import { TarjetaSaludPantalla } from "./TarjetaSaludPantalla";
 ')
 )
 $descargas = @(
-    @('https://raw.githubusercontent.com/bickluciano-boop/Murray/e7e673e53e395929c4864d3b0d037740a639ef45/scripts/app/src/RelojCaidasAviso.tsx', 'src\RelojCaidasAviso.tsx', '39374d9b9e9b7785eca234b321e5e80a23569f7723432ab684ea945b1e4fb070')
+    ,@('https://raw.githubusercontent.com/bickluciano-boop/Murray/e7e673e53e395929c4864d3b0d037740a639ef45/scripts/app/src/RelojCaidasAviso.tsx', 'src\RelojCaidasAviso.tsx', '39374d9b9e9b7785eca234b321e5e80a23569f7723432ab684ea945b1e4fb070')
 )
 
 # --- Revisar que todas las anclas esten exactamente una vez, en todos los archivos ---

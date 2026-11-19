@@ -10,7 +10,8 @@ def psq(s):
 def sha(ruta):
     return hashlib.sha256(open(ruta, 'rb').read()).hexdigest()
 nuevos = [('RelojCaidasAviso.tsx', 'src\\RelojCaidasAviso.tsx')]
-descargas = "$descargas = @(\n" + ',\n'.join("    @(%s, %s, %s)" % (psq('https://raw.githubusercontent.com/bickluciano-boop/Murray/%s/scripts/app/src/%s' % (COMMIT_ARCHIVOS, a)), psq(b), psq(sha(R + 'app/src/' + a))) for a, b in nuevos) + "\n)\n"
+# UNA sola fila: sin la coma delante PowerShell aplana @(@(a,b,c)) a tres textos y $x[1] da un caracter ("No se pudo descargar bien t.") - fallo real del 20/11
+descargas = "$descargas = @(\n    ," + ',\n    ,'.join("@(%s, %s, %s)" % (psq('https://raw.githubusercontent.com/bickluciano-boop/Murray/%s/scripts/app/src/%s' % (COMMIT_ARCHIVOS, a)), psq(b), psq(sha(R + 'app/src/' + a))) for a, b in nuevos) + "\n)\n"
 IMP_A = 'import { TarjetaSaludPantalla } from "./TarjetaSaludPantalla";\n'
 IMP_B = 'import { RelojCaidasAviso } from "./RelojCaidasAviso";\n' + IMP_A
 REN_A = '      </Pressable>\n      <TarjetaSaludPantalla\n'
