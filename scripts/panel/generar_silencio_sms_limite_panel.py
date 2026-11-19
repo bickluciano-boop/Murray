@@ -25,7 +25,7 @@ async function silencioSmsPermitido(env: Env, email: string, deviceName: string)
 
 ''' + F_A
 S_A = ('  // El SMS cuesta plata: solo sale si el equipo dejo de responder justo despues de un intento de entrada (posible robo).\n'
-       '  // El silencio comun (Android duerma la app, sin senal, bateria) va solo por mail.\n'
+       '  // El silencio comun (Android duerme la app, sin senal, bateria) va solo por mail.\n'
        '  if (reason === "after_attempt" && prefs.notifySms && prefs.phoneNumber) {\n    // El carrier argentino reemplaza')
 S_B = ('  // El SMS cuesta plata: tras un intento de entrada (posible robo) sale siempre; el silencio comun, como maximo un SMS por telefono cada 24 horas.\n'
        '  // El mail sale siempre.\n'
@@ -54,21 +54,14 @@ bad = [c for c in total if ord(c) > 127 and c not in 'áéíóúñÁÉÍÓÚÑ¿
 assert not bad, set(bad)
 open(R + 'aplicar-silencio-sms-limite-panel.ps1', 'w', encoding='utf-8-sig', newline='').write(total.replace('\n', '\r\n'))
 # anclajes sobre el codigo que pego Luciano + el parche anterior
-muestra = '''x
-async function notifyDeviceSilence(
-  env: Env,
-  options: {
-  },
-) {
-  const visto = 1;
-  // El SMS cuesta plata: solo sale si el equipo dejo de responder justo despues de un intento de entrada (posible robo).
-  // El silencio comun (Android duerma la app, sin senal, bateria) va solo por mail.
-  if (reason === "after_attempt" && prefs.notifySms && prefs.phoneNumber) {
-    // El carrier argentino reemplaza el nÃºmero de origen por un cÃ³digo corto
-    await sendSms(env, prefs.phoneNumber, `Ojo Guard: ${titulo}.`);
-  }
-}
-'''
+# El texto que deja aplicar-silencio-sin-sms-panel.ps1 se LEE de ese instalador (no se copia a mano): asi un error de tipeo no pasa desapercibido.
+prev = open(R + 'aplicar-silencio-sin-sms-panel.ps1', encoding='utf-8-sig').read().replace('\r\n', '\n')
+k = prev.index("$cambios = @(\n"); k2 = prev.index("\n)\n", k)
+campos = [c.replace("''", "'") for c in re.findall(r"'((?:[^']|'')*)'", prev[k:k2])]
+dejado_por_el_anterior = campos[3]   # [archivo, etiqueta, ancla, nuevo]
+muestra = ("x\nasync function notifyDeviceSilence(\n  env: Env,\n  options: {\n  },\n) {\n  const visto = 1;\n"
+           + dejado_por_el_anterior
+           + " el nÃºmero de origen por un cÃ³digo corto\n    await sendSms(env, prefs.phoneNumber, `Ojo Guard: ${titulo}.`);\n  }\n}\n")
 for a, n, v, nv in filas:
     assert muestra.count(v) == 1, (n, muestra.count(v))
 out = muestra

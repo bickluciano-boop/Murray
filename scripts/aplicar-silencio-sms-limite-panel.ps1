@@ -45,7 +45,7 @@ async function silencioSmsPermitido(env: Env, email: string, deviceName: string)
 async function notifyDeviceSilence(
 '),
     @('src\index.ts', 'silencio: el SMS sale tras un intento de entrada o si no hubo otro en 24 h', '  // El SMS cuesta plata: solo sale si el equipo dejo de responder justo despues de un intento de entrada (posible robo).
-  // El silencio comun (Android duerma la app, sin senal, bateria) va solo por mail.
+  // El silencio comun (Android duerme la app, sin senal, bateria) va solo por mail.
   if (reason === "after_attempt" && prefs.notifySms && prefs.phoneNumber) {
     // El carrier argentino reemplaza', '  // El SMS cuesta plata: tras un intento de entrada (posible robo) sale siempre; el silencio comun, como maximo un SMS por telefono cada 24 horas.
   // El mail sale siempre.
