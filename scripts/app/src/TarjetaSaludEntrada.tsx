@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { RelojCaidasAviso } from "./RelojCaidasAviso";
 import { TarjetaSaludPantalla } from "./TarjetaSaludPantalla";
 import { cargarTarjeta, progresoCarga, tarjetaConDatos, textoSangre } from "./tarjetaSalud";
 
@@ -66,6 +67,7 @@ export function TarjetaSaludAjustes({ paleta }: { paleta: Paleta }) {
         </View>
         <Text style={{ color: c.suave, fontSize: 22 }}>›</Text>
       </Pressable>
+      <RelojCaidasAviso paleta={paleta} />
       <TarjetaSaludPantalla
         onCerrar={() => {
           setAbierta(false);
