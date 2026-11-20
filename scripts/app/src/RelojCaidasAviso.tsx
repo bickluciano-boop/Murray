@@ -43,9 +43,9 @@ export function RelojCaidasAviso({ paleta }: { paleta: Paleta }) {
       style={{
         backgroundColor: c.superficie,
         borderColor: c.borde,
-        borderRadius: 20,
+        borderRadius: 14,
         borderWidth: 1,
-        marginBottom: 12,
+        marginBottom: 8,
         overflow: "hidden",
       }}
     >
@@ -55,18 +55,18 @@ export function RelojCaidasAviso({ paleta }: { paleta: Paleta }) {
         accessibilityRole="button"
         accessibilityState={{ expanded: abierta }}
         onPress={() => setAbierta((v) => !v)}
-        style={{ alignItems: "center", flexDirection: "row", gap: 14, padding: 16 }}
+        style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 10 }}
       >
-        <View style={{ alignItems: "center", backgroundColor: "#2F6FED", borderRadius: 14, height: 52, justifyContent: "center", width: 52 }}>
-          <View style={{ borderColor: "#FFFFFF", borderRadius: 8, borderWidth: 3, height: 26, width: 22 }} />
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 2, height: 3, position: "absolute", top: 8, width: 10 }} />
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 2, bottom: 8, height: 3, position: "absolute", width: 10 }} />
+        <View style={{ alignItems: "center", backgroundColor: "#2F6FED", borderRadius: 10, height: 36, justifyContent: "center", width: 36 }}>
+          <View style={{ borderColor: "#FFFFFF", borderRadius: 6, borderWidth: 2, height: 18, width: 15 }} />
+          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 1.5, height: 2, position: "absolute", top: 5, width: 7 }} />
+          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 1.5, bottom: 5, height: 2, position: "absolute", width: 7 }} />
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ color: c.texto, fontSize: 17, fontWeight: "900" }}>Reloj con detección de caídas</Text>
-          <Text style={{ color: c.suave, fontSize: 14, lineHeight: 20 }}>Un complemento por si te caes y no puedes pedir ayuda.</Text>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={{ color: c.texto, fontSize: 15, fontWeight: "800" }}>Reloj con detección de caídas</Text>
+          <Text style={{ color: c.suave, fontSize: 13, lineHeight: 18 }}>Un complemento por si te caes</Text>
         </View>
-        <Text style={{ color: c.suave, fontSize: 22, transform: [{ rotate: abierta ? "90deg" : "0deg" }] }}>›</Text>
+        <Text style={{ color: c.suave, fontSize: 18, transform: [{ rotate: abierta ? "90deg" : "0deg" }] }}>›</Text>
       </Pressable>
       {abierta ? (
         <View style={{ borderColor: c.borde, borderTopWidth: 1, gap: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
