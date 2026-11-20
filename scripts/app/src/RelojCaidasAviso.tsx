@@ -93,12 +93,7 @@ export function RelojCaidasAviso({ paleta }: { paleta: Paleta }) {
       </Pressable>
       {abierta ? (
         <View style={{ borderColor: c.borde, borderTopWidth: 1, gap: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
-          {PUNTOS.map((p) => (
-            <View key={p.titulo} style={{ gap: 2 }}>
-              <Text style={{ color: c.texto, fontSize: 14.5, fontWeight: "800" }}>{p.titulo}</Text>
-              <Text style={{ color: c.suave, fontSize: 14, lineHeight: 20 }}>{p.texto}</Text>
-            </View>
-          ))}
+          {/* Ver presentación arriba (20/11/2026): el botón va ANTES de los textos para que se encuentre sin bajar. */}
           {verVideo ? (
             <View style={{ gap: 8 }}>
               <View style={{ aspectRatio: 16 / 9, backgroundColor: "#000000", borderRadius: 10, overflow: "hidden", width: "100%" }}>
@@ -139,6 +134,12 @@ export function RelojCaidasAviso({ paleta }: { paleta: Paleta }) {
               <Text style={{ color: c.superficie, fontSize: 14.5, fontWeight: "800" }}>Ver presentación</Text>
             </Pressable>
           )}
+          {PUNTOS.map((p) => (
+            <View key={p.titulo} style={{ gap: 2 }}>
+              <Text style={{ color: c.texto, fontSize: 14.5, fontWeight: "800" }}>{p.titulo}</Text>
+              <Text style={{ color: c.suave, fontSize: 14, lineHeight: 20 }}>{p.texto}</Text>
+            </View>
+          ))}
         </View>
       ) : null}
     </View>
