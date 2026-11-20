@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { registrarApertura } from "./aperturasAjustes";
 import { RelojCaidasAviso } from "./RelojCaidasAviso";
 import { TarjetaSaludPantalla } from "./TarjetaSaludPantalla";
 import { cargarTarjeta, progresoCarga, tarjetaConDatos, textoSangre } from "./tarjetaSalud";
@@ -37,6 +38,9 @@ export function TarjetaSaludAjustes({ paleta }: { paleta: Paleta }) {
   useEffect(() => {
     void leer();
   }, [leer]);
+
+  // El buscador de Ajustes puede abrir esta pantalla.
+  useEffect(() => registrarApertura("salud", () => setAbierta(true)), []);
 
   return (
     <>

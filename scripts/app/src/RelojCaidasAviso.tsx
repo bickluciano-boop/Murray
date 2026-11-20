@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
+
+import { registrarApertura } from "./aperturasAjustes";
 
 /**
  * Tarjeta INFORMATIVA debajo de "Salud y emergencias": los relojes con detección de caídas. Es solo información: Ojo Guard NO se conecta
@@ -50,6 +52,17 @@ export function RelojCaidasAviso({ paleta }: { paleta: Paleta }) {
   const [abierta, setAbierta] = useState(false);
   const [verVideo, setVerVideo] = useState(false);
   const [falloVideo, setFalloVideo] = useState(false);
+
+  // El buscador de Ajustes puede desplegar esta tarjeta.
+  useEffect(
+    () =>
+      registrarApertura("reloj", () => {
+        setVerVideo(false);
+        setFalloVideo(false);
+        setAbierta(true);
+      }),
+    [],
+  );
   const c = {
     superficie: paleta.superficieHonda ?? paleta.superficie ?? "#FFFFFF",
     borde: paleta.borde ?? "#DFE4F0",

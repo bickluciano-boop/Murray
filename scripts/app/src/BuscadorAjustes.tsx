@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Modal, Platform, Pressable, ScrollView, StatusBar, Text, TextInput, View } from "react-native";
 
+import { abrirDesdeBuscador } from "./aperturasAjustes";
 import { BUSQUEDAS_FRECUENTES, NOMBRE_DE_GRUPO, buscarEnAjustes } from "./indiceBusqueda";
 
 /**
@@ -33,9 +34,15 @@ export function BuscadorAjustes({ paleta, android, onElegir }: { paleta: Paleta;
   function cerrar() {
     setAbierto(false);
   }
-  function elegir(grupo: string) {
+  function elegir(entrada: { grupo: string; abre?: string }) {
     cerrar();
-    onElegir(grupo);
+    if (entrada.abre) {
+      const cual = entrada.abre;
+      // Se espera a que termine de cerrarse la hoja: en iPhone, abrir otra pantalla mientras esta se cierra la ignora.
+      setTimeout(() => abrirDesdeBuscador(cual), 500);
+      return;
+    }
+    onElegir(entrada.grupo);
   }
 
   return (
@@ -88,7 +95,7 @@ export function BuscadorAjustes({ paleta, android, onElegir }: { paleta: Paleta;
                 onChangeText={setConsulta}
                 onSubmitEditing={() => {
                   const primero = resultados[0];
-                  if (primero) elegir(primero.entrada.grupo);
+                  if (primero) elegir(primero.entrada);
                 }}
                 placeholder="¿Qué quieres buscar?"
                 placeholderTextColor={c.suave}
@@ -131,7 +138,7 @@ export function BuscadorAjustes({ paleta, android, onElegir }: { paleta: Paleta;
                     accessibilityLabel={`${entrada.titulo}. Está en ${NOMBRE_DE_GRUPO[entrada.grupo] ?? "Ajustes"}`}
                     accessibilityRole="button"
                     key={entrada.id}
-                    onPress={() => elegir(entrada.grupo)}
+                    onPress={() => elegir(entrada)}
                     style={{ backgroundColor: c.superficie, borderColor: c.borde, borderRadius: 14, borderWidth: 1, gap: 2, paddingHorizontal: 14, paddingVertical: 12 }}
                   >
                     <Text style={{ color: c.texto, fontSize: 16, fontWeight: "800" }}>{entrada.titulo}</Text>

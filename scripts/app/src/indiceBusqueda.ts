@@ -18,10 +18,13 @@ export type EntradaBusqueda = {
   palabras: string;
   soloAndroid?: boolean;
   soloIphone?: boolean;
+  /** Si no es un grupo sino una tarjeta con su propio estado: el nombre con el que se anota en aperturasAjustes.ts (ej.: "salud"). */
+  abre?: string;
 };
 
 /** Nombre con el que se ve cada grupo en Ajustes, para decir "Está en …". */
 export const NOMBRE_DE_GRUPO: { [grupo: string]: string } = {
+  configuracion: "Ajustes",
   permisos: "Permisos",
   perfil: "Perfil",
   perdido: "Modo perdido",
@@ -53,6 +56,8 @@ export const INDICE_AJUSTES: EntradaBusqueda[] = [
   { id: "pendientes", titulo: "Envíos pendientes", ayuda: "Lo que falta enviar", grupo: "preferencias", palabras: "envios pendientes enviar sin conexion internet cola falta mandar" },
   { id: "intentos", titulo: "Intentos de entrada", ayuda: "Fotos y registro de quien intentó entrar", grupo: "fotos", palabras: "intentos entrada intrusos intruso fotos foto camara galeria historial quien entro registro evidencias" },
   { id: "ms", titulo: "Ojo Guard MS · Teléfono principal", ayuda: "La conexión con el panel", grupo: "conexion", palabras: "ms panel consola vincular vinculado conexion cuenta enlace desvincular telefono principal web ordenes" },
+  { id: "salud", titulo: "Salud y emergencias", ayuda: "Tu tarjeta de salud: lo que te piden en una emergencia", grupo: "configuracion", abre: "salud", palabras: "salud tarjeta sangre grupo sanguineo factor alergia alergias medicamentos remedios obra social prepaga credencial afiliado medico emergencia accidente donante cirugias datos medicos" },
+  { id: "reloj", titulo: "Reloj con detección de caídas", ayuda: "Un complemento por si te caes y no puedes pedir ayuda", grupo: "configuracion", abre: "reloj", palabras: "reloj relojes caida caidas deteccion pulsera smartwatch apple watch galaxy watch video presentacion" },
   { id: "familia", titulo: "Familia y amigos", ayuda: "Unirme con un código, pausar mi ubicación y el SOS", grupo: "familia", palabras: "familia amigos codigo invitar unirme pausar ubicacion sos emergencia ayuda menores hijos compartir" },
 ];
 
@@ -91,9 +96,14 @@ function puntosDePalabra(escrita: string, palabra: string): number {
   if (escrita.length >= 3 && palabra.includes(escrita)) return 1.5;
   if (escrita.length >= 4) {
     const maximo = escrita.length >= 8 ? 2 : 1;
-    if (distancia(escrita, palabra) <= maximo) return 1.2;
+    // Un error de una letra puntúa más que uno de dos: así "alerjias" prefiere "alergias" antes que una palabra que se parece menos.
+    const completa = distancia(escrita, palabra);
+    if (completa <= maximo) return completa <= 1 ? 1.2 : 0.9;
     // Se está escribiendo todavía y ya hay un error: se compara contra el principio de la palabra.
-    if (palabra.length > escrita.length && distancia(escrita, palabra.slice(0, escrita.length)) <= maximo) return 1.1;
+    if (palabra.length > escrita.length) {
+      const inicio = distancia(escrita, palabra.slice(0, escrita.length));
+      if (inicio <= maximo) return inicio <= 1 ? 1.1 : 0.8;
+    }
   }
   return 0;
 }
@@ -124,11 +134,16 @@ function puntosEntrada(p: Preparada, palabras: string[], exigirTodas: boolean): 
   return total / palabras.length + (acertadas === palabras.length ? 0.5 : 0);
 }
 
+/** Palabras que no dicen nada por sí solas ("se cae", "el pin"): se ignoran mientras haya otras palabras con las que buscar. */
+const PALABRAS_VACIAS = new Set(["de", "del", "la", "el", "los", "las", "lo", "le", "se", "me", "mi", "mis", "tu", "tus", "te", "un", "una", "unos", "unas", "y", "o", "a", "al", "en", "que", "por", "con", "para", "es"]);
+
 export type ResultadoBusqueda = { entrada: EntradaBusqueda; exacto: boolean };
 
 /** Busca mientras se escribe. `android` filtra lo que solo existe en Android o solo en iPhone. */
 export function buscarEnAjustes(consulta: string, android: boolean, limite = 6): { resultados: ResultadoBusqueda[]; aproximado: boolean } {
-  const palabras = normalizar(consulta).split(" ").filter(Boolean);
+  const todas = normalizar(consulta).split(" ").filter(Boolean);
+  const utiles = todas.filter((w) => !PALABRAS_VACIAS.has(w));
+  const palabras = utiles.length ? utiles : todas;
   if (!palabras.length || palabras.join("").length < 2) return { resultados: [], aproximado: false };
   const visibles = PREPARADAS.filter((p) => !(android ? p.entrada.soloIphone : p.entrada.soloAndroid));
   const con = (exigir: boolean) =>
