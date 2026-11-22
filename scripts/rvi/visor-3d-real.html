@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reconstrucción visual · prueba con mapa real</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.130.0/Build/Cesium/Widgets/widgets.css">
+<style>
+/* Paleta de la marca: obsidiana, marfil cálido, hielo solo para texto digital, ámbar solo para lo vivo. */
+:root {
+  --obsidian: #070707; --obsidian-2: #0f0f0f; --obsidian-3: #1a1a1a;
+  --ivory: #f5f0e6; --ivory-dim: rgba(245, 240, 230, 0.86); --ivory-faint: rgba(245, 240, 230, 0.62);
+  --line: rgba(245, 240, 230, 0.16); --ice: #cdebff; --amber: #ffb400; --bad: #ff8a7a;
+  --font-text: "Outfit", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--obsidian); color: var(--ivory); font-family: var(--font-text); font-weight: 300; line-height: 1.5; }
+.app { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
+.lado { background: var(--obsidian-2); border-right: 1px solid var(--line); padding: 20px 18px; overflow-y: auto; display: grid; align-content: start; gap: 18px; }
+h1 { margin: 0; font-weight: 300; font-size: 24px; line-height: 1.15; }
+.tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ice); border: 1px solid rgba(205, 235, 255, 0.45); padding: 4px 8px; border-radius: 4px; justify-self: start; }
+.sub { margin: 0; color: var(--ivory-dim); font-size: 15px; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
+legend { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ivory-faint); padding: 0; margin-bottom: 8px; }
+label { display: grid; gap: 4px; font-size: 13.5px; color: var(--ivory-dim); }
+input { font: inherit; font-family: var(--font-mono); font-size: 14px; color: var(--ivory); background: var(--obsidian); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; width: 100%; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: inherit; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ivory); background: var(--obsidian-3); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; cursor: pointer; }
+button:hover { border-color: rgba(255, 180, 0, 0.6); }
+button.pri { background: var(--amber); color: #1a1100; border-color: var(--amber); font-weight: 500; }
+button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.nota { margin: 0; font-size: 13px; color: var(--ivory-faint); }
+.estado { margin: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--ivory-dim); border-left: 2px solid var(--amber); padding-left: 10px; }
+.estado[data-t="mal"] { border-color: var(--bad); color: var(--bad); }
+#visor { position: relative; height: 100%; min-height: 0; background: #0a0a0a; }
+.cesium-viewer-bottom { opacity: 0.95; }
+@media (max-width: 820px) { .app { grid-template-columns: 1fr; grid-template-rows: auto 60vh; height: auto; } .lado { border-right: 0; border-bottom: 1px solid var(--line); } #visor { height: 60vh; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="lado" aria-label="Controles">
+    <span class="tag">prueba · mapa real · v7</span>
+    <h1>Reconstrucción visual</h1>
+    <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
+
+    <fieldset>
+      <legend>1 · Clave de Google</legend>
+      <label>Clave de la API (Map Tiles API)
+        <input id="clave" type="password" autocomplete="off" spellcheck="false" placeholder="Pégala aquí, no en el chat">
+      </label>
+      <div class="btns"><button id="guardar" type="button">Guardar en este navegador</button><button id="borrar" type="button">Borrar</button></div>
+      <p class="nota">La clave se queda en este navegador y solo se envía a Google. No se guarda en ningún archivo.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · Lugar</legend>
+      <div class="fila">
+        <label>Latitud<input id="lat" inputmode="decimal" value="-34.6037"></label>
+        <label>Longitud<input id="lon" inputmode="decimal" value="-58.3816"></label>
+      </div>
+      <p class="nota">Ejemplo: el Obelisco de Buenos Aires. Cambia los números para probar tu zona (clic derecho en Google Maps → copiar coordenadas).</p>
+      <label>Precisión del punto (metros)<input id="prec" inputmode="numeric" value="15"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · Franja de pisos (ejemplo)</legend>
+      <div class="fila">
+        <label>Desde el piso<input id="p1" inputmode="numeric" value="12"></label>
+        <label>Hasta el piso<input id="p2" inputmode="numeric" value="28"></label>
+      </div>
+      <p class="nota">Cada piso se calcula de 3 m. Es un rango de ejemplo: Ojo Guard hoy no guarda la altura.</p>
+    </fieldset>
+
+    <div class="btns"><button id="ir" class="pri" type="button">Cargar y mostrar</button></div>
+
+    <fieldset>
+      <legend>Cámara</legend>
+      <div class="btns">
+        <button id="c-aerea" type="button" aria-pressed="false">Aérea</button>
+        <button id="c-incl" type="button" aria-pressed="true">Inclinada</button>
+        <button id="c-calle" type="button" aria-pressed="false">Calle</button>
+        <button id="c-giro" type="button" aria-pressed="false">Girar</button>
+      </div>
+    </fieldset>
+
+    <p class="estado" id="estado" role="status" aria-live="polite">Pega tu clave de Google y toca “Cargar y mostrar”.</p>
+    <p class="nota">Los edificios y la atribución de Google que se ven abajo del mapa son parte del servicio y no se pueden quitar. Los datos del mapa no se guardan ni se exportan.</p>
+  </aside>
+  <main id="visor" aria-label="Mapa 3D"></main>
+</div>
+
+<script>window.CESIUM_BASE_URL = "https://cdn.jsdelivr.net/npm/cesium@1.130.0/Build/Cesium/";</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.130.0/Build/Cesium/Cesium.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var estado = $("estado"), claveEl = $("clave");
+  function decir(txt, mal) { estado.textContent = txt; estado.dataset.t = mal ? "mal" : "ok"; }
+  function leerClave() { try { return localStorage.getItem("rvi_clave_google") || ""; } catch (e) { return ""; } }
+  function guardarClave(v) { try { if (v) localStorage.setItem("rvi_clave_google", v); else localStorage.removeItem("rvi_clave_google"); return true; } catch (e) { return false; } }
+  claveEl.value = leerClave();
+  $("guardar").addEventListener("click", function () { decir(guardarClave(claveEl.value.trim()) ? "Clave guardada en este navegador." : "Este navegador no permite guardarla. Pégala cada vez.", false); });
+  $("borrar").addEventListener("click", function () { claveEl.value = ""; guardarClave(""); decir("Clave borrada de este navegador.", false); });
+
+  if (!window.Cesium) { decir("No se pudo cargar el visor (CesiumJS). Revisa tu conexión a internet y recarga la página.", true); return; }
+
+  var viewer = null, tileset = null, capa = [], centro = null, vista = { pitch: -35, range: 300 }, girando = false, rumbo = 0, ultimaClaveUsada = "";
+  function crearVisor() {
+    viewer = new Cesium.Viewer("visor", {
+      globe: false, baseLayer: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false,
+      animation: false, timeline: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, shouldAnimate: true, showRenderLoopErrors: false
+    });
+    viewer.scene.renderError.addEventListener(function () { decir("Este navegador no pudo dibujar el 3D (pasa en la vista previa del celular o con poca memoria). Abre el archivo en Chrome o Edge desde una computadora.", true); });
+    viewer.scene.skyAtmosphere.show = false; viewer.scene.highDynamicRange = false; viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#0a0a0a");
+    viewer.clock.onTick.addEventListener(function () { if (girando && centro) { rumbo += 0.0035; viewer.camera.lookAt(centro, new Cesium.HeadingPitchRange(rumbo, Cesium.Math.toRadians(vista.pitch), vista.range)); } });
+  }
+  function num(id, def) { var v = parseFloat(String($(id).value).replace(",", ".")); return isFinite(v) ? v : def; }
+  function limpiarCapa() { capa.forEach(function (e) { viewer.entities.remove(e); }); capa = []; }
+
+  function mirar(rumboRad) {
+    if (!centro) return;
+    viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+    viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(centro, 40), { duration: 2.2, offset: new Cesium.HeadingPitchRange(rumboRad === undefined ? rumbo : rumboRad, Cesium.Math.toRadians(vista.pitch), vista.range) });
+  }
+  function camara(btn, pitch, range) {
+    ["c-aerea", "c-incl", "c-calle"].forEach(function (i) { $(i).setAttribute("aria-pressed", i === btn ? "true" : "false"); });
+    vista = { pitch: pitch, range: range }; if (girando) { toggleGiro(false); } mirar();
+  }
+  function toggleGiro(on) {
+    girando = on; $("c-giro").setAttribute("aria-pressed", on ? "true" : "false");
+    if (!on && viewer) viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+  }
+  $("c-aerea").addEventListener("click", function () { camara("c-aerea", -80, 520); });
+  $("c-incl").addEventListener("click", function () { camara("c-incl", -35, 300); });
+  $("c-calle").addEventListener("click", function () { camara("c-calle", -8, 150); });
+  $("c-giro").addEventListener("click", function () { if (!centro) { decir("Primero carga un lugar.", true); return; } toggleGiro(!girando); });
+
+  async function cargarMapa(clave) {
+    if (tileset && ultimaClaveUsada === clave) return;
+    if (tileset) { viewer.scene.primitives.remove(tileset); tileset = null; }
+    Cesium.GoogleMaps.defaultApiKey = clave;
+    tileset = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true });
+    viewer.scene.primitives.add(tileset); ultimaClaveUsada = clave;
+  }
+  function mensajeDeError(e) {
+    var txt = String(e && (e.message || e)), st = e && (e.statusCode || e.status);
+    if (st === 403 || /403/.test(txt)) return "Google rechazó la clave (403). Revisa que la API “Map Tiles API” esté habilitada, que haya facturación y que la clave no esté restringida a otro sitio.";
+    if (st === 400 || /400/.test(txt)) return "Google no aceptó la clave (400). Revisa que la copiaste completa.";
+    if (st === 429 || /429/.test(txt)) return "Se llegó al límite diario de consultas de Google (429). Prueba mañana o revisa las cuotas en Google Cloud.";
+    return "No se pudo cargar el mapa 3D (" + txt.slice(0, 120) + "). Si estás en la vista previa del celular, abre el archivo en Chrome o Edge desde una computadora.";
+  }
+  // Prueba directa con Google, antes de dibujar: dice con claridad si falla la clave o la conexión.
+  async function probarClave(clave) {
+    var r;
+    try { r = await fetch("https://tile.googleapis.com/v1/3dtiles/root.json?key=" + encodeURIComponent(clave), { cache: "no-store" }); }
+    catch (e) { return "No se pudo hablar con Google desde este navegador. Si estás en la vista previa del celular, abre el archivo en Chrome o Edge desde una computadora; si ya lo hiciste, revisa tu conexión o si algo bloquea tile.googleapis.com."; }
+    if (r.status === 200) return "";
+    if (r.status === 400) return "Google no aceptó la clave (400). Revisa que la copiaste completa, sin espacios.";
+    if (r.status === 403) return "Google rechazó la clave (403). Revisa que la API “Map Tiles API” esté habilitada, que haya facturación y que la clave no esté restringida a otro sitio.";
+    if (r.status === 429) return "Se llegó al límite diario de consultas de Google (429). Prueba mañana o revisa las cuotas en Google Cloud.";
+    return "Google respondió con el código " + r.status + ".";
+  }
+  function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  $("ir").addEventListener("click", async function () {
+    var clave = claveEl.value.trim();
+    if (!clave) { decir("Falta la clave de Google. Pégala en el paso 1.", true); return; }
+    var lat = num("lat", NaN), lon = num("lon", NaN), prec = Math.max(3, Math.min(200, num("prec", 15))), p1 = Math.max(0, num("p1", 12)), p2 = Math.max(p1 + 1, num("p2", 28));
+    if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) { decir("Latitud o longitud inválida. Ejemplo: -34.6037 y -58.3816.", true); return; }
+    try {
+      decir("Probando la clave con Google…", false);
+      var falla = await probarClave(clave); if (falla) { decir(falla, true); return; }
+      decir("Cargando el mapa 3D de Google…", false);
+      if (!viewer) crearVisor();
+      await cargarMapa(clave);
+      limpiarCapa(); toggleGiro(false);
+      var cart = Cesium.Cartographic.fromDegrees(lon, lat, 0);
+      centro = Cesium.Cartesian3.fromDegrees(lon, lat, 30);
+      viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(centro, 60), { duration: 2.2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(vista.pitch), vista.range) });
+      decir("Cargando edificios de la zona… (puede tardar unos segundos)", false);
+      await esperar(3500);
+      // El suelo: se mide en un anillo de puntos alrededor del lugar (calles, plazas) y se toma el más bajo. Medir solo en el centro daría el techo o la punta del edificio.
+      var h0 = null;
+      try {
+        var pts = [cart]; [30, 60, 90].forEach(function (rad) { for (var k = 0; k < 12; k++) { var ang = k * Math.PI / 6, dLat = (rad * Math.cos(ang)) / 111320, dLon = (rad * Math.sin(ang)) / (111320 * Math.cos(lat * Math.PI / 180)); pts.push(Cesium.Cartographic.fromDegrees(lon + dLon, lat + dLat, 0)); } });
+        var med = await viewer.scene.sampleHeightMostDetailed(pts);
+        med.forEach(function (c) { if (c && isFinite(c.height) && (h0 === null || c.height < h0)) h0 = c.height; });
+      } catch (e) { h0 = null; }
+      var base = h0 === null ? cart.height : h0;
+      centro = Cesium.Cartesian3.fromDegrees(lon, lat, base + 30);
+      var ambar = Cesium.Color.fromCssColorString("#ffb400");
+      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, base + 1.5), point: { pixelSize: 11, color: ambar, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        label: { text: "teléfono · ±" + Math.round(prec) + " m", font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, -22), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      // Anillo de precisión, columna de pisos y marcas: líneas con "depthFail" para que se vean aunque un edificio las tape.
+      function anillo(radio, altura) { var p = []; for (var k = 0; k <= 64; k++) { var an = k * 2 * Math.PI / 64; p.push(Cesium.Cartesian3.fromDegrees(lon + (radio * Math.sin(an)) / (111320 * Math.cos(lat * Math.PI / 180)), lat + (radio * Math.cos(an)) / 111320, altura)); } return p; }
+      function linea(pos, color, ancho) { capa.push(viewer.entities.add({ polyline: { positions: pos, width: ancho, material: color, depthFailMaterial: color.withAlpha(0.65), arcType: Cesium.ArcType.NONE } })); }
+      var r = Math.max(8, Math.min(prec, 40)), hA = base + p1 * 3, hB = base + p2 * 3;
+      linea(anillo(prec, base + 0.6), ambar, 4);                       // precisión del punto, al ras del suelo
+      linea(anillo(r, hA), ambar, 3); linea(anillo(r, hB), ambar, 3);  // piso desde / piso hasta
+      for (var q = 0; q < 8; q++) { var aq = q * Math.PI / 4, dx = (r * Math.sin(aq)) / (111320 * Math.cos(lat * Math.PI / 180)), dy = (r * Math.cos(aq)) / 111320; linea([Cesium.Cartesian3.fromDegrees(lon + dx, lat + dy, hA), Cesium.Cartesian3.fromDegrees(lon + dx, lat + dy, hB)], ambar, 2); }
+      linea([Cesium.Cartesian3.fromDegrees(lon, lat, base + 1.5), Cesium.Cartesian3.fromDegrees(lon, lat, hA)], Cesium.Color.WHITE, 1);   // hilo desde el punto hasta la franja
+      // Respaldo: los mismos trazos hechos con puntos (como el del teléfono), que se ven en cualquier navegador y aunque un edificio los tape.
+      function punto(la, lo, alt, px, color) { capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lo, la, alt), point: { pixelSize: px, color: color, disableDepthTestDistance: Number.POSITIVE_INFINITY } })); }
+      function enAnillo(radio, alt, n, px, color) { for (var k = 0; k < n; k++) { var an = k * 2 * Math.PI / n; punto(lat + (radio * Math.cos(an)) / 111320, lon + (radio * Math.sin(an)) / (111320 * Math.cos(lat * Math.PI / 180)), alt, px, color); } }
+      enAnillo(prec, base + 0.6, 40, 5, ambar); enAnillo(r, hA, 28, 5, ambar); enAnillo(r, hB, 28, 5, ambar);
+      for (var v = 0; v < 8; v++) { var av = v * Math.PI / 4; for (var z = hA; z <= hB; z += 3) punto(lat + (r * Math.cos(av)) / 111320, lon + (r * Math.sin(av)) / (111320 * Math.cos(lat * Math.PI / 180)), z, 3, ambar.withAlpha(0.85)); }
+      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, (hA + hB) / 2), cylinder: { length: hB - hA, topRadius: r, bottomRadius: r, material: ambar.withAlpha(0.28), outline: false } }));
+      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, hB + 2),
+        label: { text: "franja posible · pisos " + Math.round(p1) + " a " + Math.round(p2), font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
+    } catch (e) { decir(mensajeDeError(e), true); }
+  });
+})();
+</script>
+</body>
+</html>

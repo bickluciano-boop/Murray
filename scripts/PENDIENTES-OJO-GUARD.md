@@ -2051,3 +2051,8 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - La clave NO se guarda en ningun archivo: se pega en el visor (localStorage del navegador). Una clave se pego en el chat por error: se pidio borrarla y se creo "Clave de API 5". Recordar: nunca por el chat.
 - Desde el celular (vista previa de archivos de iOS) NO funciona: error de render. Las paginas publicadas como artifact no pueden conectarse a Google (CSP). Pendiente: como mostrarlo en el celular/consola (alojarlo en el panel propio ojoguard.app con clave restringida por sitio) - decidir.
 - Pendiente: probar su zona, fijar cuota diaria baja y alerta de presupuesto en Google Cloud, ver precio real en la lista de precios.
+
+## 22/11/2026 - Visor Google 3D: v7 funcionando (scripts/rvi/visor-3d-real.html)
+- Con Entities de Cesium (polilineas y cilindro) el anillo de precision y la columna de pisos NO se veian sobre los tiles reales de Google en el Chrome de Luciano (si se veian con un edificio de prueba local y con el mapa vacio). Causa no determinada. Solucion: dibujarlos con puntos (point con disableDepthTestDistance infinito), que si se ven. Confirmado por captura: anillo al pie del Obelisco + columna de pisos 12 a 28 + cartel.
+- El archivo no lleva clave: se pega en el campo del visor (localStorage). Verificado con grep: 0 apariciones de "AIza".
+- Siguiente: probar su barrio; poner tope de cuota diario y alerta de presupuesto en Google Cloud; decidir donde alojar el visor para verlo desde el celular/consola (clave restringida por sitio); luego conectar el recorrido real (puntos y horas del panel) y la animacion.
