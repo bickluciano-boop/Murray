@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v11</span>
+    <span class="tag">prueba · mapa real · v12</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -184,18 +184,21 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     lista.sort(function (a, b) { return (a.dist - b.dist) || (b.tope - a.tope); });
     return lista.slice(0, 8);
   }
+  var motivoOSM = "";
   async function consultarOSM(lat, lon) {
     var la = Math.round(lat * 10000) / 10000, lo = Math.round(lon * 10000) / 10000;   // se envía redondeado (unos 10 m)
     var q = "[out:json][timeout:15];way[\"building\"](around:60," + la + "," + lo + ");out tags geom;";
-    var servidores = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+    var servidores = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"], motivos = [];
     for (var i = 0; i < servidores.length; i++) {
+      var host = servidores[i].split("/")[2];
       try {
-        var ctl = new AbortController(), tm = setTimeout(function () { ctl.abort(); }, 18000);
-        var r = await fetch(servidores[i], { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "data=" + encodeURIComponent(q), signal: ctl.signal }); clearTimeout(tm);
+        var ctl = new AbortController(), tm = setTimeout(function () { ctl.abort(); }, 20000);
+        var r = await fetch(servidores[i] + "?data=" + encodeURIComponent(q), { signal: ctl.signal }); clearTimeout(tm);
         if (r.ok) { var j = await r.json(); return j.elements || []; }
-      } catch (e) { /* prueba el siguiente servidor */ }
+        motivos.push(host + " respondió " + r.status);
+      } catch (e) { motivos.push(host + (e && e.name === "AbortError" ? " tardó demasiado" : " no se pudo alcanzar")); }
     }
-    return null;
+    motivoOSM = motivos.join("; "); return null;
   }
   function aplicarPisosDelEdificio() {
     var ed = idxEd >= 0 ? edificios[idxEd] : null; if (!ed || !ed.tope) return;
@@ -211,7 +214,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     if (!$("usarosm").checked) { dibujar(); return; }
     decir("Buscando el contorno del edificio en OpenStreetMap…", false);
     var el = await consultarOSM(est.lat, est.lon);
-    if (el === null) { decir("No pude consultar OpenStreetMap. Dibujo la caja a mano: ajústala en “Ajuste a mano”.", true); return; }
+    if (el === null) { decir("No pude consultar OpenStreetMap (" + motivoOSM + "). Si tienes un bloqueador de anuncios o de rastreo, desactívalo para este archivo y vuelve a tocar “Cargar y mostrar”. Mientras tanto dibujo la caja a mano: ajústala en “Ajuste a mano”.", true); return; }
     edificios = armarEdificios(el, est.lat, est.lon);
     if (!edificios.length) { decir("No encontré edificios en OpenStreetMap cerca de ese punto. Dibujo la caja a mano: ajústala en “Ajuste a mano”.", true); return; }
     idxEd = 0; aplicarPisosDelEdificio(); $("osm").hidden = false; dibujar(); decir(textoEdificio(), false);
