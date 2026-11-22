@@ -2110,3 +2110,7 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Error mio: la franja decia "pisos 0 a 2". `aplicarPisosDelEdificio` ESCRIBIA en las cajitas Desde/Hasta el tope de un edificio de OSM (2 pisos) y se contagiaba a los siguientes. v16: `pisosEfectivos(ed)` calcula la franja al dibujar sin tocar las cajitas.
 - "Otro edificio cercano" avanza por distancia al punto (no por tamano), y el punto del telefono suele estar en la calle: la torre no salia. v16 agrega "Elegir el edificio con un clic" (pickPosition + punto en poligono / contorno a menos de 20 m entre los cargados). Probado la logica en node (8 casos); el clic real contra el mapa de Google no probado.
 - Limites: OSM puede no tener ese edificio o no traer pisos; radio de busqueda 130 m alrededor del punto redondeado (~110 m).
+
+## 22/11/2026 - Visor v17: el contorno de OSM se puede correr y girar
+- Luciano: el contorno cae cerca de la torre pero "no coincide" (OSM y los tiles de Google no coinciden al metro). Hasta v16 el ajuste a mano se ignoraba cuando habia contorno de OSM. v17: dx/dy (este/norte) y giro se aplican al contorno de OSM (giro alrededor de su centro); botones ◀ ▶ ▲ ▼ de 2 m, ↺ ↻ de 3 grados y Reiniciar; al cambiar de edificio el ajuste vuelve a cero. Probada la geometria en node; no visto con el mapa real.
+- Idea pendiente si hace falta: calzar el contorno automaticamente (no se puede derivar de los tiles de Google por sus politicas); alternativa: guardar el ajuste por edificio.

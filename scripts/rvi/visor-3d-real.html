@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v16</span>
+    <span class="tag">prueba · mapa real · v17</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -79,6 +79,8 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       </label>
       <div class="btns"><button id="otro" type="button">Otro edificio cercano</button><button id="reint" type="button">Buscar el edificio de nuevo</button></div>
       <div class="btns"><button id="clicedif" type="button">Elegir el edificio con un clic</button></div>
+      <div class="btns" role="group" aria-label="Mover el contorno"><button id="mo" type="button" title="Mover al oeste 2 m">◀ 2 m</button><button id="me" type="button" title="Mover al este 2 m">2 m ▶</button><button id="mn" type="button" title="Mover al norte 2 m">▲ 2 m</button><button id="ms" type="button" title="Mover al sur 2 m">▼ 2 m</button><button id="gi" type="button" title="Girar a la izquierda 3 grados">↺ 3°</button><button id="gd" type="button" title="Girar a la derecha 3 grados">↻ 3°</button><button id="rst" type="button" title="Volver el contorno a su lugar">Reiniciar</button></div>
+      <p class="nota">Si el contorno queda cerca pero corrido, muévelo y gíralo con estos botones.</p>
       <details style="margin-top:4px"><summary style="cursor:pointer;color:var(--ivory-dim);font-size:13.5px">Ajuste a mano (si no encuentra el edificio)</summary><div style="display:grid;gap:10px;margin-top:10px">
       <div class="fila">
         <label>Desde el piso<input id="p1" inputmode="numeric" value="12"></label>
@@ -264,7 +266,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   $("reint").addEventListener("click", function () { if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; } if (!$("usarosm").checked) { decir("Activa el casillero de OpenStreetMap para buscar el edificio.", true); return; } buscarEdificio(); });
   $("otro").addEventListener("click", function () {
     if (!edificios.length) { decir("Todavía no hay otros edificios para mostrar. Toca “Cargar y mostrar” con la búsqueda activada.", true); return; }
-    idxEd = (idxEd + 1) % edificios.length; aplicarPisosDelEdificio(); dibujar(); decir(textoEdificio(), false);
+    idxEd = (idxEd + 1) % edificios.length; $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; dibujar(); decir(textoEdificio(), false);
   });
   $("usarosm").addEventListener("change", function () { if (!$("usarosm").checked) { idxEd = -1; $("osm").hidden = true; dibujar(); } else if (est) buscarEdificio(); });
 
@@ -285,7 +287,10 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       ox = dx; oy = dy;                                                  // desde acá, la caja de pisos se mueve con el corrimiento
       var cxL = dx, cyL = dy, ed = idxEd >= 0 ? edificios[idxEd] : null;
       if (ed) {
-        ox = 0; oy = 0; cxL = ed.cx; cyL = ed.cy; var P = ed.pts;
+        // El contorno de OpenStreetMap se puede correr (dx, dy) y girar (giro) alrededor de su centro: a veces no coincide al metro con el mapa de Google.
+        var tg = giro * Math.PI / 180, cg = Math.cos(tg), sg = Math.sin(tg);
+        var P = ed.pts.map(function (p) { var rx = p[0] - ed.cx, ry = p[1] - ed.cy; return [ed.cx + rx * cg + ry * sg + dx, ed.cy - rx * sg + ry * cg + dy]; });
+        ox = 0; oy = 0; cxL = ed.cx + dx; cyL = ed.cy + dy;
         [hA, hB].forEach(function (alt) { for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length], d = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.max(1, Math.round(d / 3)); for (var k = 0; k < n; k++) enM(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n, alt, 5, ambar); } });
         var paso = Math.max(1, Math.ceil(P.length / 24)); for (var i2 = 0; i2 < P.length; i2 += paso) for (var z2 = hA; z2 <= hB; z2 += 3) enM(P[i2][0], P[i2][1], z2, 3, ambar.withAlpha(0.85));
       } else if (forma === "rect") {
@@ -306,6 +311,16 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     eligiendo = !eligiendo; $("elegir").setAttribute("aria-pressed", eligiendo ? "true" : "false");
     decir(eligiendo ? "Haz clic sobre la torre (techo o fachada) para marcar su centro." : "Listo, se canceló la selección.", false);
   });
+  function mover(dEste, dNorte, dGiro) {
+    if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; }
+    $("dx").value = String(Math.round((num("dx", 0) + dEste) * 10) / 10); $("dy").value = String(Math.round((num("dy", 0) + dNorte) * 10) / 10);
+    var g = ((num("giro", 0) + dGiro) % 360 + 360) % 360; $("giro").value = String(Math.round(g * 10) / 10); dibujar();
+    decir("Corrimiento: " + num("dx", 0) + " m al este, " + num("dy", 0) + " m al norte · giro " + num("giro", 0) + "°.", false);
+  }
+  $("mo").addEventListener("click", function () { mover(-2, 0, 0); }); $("me").addEventListener("click", function () { mover(2, 0, 0); });
+  $("mn").addEventListener("click", function () { mover(0, 2, 0); }); $("ms").addEventListener("click", function () { mover(0, -2, 0); });
+  $("gi").addEventListener("click", function () { mover(0, 0, -3); }); $("gd").addEventListener("click", function () { mover(0, 0, 3); });
+  $("rst").addEventListener("click", function () { $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; if (est) { dibujar(); decir("Contorno en su lugar original.", false); } });
   var eligiendoEd = false;
   $("clicedif").addEventListener("click", function () {
     if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; }
@@ -320,7 +335,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       var cq = Cesium.Cartographic.fromCartesian(q), mLonQ = 111320 * Math.cos(est.lat * Math.PI / 180);
       var xm = (Cesium.Math.toDegrees(cq.longitude) - est.lon) * mLonQ, ym = (Cesium.Math.toDegrees(cq.latitude) - est.lat) * 111320, k = indiceDelEdificioEn(xm, ym);
       if (k < 0) { decir("Ese punto no cae en ningún contorno de OpenStreetMap. Prueba sobre otro edificio, o puede que OpenStreetMap no tenga ese edificio dibujado.", true); return; }
-      eligiendoEd = false; $("clicedif").setAttribute("aria-pressed", "false"); idxEd = k; dibujar(); decir(textoEdificio(), false); return;
+      eligiendoEd = false; $("clicedif").setAttribute("aria-pressed", "false"); idxEd = k; $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; dibujar(); decir(textoEdificio(), false); return;
     }
     if (!eligiendo || !est) return;
     var p = null; try { p = viewer.scene.pickPosition(pos); } catch (e) { p = null; }
