@@ -2091,3 +2091,8 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Visor v14 (`scripts/rvi/visor-3d-real.html`): campo "Codigo del panel" (localStorage); pide al panel primero y si falla cae al Overpass publico; al panel se envian coordenadas redondeadas.
 - Si el Worker no puede llegar a Overpass desde Cloudflare (bloqueo de IP), la ruta contestara 503 con el detalle por servidor: habria que usar otra fuente de contornos.
 - Pendiente de limpieza: sacar overpass-api.de y developers.google.com de los hosts permitidos del entorno "Predeterminado".
+
+## 22/11/2026 - Contornos: instalado el panel y correccion de respuestas vacias (aplicar-contornos2-panel.ps1)
+- `aplicar-contornos-panel.ps1` APLICADO por Luciano (version del panel 5b935ed2; prueba de la ruta HTTP 200, cache miss: Cloudflare si llega a Overpass). Con el visor v14 (codigo del panel pegado) dijo "No encontre edificios en OpenStreetMap cerca de ese punto" en una zona densa de Buenos Aires.
+- Hipotesis (no confirmada): Overpass sobrecargado contesta HTTP 200 con `elements: []` y un `remark` ("Query timed out"); el panel lo aceptaba y lo guardaba 30 dias. `aplicar-contornos2-panel.ps1` (generador `panel/generar_contornos2_panel.py`): una respuesta vacia o con aviso no se acepta ni se guarda (prueba el siguiente servidor; si todos fallan, 503 con el motivo) y la cache cambia de llave (`rvi/contornos2`). No toca RVI_TOKEN. Probado en node (6 casos).
+- Si despues de esto igual no hay contornos: ver el campo `detail` de la respuesta 503 (ahora dice "con aviso: ..." o "sin edificios" por servidor).
