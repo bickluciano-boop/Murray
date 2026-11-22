@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v13</span>
+    <span class="tag">prueba · mapa real · v14</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -73,7 +73,10 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 
     <fieldset>
       <legend>3 · Edificio y franja de pisos</legend>
-      <label style="display:flex;gap:8px;align-items:flex-start"><input id="usarosm" type="checkbox" checked style="width:auto;margin-top:4px"><span>Dibujar el contorno real del edificio (OpenStreetMap). Envía la ubicación aproximada, redondeada a unos 10 m, al servicio de OpenStreetMap.</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input id="usarosm" type="checkbox" checked style="width:auto;margin-top:4px"><span>Dibujar el contorno real del edificio (OpenStreetMap). Envía la ubicación aproximada, redondeada a unos 100 m, a tu panel o al servicio de OpenStreetMap.</span></label>
+      <label>Código del panel (opcional, evita esperar al servicio público)
+        <input id="tokenpanel" type="password" autocomplete="off" spellcheck="false" placeholder="Pégalo aquí; queda en este navegador">
+      </label>
       <div class="btns"><button id="otro" type="button">Otro edificio cercano</button><button id="reint" type="button">Buscar el edificio de nuevo</button></div>
       <details style="margin-top:4px"><summary style="cursor:pointer;color:var(--ivory-dim);font-size:13.5px">Ajuste a mano (si no encuentra el edificio)</summary><div style="display:grid;gap:10px;margin-top:10px">
       <div class="fila">
@@ -185,10 +188,35 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     return lista.slice(0, 8);
   }
   var motivoOSM = "";
+  var PANEL_URL = "https://ojoguard.app/api/rvi/buildings", motivoPanel = "";
+  function leerTokenPanel() { try { return localStorage.getItem("rvi_token_panel") || ""; } catch (e) { return ""; } }
+  function guardarTokenPanel(v) { try { if (v) localStorage.setItem("rvi_token_panel", v); else localStorage.removeItem("rvi_token_panel"); } catch (e) { /* sin almacenamiento: se pega cada vez */ } }
+  $("tokenpanel").value = leerTokenPanel();
+  $("tokenpanel").addEventListener("change", function () { guardarTokenPanel($("tokenpanel").value.trim()); });
+  // Pide los contornos a TU panel (que los guarda en cache). Devuelve la lista, o null si no se pudo (y deja el motivo).
+  async function consultarPanel(lat, lon, avisar) {
+    var tok = $("tokenpanel").value.trim(); if (!tok) return null;
+    guardarTokenPanel(tok); motivoPanel = "";
+    var la = Math.round(lat * 1000) / 1000, lo = Math.round(lon * 1000) / 1000;
+    for (var intento = 0; intento < 2; intento++) {
+      if (intento > 0) { if (avisar) avisar("El panel todavía no consiguió los contornos. Reintento en 4 segundos…"); await espera(4000); }
+      try {
+        var ctl = new AbortController(), tm = setTimeout(function () { ctl.abort(); }, 50000);
+        var r = await fetch(PANEL_URL + "?lat=" + la + "&lon=" + lo + "&k=" + encodeURIComponent(tok), { signal: ctl.signal }); clearTimeout(tm);
+        if (r.ok) { var j = await r.json(); return j.elements || []; }
+        if (r.status === 403) { motivoPanel = "el código del panel no es el correcto"; return null; }
+        if (r.status === 404) { motivoPanel = "el panel todavía no tiene esta función instalada"; return null; }
+        if (r.status === 400) { motivoPanel = "el panel solo busca edificios de Argentina"; return null; }
+        motivoPanel = r.status === 503 ? "el panel no consiguió los contornos (OpenStreetMap ocupado)" : "el panel respondió " + r.status;
+      } catch (e) { motivoPanel = e && e.name === "AbortError" ? "el panel tardó demasiado" : "no se pudo hablar con el panel"; }
+    }
+    return null;
+  }
   function espera(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   async function consultarOSM(lat, lon, avisar) {
     var la = Math.round(lat * 10000) / 10000, lo = Math.round(lon * 10000) / 10000;   // se envía redondeado (unos 10 m)
     var q = "[out:json][timeout:15];way[\"building\"](around:60," + la + "," + lo + ");out tags geom;";
+    if ($("tokenpanel").value.trim()) { var dePanel = await consultarPanel(lat, lon, avisar); if (dePanel !== null) return dePanel; if (avisar) avisar("No salió por el panel (" + motivoPanel + "). Pruebo con el servicio público de OpenStreetMap…"); }
     var servidores = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"], motivos = {};
     // Hasta 3 vueltas por los tres servidores, con esperas crecientes (3 s y 8 s): el servicio público se satura a veces y pide reintentar así.
     for (var vuelta = 0; vuelta < 3; vuelta++) {
@@ -203,7 +231,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         } catch (e) { motivos[host] = e && e.name === "AbortError" ? "tardó demasiado" : "no se pudo alcanzar"; }
       }
     }
-    motivoOSM = Object.keys(motivos).map(function (h) { return h + " " + motivos[h]; }).join("; "); return null;
+    motivoOSM = (motivoPanel ? "panel: " + motivoPanel + "; " : "") + Object.keys(motivos).map(function (h) { return h + " " + motivos[h]; }).join("; "); return null;
   }
   function aplicarPisosDelEdificio() {
     var ed = idxEd >= 0 ? edificios[idxEd] : null; if (!ed || !ed.tope) return;
