@@ -2117,3 +2117,8 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 
 ## 22/11/2026 - Visor v18: casillero para no limitar la franja a los pisos de OpenStreetMap
 - Con v16 (Luciano aun no habia abierto la v17) el panel dijo "Edificio de OpenStreetMap a 56 m del punto · 6 pisos segun OpenStreetMap" y la franja quedo 2 a 6, pero el edificio visible tiene bastantes mas: contorno de otra construccion o dato de OSM desactualizado. v18 agrega el casillero "Limitar la franja a los pisos que dice OpenStreetMap" (activo por defecto). Incluye todo lo de v17 (mover/girar el contorno). No probado con el mapa real.
+
+## 22/11/2026 - Contornos: servidores de OpenStreetMap en paralelo (aplicar-contornos3-panel.ps1)
+- Con el visor v18 el panel respondio 503 con detalle: "overpass-api.de 521" (servidor principal caido), "overpass.private.coffee tardo demasiado", "overpass.kumi.systems tardo demasiado". El codigo del panel y del visor estan bien: es el servicio publico.
+- `aplicar-contornos3-panel.ps1` (generador `panel/generar_contornos3_panel.py`): 5 servidores (api, lz4, z, private.coffee, kumi) consultados A LA VEZ, 22 s cada uno, gana el primero con edificios; vacio o con aviso cuenta como fallo; lo fallido no se guarda; lo logrado se guarda 30 dias. Probado en node con servidores simulados (8 casos). No probado con los servidores reales; lz4/z son del mismo operador que overpass-api.de y pueden caerse juntos.
+- Requiere contornos y contornos2. Pendiente de correr por Luciano.
