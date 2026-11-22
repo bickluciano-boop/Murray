@@ -2066,3 +2066,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 ## 22/11/2026 - Visor Google 3D v10: la caja se mueve y se marca con un clic
 - Con v9, en una torre real la caja salia corrida: el punto del telefono esta en la vereda y la caja se centraba en el punto, no en el edificio. v10 agrega "Mover al este/norte (m)", el boton "Marcar el centro con un clic" (scene.pickPosition sobre la torre: solo toma latitud/longitud del clic para ubicar la caja, no guarda ni extrae datos de los tiles) y "Actualizar forma" (redibuja sin volver a pedir el mapa: no gasta cuota de tile raiz).
 - Probado con edificio falso local (el clic marca el centro y la caja se mueve). Falta verlo con el mapa real de Google.
+
+## 22/11/2026 - Visor Google 3D v11: el contorno del edificio se dibuja solo (OpenStreetMap)
+- Luciano: la caja manual "no cierra, tendria que dibujarse sola". NO se puede detectar el edificio desde los tiles de Google: las politicas prohiben trazar/derivar objetos de los tiles, analisis de imagen y deteccion de objetos. Si se pueden superponer objetos propios hechos con OTROS datos.
+- v11: busca el contorno del edificio mas cercano en OpenStreetMap (Overpass API, `way["building"]` a 60 m; ordena por cercania y pisos) y lo dibuja a la altura de la franja. Usa "building:levels" o "height" si existen para limitar los pisos. Boton "Otro edificio cercano". El ajuste a mano queda plegado como respaldo.
+- Privacidad: se envia a Overpass la ubicacion REDONDEADA a 4 decimales (~10 m); hay un casillero para desactivarlo. Atribucion visible "Contorno del edificio: © colaboradores de OpenStreetMap" separada de la de Google (requisito de las politicas para datos propios sobre el mapa de Google).
+- Probado solo con datos simulados (no se pudo consultar Overpass desde el entorno). Falta verlo con el mapa y OSM reales; relaciones (edificios multipoligono) no estan soportadas, solo ways.
