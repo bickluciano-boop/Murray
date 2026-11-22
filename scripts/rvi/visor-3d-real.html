@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v14</span>
+    <span class="tag">prueba · mapa real · v15</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -207,7 +207,8 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         if (r.status === 403) { motivoPanel = "el código del panel no es el correcto"; return null; }
         if (r.status === 404) { motivoPanel = "el panel todavía no tiene esta función instalada"; return null; }
         if (r.status === 400) { motivoPanel = "el panel solo busca edificios de Argentina"; return null; }
-        motivoPanel = r.status === 503 ? "el panel no consiguió los contornos (OpenStreetMap ocupado)" : "el panel respondió " + r.status;
+        var detalle = ""; try { var jj = await r.json(); detalle = jj && jj.detail ? " · " + String(jj.detail).slice(0, 220) : ""; } catch (e2) { detalle = ""; }
+        motivoPanel = r.status === 503 ? "el panel no consiguió los contornos de OpenStreetMap" + detalle : "el panel respondió " + r.status + detalle;
       } catch (e) { motivoPanel = e && e.name === "AbortError" ? "el panel tardó demasiado" : "no se pudo hablar con el panel"; }
     }
     return null;
