@@ -2056,3 +2056,9 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Con Entities de Cesium (polilineas y cilindro) el anillo de precision y la columna de pisos NO se veian sobre los tiles reales de Google en el Chrome de Luciano (si se veian con un edificio de prueba local y con el mapa vacio). Causa no determinada. Solucion: dibujarlos con puntos (point con disableDepthTestDistance infinito), que si se ven. Confirmado por captura: anillo al pie del Obelisco + columna de pisos 12 a 28 + cartel.
 - El archivo no lleva clave: se pega en el campo del visor (localStorage). Verificado con grep: 0 apariciones de "AIza".
 - Siguiente: probar su barrio; poner tope de cuota diario y alerta de presupuesto en Google Cloud; decidir donde alojar el visor para verlo desde el celular/consola (clave restringida por sitio); luego conectar el recorrido real (puntos y horas del panel) y la animacion.
+
+## 22/11/2026 - Visor Google 3D v9: forma rectangular y prueba en torre real
+- Luciano probo una torre real de su zona (a una cuadra de su casa): se ven el punto, el anillo de precision y la franja de pisos 12 a 28 con el cartel, bien ubicados. Suelo medido en 22 m (anillo de muestras). En su propio edificio, rodeado de edificios altos, la vista queda tapada: usar camara Aerea/Girar.
+- Observacion: el cilindro se ve raro en una torre cuadrada. v9 agrega forma Rectangulo (por defecto, 30 x 30 m) o Circulo, con ancho, largo y giro en grados (hacia la derecha desde el norte), todo dibujado con puntos. Probado con un edificio falso local; falta verlo con el mapa real.
+- Topes de gasto puestos: cuota de 500 "3D Tiles root requests per day" y presupuesto "ojo guard 3d" de 10 USD con alertas al 50/90/100 %.
+- Desde el celular no se abre (vista previa de iOS y artifacts sin conexion a Google). Decidido NO alojarlo en el sitio por ahora.
