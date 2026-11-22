@@ -46,7 +46,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v9</span>
+    <span class="tag">prueba · mapa real · v10</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -83,6 +83,12 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         <label>Ancho (m)<input id="ancho" inputmode="decimal" value="30"></label>
         <label>Largo (m)<input id="largo" inputmode="decimal" value="30"></label>
       </div>
+      <div class="fila">
+        <label>Mover al este (m)<input id="dx" inputmode="decimal" value="0"></label>
+        <label>Mover al norte (m)<input id="dy" inputmode="decimal" value="0"></label>
+      </div>
+      <div class="btns"><button id="elegir" type="button">Marcar el centro con un clic</button><button id="act" type="button">Actualizar forma</button></div>
+      <p class="nota">El punto del teléfono suele estar en la vereda, no en el centro del edificio. Toca “Marcar el centro”, haz clic sobre el techo o la fachada de la torre y la caja se mueve ahí. “Actualizar forma” redibuja sin volver a cargar el mapa.</p>
       <p class="nota">Cada piso se calcula de 3 m. Ajusta forma, ancho, largo y giro hasta que la franja calce con el edificio (giro en grados, hacia la derecha desde el norte). Es un rango de ejemplo: Ojo Guard hoy no guarda la altura.</p>
     </fieldset>
 
@@ -127,6 +133,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       animation: false, timeline: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, shouldAnimate: true, showRenderLoopErrors: false
     });
     viewer.scene.renderError.addEventListener(function () { decir("Este navegador no pudo dibujar el 3D (pasa en la vista previa del celular o con poca memoria). Abre el archivo en Chrome o Edge desde una computadora.", true); });
+    new Cesium.ScreenSpaceEventHandler(viewer.canvas).setInputAction(function (e) { alClic(e.position); }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     viewer.scene.skyAtmosphere.show = false; viewer.scene.highDynamicRange = false; viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#0a0a0a");
     viewer.clock.onTick.addEventListener(function () { if (girando && centro) { rumbo += 0.0035; viewer.camera.lookAt(centro, new Cesium.HeadingPitchRange(rumbo, Cesium.Math.toRadians(vista.pitch), vista.range)); } });
   }
@@ -150,6 +157,49 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   $("c-incl").addEventListener("click", function () { camara("c-incl", -35, 300); });
   $("c-calle").addEventListener("click", function () { camara("c-calle", -8, 150); });
   $("c-giro").addEventListener("click", function () { if (!centro) { decir("Primero carga un lugar.", true); return; } toggleGiro(!girando); });
+
+  var est = null, eligiendo = false;
+  // Dibuja el punto, su precisión y la caja de pisos con lo que hay en las cajitas. No vuelve a pedir nada a Google.
+  function dibujar() {
+    if (!viewer || !est) return;
+    limpiarCapa();
+    var lat = est.lat, lon = est.lon, base = est.base, prec = Math.max(3, Math.min(200, num("prec", 15))), p1 = Math.max(0, num("p1", 12)), p2 = Math.max(p1 + 1, num("p2", 28));
+    var forma = $("forma").value, ancho = Math.max(4, Math.min(300, num("ancho", 30))), largo = Math.max(4, Math.min(300, num("largo", 30))), giro = num("giro", 0), dx = num("dx", 0), dy = num("dy", 0);
+    var ambar = Cesium.Color.fromCssColorString("#ffb400");
+      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, base + 1.5), point: { pixelSize: 11, color: ambar, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        label: { text: "teléfono · ±" + Math.round(prec) + " m", font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, -22), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      // Todo se dibuja con puntos (como el del teléfono): se ven en cualquier navegador y aunque un edificio los tape.
+      var r = Math.max(8, Math.min(prec, 40)), hA = base + p1 * 3, hB = base + p2 * 3, mLat = 111320, mLon = 111320 * Math.cos(lat * Math.PI / 180), ox = 0, oy = 0;
+      function enM(este, norte, alt, px, color) { capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon + (este + ox) / mLon, lat + (norte + oy) / mLat, alt), point: { pixelSize: px, color: color, disableDepthTestDistance: Number.POSITIVE_INFINITY } })); }
+      function anilloM(radio, alt, n, px, color) { for (var k = 0; k < n; k++) { var an = k * 2 * Math.PI / n; enM(radio * Math.sin(an), radio * Math.cos(an), alt, px, color); } }
+      anilloM(prec, base + 0.6, 40, 5, ambar);                          // precisión del punto, al ras del suelo
+      ox = dx; oy = dy;                                                  // desde acá, la caja de pisos se mueve con el corrimiento
+      if (forma === "rect") {
+        var th = giro * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th), ha = ancho / 2, hb = largo / 2, esq = [[-ha, -hb], [ha, -hb], [ha, hb], [-ha, hb]];
+        var rot = function (x, y) { return [x * cs + y * sn, -x * sn + y * cs]; };   // giro hacia la derecha desde el norte
+        [hA, hB].forEach(function (alt) { for (var i = 0; i < 4; i++) { var p = esq[i], q = esq[(i + 1) % 4], d = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.max(2, Math.round(d / 3)); for (var k = 0; k < n; k++) { var rr = rot(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n); enM(rr[0], rr[1], alt, 5, ambar); } } });
+        esq.forEach(function (p) { var rr = rot(p[0], p[1]); for (var z = hA; z <= hB; z += 3) enM(rr[0], rr[1], z, 3, ambar.withAlpha(0.85)); });
+      } else {
+        anilloM(r, hA, 28, 5, ambar); anilloM(r, hB, 28, 5, ambar);
+        for (var v = 0; v < 8; v++) { var av = v * Math.PI / 4; for (var z = hA; z <= hB; z += 3) enM(r * Math.sin(av), r * Math.cos(av), z, 3, ambar.withAlpha(0.85)); }
+      }
+      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon + dx / mLon, lat + dy / mLat, hB + 2),
+        label: { text: "franja posible · pisos " + Math.round(p1) + " a " + Math.round(p2), font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+  }
+  $("act").addEventListener("click", function () { if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; } dibujar(); decir("Forma actualizada.", false); });
+  $("elegir").addEventListener("click", function () {
+    if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; }
+    eligiendo = !eligiendo; $("elegir").setAttribute("aria-pressed", eligiendo ? "true" : "false");
+    decir(eligiendo ? "Haz clic sobre la torre (techo o fachada) para marcar su centro." : "Listo, se canceló la selección.", false);
+  });
+  function alClic(pos) {
+    if (!eligiendo || !est) return;
+    var p = null; try { p = viewer.scene.pickPosition(pos); } catch (e) { p = null; }
+    if (!p) { decir("No pude medir ese punto. Haz clic sobre un edificio (no sobre el cielo) y vuelve a intentar.", true); return; }
+    var c = Cesium.Cartographic.fromCartesian(p), mLonL = 111320 * Math.cos(est.lat * Math.PI / 180);
+    $("dx").value = String(Math.round((Cesium.Math.toDegrees(c.longitude) - est.lon) * mLonL * 10) / 10); $("dy").value = String(Math.round((Cesium.Math.toDegrees(c.latitude) - est.lat) * 111320 * 10) / 10);
+    eligiendo = false; $("elegir").setAttribute("aria-pressed", "false"); dibujar(); decir("Centro marcado. Ajusta ancho, largo y giro y toca “Actualizar forma”.", false);
+  }
 
   async function cargarMapa(clave) {
     if (tileset && ultimaClaveUsada === clave) return;
@@ -189,7 +239,6 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var clave = claveEl.value.trim();
     if (!clave) { decir("Falta la clave de Google. Pégala en el paso 1.", true); return; }
     var lat = num("lat", NaN), lon = num("lon", NaN), prec = Math.max(3, Math.min(200, num("prec", 15))), p1 = Math.max(0, num("p1", 12)), p2 = Math.max(p1 + 1, num("p2", 28));
-    var forma = $("forma").value, ancho = Math.max(4, Math.min(300, num("ancho", 30))), largo = Math.max(4, Math.min(300, num("largo", 30))), giro = num("giro", 0);
     if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) { decir("Latitud o longitud inválida. Ejemplo: -34.6037 y -58.3816.", true); return; }
     try {
       decir("Probando la clave con Google…", false);
@@ -197,7 +246,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       decir("Cargando el mapa 3D de Google…", false);
       if (!viewer) crearVisor();
       await cargarMapa(clave);
-      limpiarCapa(); toggleGiro(false);
+      limpiarCapa(); est = null; toggleGiro(false);
       var cart = Cesium.Cartographic.fromDegrees(lon, lat, 0);
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, 30);
       viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(centro, 60), { duration: 2.2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(vista.pitch), vista.range) });
@@ -212,25 +261,8 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       } catch (e) { h0 = null; }
       var base = h0 === null ? cart.height : h0;
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, base + 30);
-      var ambar = Cesium.Color.fromCssColorString("#ffb400");
-      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, base + 1.5), point: { pixelSize: 11, color: ambar, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-        label: { text: "teléfono · ±" + Math.round(prec) + " m", font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, -22), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
-      // Todo se dibuja con puntos (como el del teléfono): se ven en cualquier navegador y aunque un edificio los tape.
-      var r = Math.max(8, Math.min(prec, 40)), hA = base + p1 * 3, hB = base + p2 * 3, mLat = 111320, mLon = 111320 * Math.cos(lat * Math.PI / 180);
-      function enM(este, norte, alt, px, color) { capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon + este / mLon, lat + norte / mLat, alt), point: { pixelSize: px, color: color, disableDepthTestDistance: Number.POSITIVE_INFINITY } })); }
-      function anilloM(radio, alt, n, px, color) { for (var k = 0; k < n; k++) { var an = k * 2 * Math.PI / n; enM(radio * Math.sin(an), radio * Math.cos(an), alt, px, color); } }
-      anilloM(prec, base + 0.6, 40, 5, ambar);                          // precisión del punto, al ras del suelo
-      if (forma === "rect") {
-        var th = giro * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th), ha = ancho / 2, hb = largo / 2, esq = [[-ha, -hb], [ha, -hb], [ha, hb], [-ha, hb]];
-        var rot = function (x, y) { return [x * cs + y * sn, -x * sn + y * cs]; };   // giro hacia la derecha desde el norte
-        [hA, hB].forEach(function (alt) { for (var i = 0; i < 4; i++) { var p = esq[i], q = esq[(i + 1) % 4], d = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.max(2, Math.round(d / 3)); for (var k = 0; k < n; k++) { var rr = rot(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n); enM(rr[0], rr[1], alt, 5, ambar); } } });
-        esq.forEach(function (p) { var rr = rot(p[0], p[1]); for (var z = hA; z <= hB; z += 3) enM(rr[0], rr[1], z, 3, ambar.withAlpha(0.85)); });
-      } else {
-        anilloM(r, hA, 28, 5, ambar); anilloM(r, hB, 28, 5, ambar);
-        for (var v = 0; v < 8; v++) { var av = v * Math.PI / 4; for (var z = hA; z <= hB; z += 3) enM(r * Math.sin(av), r * Math.cos(av), z, 3, ambar.withAlpha(0.85)); }
-      }
-      capa.push(viewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, hB + 2),
-        label: { text: "franja posible · pisos " + Math.round(p1) + " a " + Math.round(p2), font: "13px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      est = { lat: lat, lon: lon, base: base };
+      dibujar();
       decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
     } catch (e) { decir(mensajeDeError(e), true); }
   });

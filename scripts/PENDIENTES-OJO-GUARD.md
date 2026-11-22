@@ -2062,3 +2062,7 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 - Observacion: el cilindro se ve raro en una torre cuadrada. v9 agrega forma Rectangulo (por defecto, 30 x 30 m) o Circulo, con ancho, largo y giro en grados (hacia la derecha desde el norte), todo dibujado con puntos. Probado con un edificio falso local; falta verlo con el mapa real.
 - Topes de gasto puestos: cuota de 500 "3D Tiles root requests per day" y presupuesto "ojo guard 3d" de 10 USD con alertas al 50/90/100 %.
 - Desde el celular no se abre (vista previa de iOS y artifacts sin conexion a Google). Decidido NO alojarlo en el sitio por ahora.
+
+## 22/11/2026 - Visor Google 3D v10: la caja se mueve y se marca con un clic
+- Con v9, en una torre real la caja salia corrida: el punto del telefono esta en la vereda y la caja se centraba en el punto, no en el edificio. v10 agrega "Mover al este/norte (m)", el boton "Marcar el centro con un clic" (scene.pickPosition sobre la torre: solo toma latitud/longitud del clic para ubicar la caja, no guarda ni extrae datos de los tiles) y "Actualizar forma" (redibuja sin volver a pedir el mapa: no gasta cuota de tile raiz).
+- Probado con edificio falso local (el clic marca el centro y la caja se mueve). Falta verlo con el mapa real de Google.
