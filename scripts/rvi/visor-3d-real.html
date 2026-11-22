@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v17</span>
+    <span class="tag">prueba · mapa real · v18</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -74,6 +74,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     <fieldset>
       <legend>3 · Edificio y franja de pisos</legend>
       <label style="display:flex;gap:8px;align-items:flex-start"><input id="usarosm" type="checkbox" checked style="width:auto;margin-top:4px"><span>Dibujar el contorno real del edificio (OpenStreetMap). Envía la ubicación aproximada, redondeada a unos 100 m, a tu panel o al servicio de OpenStreetMap.</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input id="usarpisos" type="checkbox" checked style="width:auto;margin-top:4px"><span>Limitar la franja a los pisos que dice OpenStreetMap (si no coincide con lo que ves, desmárcalo).</span></label>
       <label>Código del panel (opcional, evita esperar al servicio público)
         <input id="tokenpanel" type="password" autocomplete="off" spellcheck="false" placeholder="Pégalo aquí; queda en este navegador">
       </label>
@@ -240,7 +241,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   // Pisos que se dibujan: lo que hay en las cajitas, recortado a los pisos que OpenStreetMap dice que tiene ESE edificio. No se escribe nada en las cajitas.
   function pisosEfectivos(ed) {
     var p1 = Math.max(0, num("p1", 12)), p2 = Math.max(p1 + 1, num("p2", 28));
-    if (ed && ed.tope) { if (p2 > ed.tope) p2 = ed.tope; if (p1 >= p2) p1 = Math.max(0, p2 - Math.max(1, Math.round(p2 * 0.6))); }
+    if (ed && ed.tope && $("usarpisos").checked) { if (p2 > ed.tope) p2 = ed.tope; if (p1 >= p2) p1 = Math.max(0, p2 - Math.max(1, Math.round(p2 * 0.6))); }
     return [p1, p2];
   }
   function aplicarPisosDelEdificio() { /* v16: ya no pisa las cajitas; ver pisosEfectivos */ }
@@ -251,7 +252,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     return d0 <= 20 ? mejor : -1;
   }
   function textoEdificio() {
-    var ed = edificios[idxEd]; return "Edificio de OpenStreetMap a " + Math.round(ed.dist) + " m del punto" + (ed.tope ? " · " + ed.tope + " pisos según OpenStreetMap, la franja no pasa de ahí" : " · sin dato de pisos") + ". Si no es el que buscabas, toca “Otro edificio cercano”.";
+    var ed = edificios[idxEd]; return "Edificio de OpenStreetMap a " + Math.round(ed.dist) + " m del punto" + (ed.tope ? " · " + ed.tope + " pisos según OpenStreetMap" + ($("usarpisos").checked ? ", la franja no pasa de ahí (puedes desmarcar el casillero de pisos)" : ", sin limitar la franja") : " · sin dato de pisos") + ". Si no es el que buscabas, toca “Otro edificio cercano”.";
   }
   async function buscarEdificio() {
     edificios = []; idxEd = -1; $("osm").hidden = true;
@@ -268,6 +269,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     if (!edificios.length) { decir("Todavía no hay otros edificios para mostrar. Toca “Cargar y mostrar” con la búsqueda activada.", true); return; }
     idxEd = (idxEd + 1) % edificios.length; $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; dibujar(); decir(textoEdificio(), false);
   });
+  $("usarpisos").addEventListener("change", function () { if (est) dibujar(); });
   $("usarosm").addEventListener("change", function () { if (!$("usarosm").checked) { idxEd = -1; $("osm").hidden = true; dibujar(); } else if (est) buscarEdificio(); });
 
   // Dibuja el punto, su precisión y la caja de pisos con lo que hay en las cajitas. No vuelve a pedir nada a Google.

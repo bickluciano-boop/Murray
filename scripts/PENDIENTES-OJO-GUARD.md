@@ -2114,3 +2114,6 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 ## 22/11/2026 - Visor v17: el contorno de OSM se puede correr y girar
 - Luciano: el contorno cae cerca de la torre pero "no coincide" (OSM y los tiles de Google no coinciden al metro). Hasta v16 el ajuste a mano se ignoraba cuando habia contorno de OSM. v17: dx/dy (este/norte) y giro se aplican al contorno de OSM (giro alrededor de su centro); botones ◀ ▶ ▲ ▼ de 2 m, ↺ ↻ de 3 grados y Reiniciar; al cambiar de edificio el ajuste vuelve a cero. Probada la geometria en node; no visto con el mapa real.
 - Idea pendiente si hace falta: calzar el contorno automaticamente (no se puede derivar de los tiles de Google por sus politicas); alternativa: guardar el ajuste por edificio.
+
+## 22/11/2026 - Visor v18: casillero para no limitar la franja a los pisos de OpenStreetMap
+- Con v16 (Luciano aun no habia abierto la v17) el panel dijo "Edificio de OpenStreetMap a 56 m del punto · 6 pisos segun OpenStreetMap" y la franja quedo 2 a 6, pero el edificio visible tiene bastantes mas: contorno de otra construccion o dato de OSM desactualizado. v18 agrega el casillero "Limitar la franja a los pisos que dice OpenStreetMap" (activo por defecto). Incluye todo lo de v17 (mover/girar el contorno). No probado con el mapa real.
