@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v20</span>
+    <span class="tag">prueba · mapa real · v21</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -176,7 +176,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   $("c-giro").addEventListener("click", function () { if (!centro) { decir("Primero carga un lugar.", true); return; } toggleGiro(!girando); });
 
   var est = null, eligiendo = false;
-  var edificios = [], idxEd = -1;
+  var edificios = [], idxEd = -1, ultimaFuente = "";
   function aMetros(g, lat0, lon0) { var mLon0 = 111320 * Math.cos(lat0 * Math.PI / 180), P = g.map(function (n) { return [(n.lon - lon0) * mLon0, (n.lat - lat0) * 111320]; }); if (P.length > 2 && Math.hypot(P[0][0] - P[P.length - 1][0], P[0][1] - P[P.length - 1][1]) < 0.01) P.pop(); return P; }
   function dentroDe(P, x, y) { var d = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++) { if (((P[i][1] > y) !== (P[j][1] > y)) && (x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0])) d = !d; } return d; }
   function distBorde(P, x, y) { var m = 1e9; for (var i = 0; i < P.length; i++) { var a = P[i], b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)) : 0; m = Math.min(m, Math.hypot(x - (a[0] + t * dx), y - (a[1] + t * dy))); } return m; }
@@ -189,7 +189,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       var t = el.tags || {}, niveles = parseInt(t["building:levels"], 10), altura = parseFloat(String(t.height || "").replace(",", ".")), cx = 0, cy = 0;
       P.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= P.length; cy /= P.length;
       var tope = isFinite(niveles) && niveles > 0 ? niveles : (isFinite(altura) && altura > 0 ? Math.max(1, Math.round(altura / 3)) : 0);
-      lista.push({ pts: P, cx: cx, cy: cy, dist: dentroDe(P, 0, 0) ? 0 : distBorde(P, 0, 0), tope: tope, nombre: t.name || t["addr:housename"] || "", id: el.id });
+      lista.push({ pts: P, cx: cx, cy: cy, dist: dentroDe(P, 0, 0) ? 0 : distBorde(P, 0, 0), tope: tope, nombre: t.name || t["addr:housename"] || "", id: el.id, src: String(el.src || "OpenStreetMap") });
     });
     lista.sort(function (a, b) { return (a.dist - b.dist) || (b.tope - a.tope); });
     return lista.slice(0, 8);
@@ -217,7 +217,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       try {
         var ctl = new AbortController(), tm = setTimeout(function () { ctl.abort(); }, 50000);
         var r = await fetch(PANEL_URL + "?lat=" + la + "&lon=" + lo + "&k=" + encodeURIComponent(tok), { signal: ctl.signal }); clearTimeout(tm);
-        if (r.ok) { var j = await r.json(); return j.elements || []; }
+        if (r.ok) { var j = await r.json(); ultimaFuente = String(j.fuente || ""); return j.elements || []; }
         if (r.status === 403) { motivoPanel = "el código del panel no es el correcto"; return null; }
         if (r.status === 404) { motivoPanel = "el panel todavía no tiene esta función instalada"; return null; }
         if (r.status === 400) { motivoPanel = "el panel solo busca edificios de Argentina"; return null; }
@@ -229,6 +229,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   }
   function espera(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   async function consultarOSM(lat, lon, avisar) {
+    ultimaFuente = "";
     var la = Math.round(lat * 10000) / 10000, lo = Math.round(lon * 10000) / 10000;   // se envía redondeado (unos 10 m)
     var q = "[out:json][timeout:15];way[\"building\"](around:60," + la + "," + lo + ");out tags geom;";
     if (limpiarToken($("tokenpanel").value)) { var dePanel = await consultarPanel(lat, lon, avisar); if (dePanel !== null) return dePanel; if (avisar) avisar("No salió por el panel (" + motivoPanel + "). Pruebo con el servicio público de OpenStreetMap…"); }
@@ -261,8 +262,20 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     for (var i = 0; i < edificios.length; i++) { if (dentroDe(edificios[i].pts, xm, ym)) return i; var d = distBorde(edificios[i].pts, xm, ym); if (d < d0) { d0 = d; mejor = i; } }
     return d0 <= 20 ? mejor : -1;
   }
+  // De quien sale el contorno (lo informa el panel: OpenStreetMap, Google Open Buildings, Microsoft ML Buildings, Esri...). Los de Google y Microsoft son estimados por computadora.
+  function fuenteTexto(src) {
+    var s = String(src || "OpenStreetMap");
+    if (/openstreetmap/i.test(s)) return { corto: "OpenStreetMap", atrib: "Contorno del edificio: © colaboradores de OpenStreetMap, openstreetmap.org/copyright", est: false };
+    if (/google/i.test(s)) return { corto: "Google Open Buildings", atrib: "Contorno del edificio: Google Open Buildings (CC BY 4.0 / ODbL), vía Overture Maps", est: true };
+    if (/microsoft/i.test(s)) return { corto: "Microsoft ML Buildings", atrib: "Contorno del edificio: Microsoft ML Building Footprints (ODbL), vía Overture Maps", est: true };
+    if (/esri/i.test(s)) return { corto: "Esri Community Maps", atrib: "Contorno del edificio: Esri Community Maps, vía Overture Maps", est: false };
+    return { corto: s, atrib: "Contorno del edificio: " + s + ", vía Overture Maps", est: false };
+  }
+  function actualizarAtribucion(ed) {
+    var f = fuenteTexto(ed && ed.src); $("osm").textContent = "Mapa 3D: Google Maps (abajo a la izquierda). " + f.atrib + (/Overture/.test(ultimaFuente) ? " · datos: " + ultimaFuente : "");
+  }
   function textoEdificio() {
-    var ed = edificios[idxEd]; return "Edificio de OpenStreetMap a " + Math.round(ed.dist) + " m del punto" + (ed.tope ? " · " + ed.tope + " pisos según OpenStreetMap" + ($("usarpisos").checked ? ", la franja no pasa de ahí (puedes desmarcar el casillero de pisos)" : ", sin limitar la franja") : " · sin dato de pisos") + ". Si no es el que buscabas, toca “Otro edificio cercano”.";
+    var ed = edificios[idxEd]; actualizarAtribucion(ed); var f = fuenteTexto(ed.src); return "Edificio de " + f.corto + (f.est ? " (estimado por computadora)" : "") + " a " + Math.round(ed.dist) + " m del punto" + (ed.tope ? " · " + ed.tope + " pisos según " + f.corto + ($("usarpisos").checked ? ", la franja no pasa de ahí (puedes desmarcar el casillero de pisos)" : ", sin limitar la franja") : " · sin dato de pisos") + ". Si no es el que buscabas, toca “Otro edificio cercano”.";
   }
   async function buscarEdificio() {
     edificios = []; idxEd = -1; $("osm").hidden = true;
