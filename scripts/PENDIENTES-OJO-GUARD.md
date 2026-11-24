@@ -2131,3 +2131,6 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 
 ## 24/11/2026 - Visor v19: "con las flechas no cambia nada"
 - Probado con el codigo real (Cesium offline + edificio simulado): los botones de mover/girar SI cambian el dibujo. Causa probable: el paso de 2 m / 3 grados es casi invisible desde la vista aerea y el aviso salia al final del panel. v19: selector "Tamano del paso" (2/5/10/25 m con 3/6/12/30 grados; por defecto 10 m), rotulos de texto en los botones y una linea "Ajuste actual: X m al este, Y m al norte, giro Z" junto a ellos. Falta confirmar con Luciano en el mapa real.
+
+## 24/11/2026 - Visor v20: control del formato del codigo del panel
+- Con v19 el panel siguio respondiendo 403 ("el codigo del panel no es el correcto") aunque la cajita tenia puntitos; no hay forma de saber que se pego. v20 muestra "Codigo del panel: N caracteres" y si tiene el formato (48 hex), quita espacios/saltos de linea antes de enviarlo y agrega "Borrar el codigo guardado". Nota: el localStorage de archivos file:// se comparte entre todas las versiones del visor, por eso un codigo viejo sobrevive al cambiar de archivo. Cada renovacion invalida el anterior.

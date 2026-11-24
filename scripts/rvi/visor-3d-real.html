@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v19</span>
+    <span class="tag">prueba · mapa real · v20</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -78,6 +78,8 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       <label>Código del panel (opcional, evita esperar al servicio público)
         <input id="tokenpanel" type="password" autocomplete="off" spellcheck="false" placeholder="Pégalo aquí; queda en este navegador">
       </label>
+      <p class="nota" id="tokinfo">Código del panel: vacío.</p>
+      <div class="btns"><button id="tokborrar" type="button">Borrar el código guardado</button></div>
       <div class="btns"><button id="otro" type="button">Otro edificio cercano</button><button id="reint" type="button">Buscar el edificio de nuevo</button></div>
       <div class="btns"><button id="clicedif" type="button">Elegir el edificio con un clic</button></div>
       <label>Tamaño del paso<select id="paso"><option value="2">Fino: 2 m y 3°</option><option value="5">Medio: 5 m y 6°</option><option value="10" selected>Grande: 10 m y 12°</option><option value="25">Muy grande: 25 m y 30°</option></select></label>
@@ -196,11 +198,18 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   var PANEL_URL = "https://ojoguard.app/api/rvi/buildings", motivoPanel = "";
   function leerTokenPanel() { try { return localStorage.getItem("rvi_token_panel") || ""; } catch (e) { return ""; } }
   function guardarTokenPanel(v) { try { if (v) localStorage.setItem("rvi_token_panel", v); else localStorage.removeItem("rvi_token_panel"); } catch (e) { /* sin almacenamiento: se pega cada vez */ } }
-  $("tokenpanel").value = leerTokenPanel();
-  $("tokenpanel").addEventListener("change", function () { guardarTokenPanel($("tokenpanel").value.trim()); });
+  function limpiarToken(v) { return String(v || "").replace(/\s+/g, ""); }
+  function mostrarToken() {
+    var t = limpiarToken($("tokenpanel").value), n = t.length;
+    $("tokinfo").textContent = n === 0 ? "Código del panel: vacío." : (/^[0-9a-f]{48}$/.test(t) ? "Código del panel: 48 caracteres, formato correcto. (Si el panel dice que no es el correcto, es de una renovación anterior: genera uno nuevo.)" : "Código del panel: " + n + " caracteres. No tiene el formato del código (48 letras y números). Genera uno nuevo y pégalo de nuevo.");
+  }
+  $("tokenpanel").value = leerTokenPanel(); mostrarToken();
+  $("tokenpanel").addEventListener("input", mostrarToken); $("tokenpanel").addEventListener("paste", function () { setTimeout(mostrarToken, 0); });
+  $("tokborrar").addEventListener("click", function () { $("tokenpanel").value = ""; guardarTokenPanel(""); mostrarToken(); decir("Código borrado. Pega el código nuevo en su cajita.", false); });
+  $("tokenpanel").addEventListener("change", function () { guardarTokenPanel(limpiarToken($("tokenpanel").value)); });
   // Pide los contornos a TU panel (que los guarda en cache). Devuelve la lista, o null si no se pudo (y deja el motivo).
   async function consultarPanel(lat, lon, avisar) {
-    var tok = $("tokenpanel").value.trim(); if (!tok) return null;
+    var tok = limpiarToken($("tokenpanel").value); if (!tok) return null;
     guardarTokenPanel(tok); motivoPanel = "";
     var la = Math.round(lat * 1000) / 1000, lo = Math.round(lon * 1000) / 1000;
     for (var intento = 0; intento < 2; intento++) {
@@ -222,7 +231,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   async function consultarOSM(lat, lon, avisar) {
     var la = Math.round(lat * 10000) / 10000, lo = Math.round(lon * 10000) / 10000;   // se envía redondeado (unos 10 m)
     var q = "[out:json][timeout:15];way[\"building\"](around:60," + la + "," + lo + ");out tags geom;";
-    if ($("tokenpanel").value.trim()) { var dePanel = await consultarPanel(lat, lon, avisar); if (dePanel !== null) return dePanel; if (avisar) avisar("No salió por el panel (" + motivoPanel + "). Pruebo con el servicio público de OpenStreetMap…"); }
+    if (limpiarToken($("tokenpanel").value)) { var dePanel = await consultarPanel(lat, lon, avisar); if (dePanel !== null) return dePanel; if (avisar) avisar("No salió por el panel (" + motivoPanel + "). Pruebo con el servicio público de OpenStreetMap…"); }
     var servidores = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"], motivos = {};
     // Hasta 3 vueltas por los tres servidores, con esperas crecientes (3 s y 8 s): el servicio público se satura a veces y pide reintentar así.
     for (var vuelta = 0; vuelta < 3; vuelta++) {
