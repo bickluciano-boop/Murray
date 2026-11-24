@@ -2134,3 +2134,7 @@ Actualizada el 24/10/2026. Lo que no se sabe todavía está marcado "completar";
 
 ## 24/11/2026 - Visor v20: control del formato del codigo del panel
 - Con v19 el panel siguio respondiendo 403 ("el codigo del panel no es el correcto") aunque la cajita tenia puntitos; no hay forma de saber que se pego. v20 muestra "Codigo del panel: N caracteres" y si tiene el formato (48 hex), quita espacios/saltos de linea antes de enviarlo y agrega "Borrar el codigo guardado". Nota: el localStorage de archivos file:// se comparte entre todas las versiones del visor, por eso un codigo viejo sobrevive al cambiar de archivo. Cada renovacion invalida el anterior.
+
+## 24/11/2026 - Visor v20 funcionando con el panel
+- Con el codigo renovado y el visor v20 (formato 48 hex) el panel entrego el contorno: "Edificio de OpenStreetMap a 0 m del punto". Probado en el Obelisco (coordenadas de ejemplo): el contorno (base cuadrada + anillo) calza con el monumento en vista aerea y la franja de pisos sale en su lugar. Luciano: "con el obelisco lo hace perfecto".
+- Pendiente: repetir con la torre de su zona (el contorno de OSM puede faltar o venir corrido; usar mover/girar y "Elegir el edificio con un clic"). Sigue pendiente decidir donde alojar el visor para el celular y registrar la altura en la app (cambios aparte).
