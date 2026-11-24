@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v18</span>
+    <span class="tag">prueba · mapa real · v19</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -80,8 +80,9 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       </label>
       <div class="btns"><button id="otro" type="button">Otro edificio cercano</button><button id="reint" type="button">Buscar el edificio de nuevo</button></div>
       <div class="btns"><button id="clicedif" type="button">Elegir el edificio con un clic</button></div>
-      <div class="btns" role="group" aria-label="Mover el contorno"><button id="mo" type="button" title="Mover al oeste 2 m">◀ 2 m</button><button id="me" type="button" title="Mover al este 2 m">2 m ▶</button><button id="mn" type="button" title="Mover al norte 2 m">▲ 2 m</button><button id="ms" type="button" title="Mover al sur 2 m">▼ 2 m</button><button id="gi" type="button" title="Girar a la izquierda 3 grados">↺ 3°</button><button id="gd" type="button" title="Girar a la derecha 3 grados">↻ 3°</button><button id="rst" type="button" title="Volver el contorno a su lugar">Reiniciar</button></div>
-      <p class="nota">Si el contorno queda cerca pero corrido, muévelo y gíralo con estos botones.</p>
+      <label>Tamaño del paso<select id="paso"><option value="2">Fino: 2 m y 3°</option><option value="5">Medio: 5 m y 6°</option><option value="10" selected>Grande: 10 m y 12°</option><option value="25">Muy grande: 25 m y 30°</option></select></label>
+      <div class="btns" role="group" aria-label="Mover el contorno"><button id="mo" type="button" title="Mover al oeste">◀ oeste</button><button id="me" type="button" title="Mover al este">este ▶</button><button id="mn" type="button" title="Mover al norte">▲ norte</button><button id="ms" type="button" title="Mover al sur">▼ sur</button><button id="gi" type="button" title="Girar a la izquierda">↺ girar</button><button id="gd" type="button" title="Girar a la derecha">girar ↻</button><button id="rst" type="button" title="Volver el contorno a su lugar">Reiniciar</button></div>
+      <p class="nota" id="ajuste">Ajuste actual: sin mover. Si el contorno queda corrido, muévelo y gíralo con estos botones (cambia el tamaño del paso si no ves el cambio).</p>
       <details style="margin-top:4px"><summary style="cursor:pointer;color:var(--ivory-dim);font-size:13.5px">Ajuste a mano (si no encuentra el edificio)</summary><div style="display:grid;gap:10px;margin-top:10px">
       <div class="fila">
         <label>Desde el piso<input id="p1" inputmode="numeric" value="12"></label>
@@ -317,12 +318,18 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; }
     $("dx").value = String(Math.round((num("dx", 0) + dEste) * 10) / 10); $("dy").value = String(Math.round((num("dy", 0) + dNorte) * 10) / 10);
     var g = ((num("giro", 0) + dGiro) % 360 + 360) % 360; $("giro").value = String(Math.round(g * 10) / 10); dibujar();
-    decir("Corrimiento: " + num("dx", 0) + " m al este, " + num("dy", 0) + " m al norte · giro " + num("giro", 0) + "°.", false);
+    textoAjuste();
   }
-  $("mo").addEventListener("click", function () { mover(-2, 0, 0); }); $("me").addEventListener("click", function () { mover(2, 0, 0); });
-  $("mn").addEventListener("click", function () { mover(0, 2, 0); }); $("ms").addEventListener("click", function () { mover(0, -2, 0); });
-  $("gi").addEventListener("click", function () { mover(0, 0, -3); }); $("gd").addEventListener("click", function () { mover(0, 0, 3); });
-  $("rst").addEventListener("click", function () { $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; if (est) { dibujar(); decir("Contorno en su lugar original.", false); } });
+  function textoAjuste() {
+    var x = num("dx", 0), y = num("dy", 0), g = num("giro", 0);
+    $("ajuste").textContent = "Ajuste actual: " + Math.abs(x) + " m al " + (x >= 0 ? "este" : "oeste") + ", " + Math.abs(y) + " m al " + (y >= 0 ? "norte" : "sur") + ", giro " + g + "°.";
+  }
+  function paso() { return +$("paso").value || 10; }
+  function pasoGiro() { var m = paso(); return m === 2 ? 3 : m === 5 ? 6 : m === 10 ? 12 : 30; }
+  $("mo").addEventListener("click", function () { mover(-paso(), 0, 0); }); $("me").addEventListener("click", function () { mover(paso(), 0, 0); });
+  $("mn").addEventListener("click", function () { mover(0, paso(), 0); }); $("ms").addEventListener("click", function () { mover(0, -paso(), 0); });
+  $("gi").addEventListener("click", function () { mover(0, 0, -pasoGiro()); }); $("gd").addEventListener("click", function () { mover(0, 0, pasoGiro()); });
+  $("rst").addEventListener("click", function () { $("dx").value = "0"; $("dy").value = "0"; $("giro").value = "0"; if (est) { dibujar(); } textoAjuste(); });
   var eligiendoEd = false;
   $("clicedif").addEventListener("click", function () {
     if (!est) { decir("Primero toca “Cargar y mostrar”.", true); return; }
