@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v21</span>
+    <span class="tag">prueba · mapa real · v22</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -122,6 +122,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     </fieldset>
 
     <p class="estado" id="estado" role="status" aria-live="polite">Pega tu clave de Google y toca “Cargar y mostrar”.</p>
+    <p class="nota" id="suelo">Suelo medido: todavía sin datos.</p>
     <p class="nota">Los edificios y la atribución de Google que se ven abajo del mapa son parte del servicio y no se pueden quitar. Los datos del mapa no se guardan ni se exportan.</p>
   </aside>
   <main id="visor" aria-label="Mapa 3D"><div id="osm" hidden>Mapa 3D: Google Maps (abajo a la izquierda).<br>Contorno del edificio: © colaboradores de OpenStreetMap, openstreetmap.org/copyright</div></main>
@@ -421,7 +422,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       decir("Cargando el mapa 3D de Google…", false);
       if (!viewer) crearVisor();
       await cargarMapa(clave);
-      limpiarCapa(); est = null; edificios = []; idxEd = -1; $("osm").hidden = true; toggleGiro(false);
+      $("suelo").textContent = "Suelo medido: midiendo…"; limpiarCapa(); est = null; edificios = []; idxEd = -1; $("osm").hidden = true; toggleGiro(false);
       var cart = Cesium.Cartographic.fromDegrees(lon, lat, 0);
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, 30);
       viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(centro, 60), { duration: 2.2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(vista.pitch), vista.range) });
@@ -438,6 +439,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, base + 30);
       est = { lat: lat, lon: lon, base: base };
       dibujar();
+      $("suelo").textContent = h0 === null ? "Suelo medido: no se pudo medir." : "Suelo medido: " + (Math.round(h0 * 10) / 10) + " m sobre el elipsoide WGS84 (no es altura sobre el nivel del mar).";
       decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
       buscarEdificio();
     } catch (e) { decir(mensajeDeError(e), true); }
