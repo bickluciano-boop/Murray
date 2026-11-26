@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v22</span>
+    <span class="tag">prueba · mapa real · v23</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -429,17 +429,22 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       decir("Cargando edificios de la zona… (puede tardar unos segundos)", false);
       await esperar(3500);
       // El suelo: se mide en un anillo de puntos alrededor del lugar (calles, plazas) y se toma el más bajo. Medir solo en el centro daría el techo o la punta del edificio.
-      var h0 = null;
+      var h0 = null, hCentro = null, hMediana = null, nMuestras = 0;
       try {
         var pts = [cart]; [30, 60, 90].forEach(function (rad) { for (var k = 0; k < 12; k++) { var ang = k * Math.PI / 6, dLat = (rad * Math.cos(ang)) / 111320, dLon = (rad * Math.sin(ang)) / (111320 * Math.cos(lat * Math.PI / 180)); pts.push(Cesium.Cartographic.fromDegrees(lon + dLon, lat + dLat, 0)); } });
         var med = await viewer.scene.sampleHeightMostDetailed(pts);
         med.forEach(function (c) { if (c && isFinite(c.height) && (h0 === null || c.height < h0)) h0 = c.height; });
+        // Tres lecturas del suelo: el punto exacto, la mediana de todas las muestras y el minimo (el que usa la franja).
+        var hs = med.filter(function (c) { return c && isFinite(c.height); }).map(function (c) { return c.height; }).sort(function (a, b) { return a - b; });
+        nMuestras = hs.length; if (hs.length) hMediana = hs.length % 2 ? hs[(hs.length - 1) / 2] : (hs[hs.length / 2 - 1] + hs[hs.length / 2]) / 2;
+        if (med[0] && isFinite(med[0].height)) hCentro = med[0].height;
       } catch (e) { h0 = null; }
       var base = h0 === null ? cart.height : h0;
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, base + 30);
       est = { lat: lat, lon: lon, base: base };
       dibujar();
-      $("suelo").textContent = h0 === null ? "Suelo medido: no se pudo medir." : "Suelo medido: " + (Math.round(h0 * 10) / 10) + " m sobre el elipsoide WGS84 (no es altura sobre el nivel del mar).";
+      var r1 = function (v) { return v === null ? "sin dato" : (Math.round(v * 10) / 10) + " m"; };
+      $("suelo").textContent = h0 === null ? "Suelo medido: no se pudo medir." : "Suelo medido (sobre el elipsoide WGS84, no sobre el nivel del mar): punto exacto " + r1(hCentro) + " · mediana " + r1(hMediana) + " · mínimo " + r1(h0) + " (" + nMuestras + " muestras en 90 m). Para pasar a nivel del mar resta 16,1 m en Buenos Aires.";
       decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
       buscarEdificio();
     } catch (e) { decir(mensajeDeError(e), true); }
