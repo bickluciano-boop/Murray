@@ -2200,3 +2200,7 @@ Solo busqueda web. Se agrego `data.buenosaires.gob.ar` al entorno "Predeterminad
 
 ## 26/11/2026 - Visor v24: la base de la franja es la mediana del suelo
 - Pedido de Luciano tras ver que el minimo daba 6,6 m s.n.m. en su zona. La franja de pisos (y la medicion `est.base`) ahora usan la mediana de las 37 muestras; si no hay muestras cae al minimo y luego al centro. No probado con el mapa real. La mediana en zonas muy construidas puede quedar por encima del suelo (incluye techos): es una aproximacion.
+
+## 26/11/2026 - Visor v24 verificado por Luciano ("se ve bien")
+- Segunda carga en la puerta de Luciano: punto exacto 22,2 / mediana 35,0 / minimo 22,2 m elipsoidales (-16,1 -> 6,1 / 18,9 / 6,1 m s.n.m.). Primera carga (v23): 48,8 / 32,4 / 22,7. TessaDEM: 17 m. Conclusiones: la mediana es estable (16-19 m s.n.m., coincide con 17 m); el punto exacto NO es estable entre cargas (techo vs suelo segun lo que alcanzo a cargar de las teselas); el minimo es ~22 m en ambas (~6 m s.n.m.), probablemente una zona baja cercana (ferrocarril).
+- La franja 12-28 sigue siendo el rango de ejemplo (el edificio no trae pisos). Columna dibujada sobre el contorno de Google Open Buildings, apoyada en la mediana.
