@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v23</span>
+    <span class="tag">prueba · mapa real · v24</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -439,12 +439,13 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         nMuestras = hs.length; if (hs.length) hMediana = hs.length % 2 ? hs[(hs.length - 1) / 2] : (hs[hs.length / 2 - 1] + hs[hs.length / 2]) / 2;
         if (med[0] && isFinite(med[0].height)) hCentro = med[0].height;
       } catch (e) { h0 = null; }
-      var base = h0 === null ? cart.height : h0;
+      // v24: la base de la franja es la MEDIANA de las muestras (el minimo caia en huecos del mapa y el punto exacto mide techos).
+      var base = hMediana !== null ? hMediana : (h0 === null ? cart.height : h0);
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, base + 30);
       est = { lat: lat, lon: lon, base: base };
       dibujar();
       var r1 = function (v) { return v === null ? "sin dato" : (Math.round(v * 10) / 10) + " m"; };
-      $("suelo").textContent = h0 === null ? "Suelo medido: no se pudo medir." : "Suelo medido (sobre el elipsoide WGS84, no sobre el nivel del mar): punto exacto " + r1(hCentro) + " · mediana " + r1(hMediana) + " · mínimo " + r1(h0) + " (" + nMuestras + " muestras en 90 m). Para pasar a nivel del mar resta 16,1 m en Buenos Aires.";
+      $("suelo").textContent = h0 === null ? "Suelo medido: no se pudo medir." : "Suelo medido (sobre el elipsoide WGS84, no sobre el nivel del mar): punto exacto " + r1(hCentro) + " · mediana " + r1(hMediana) + " · mínimo " + r1(h0) + " (" + nMuestras + " muestras en 90 m). La franja se apoya en la mediana. Para pasar a nivel del mar resta 16,1 m en Buenos Aires.";
       decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
       buscarEdificio();
     } catch (e) { decir(mensajeDeError(e), true); }

@@ -2197,3 +2197,6 @@ Solo busqueda web. Se agrego `data.buenosaires.gob.ar` al entorno "Predeterminad
 - Punto exacto 48,8 m, mediana 32,4 m, minimo 22,7 m (elipsoide) -> menos 16,1 m: 32,7 / 16,3 / 6,6 m sobre el nivel del mar. TessaDEM (topographic-map.com) = 17 m. La MEDIANA coincide con TessaDEM (<1 m, puede ser casualidad); el MINIMO (6,6 m) es implausible para esa zona (hueco o error de las teselas); el punto exacto mide el TECHO del edificio (cae sobre el).
 - NO usar techo menos suelo para estimar pisos: derivar medidas de las teselas de Google va contra sus politicas (no crear contenido derivado de Google Maps Content). Las lecturas de sampleHeight se usan solo para ubicar el dibujo.
 - Propuesta: v24 con la base de la franja en la MEDIANA en vez del minimo. Pendiente de OK de Luciano.
+
+## 26/11/2026 - Visor v24: la base de la franja es la mediana del suelo
+- Pedido de Luciano tras ver que el minimo daba 6,6 m s.n.m. en su zona. La franja de pisos (y la medicion `est.base`) ahora usan la mediana de las 37 muestras; si no hay muestras cae al minimo y luego al centro. No probado con el mapa real. La mediana en zonas muy construidas puede quedar por encima del suelo (incluye techos): es una aproximacion.
