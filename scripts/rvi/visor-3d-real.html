@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v27</span>
+    <span class="tag">prueba · mapa real · v28</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -131,6 +131,8 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       <label style="display:flex;gap:8px;align-items:flex-start"><input id="rseguir" type="checkbox" checked style="width:auto;margin-top:4px"><span>La cámara acompaña al teléfono (puedes hacer zoom y girar con el mouse)</span></label>
       <p class="estado" id="rhora" role="status" aria-live="polite">—</p>
       <div id="rparadas" class="nota" aria-live="polite"></div>
+      <label>Eventos del panel (opcional: órdenes enviadas al teléfono)<input id="archivoeventos" type="file" accept=".json,.txt,application/json"></label>
+      <div id="reventos" class="nota" aria-live="polite">Carga primero el recorrido y después el archivo de eventos.</div>
     </fieldset>
 
     <p class="estado" id="estado" role="status" aria-live="polite">Pega tu clave de Google y toca “Cargar y mostrar”.</p>
@@ -496,6 +498,27 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     }
     return out;
   }
+
+  // Eventos del panel (tabla commands): orden enviada al teléfono, con su estado y horas. Se ubican en el mapa donde ESTABA el teléfono según el recorrido (posición estimada).
+  function etiquetaEvento(tipo, estado) {
+    var t = { "capture-evidence": "Orden de evidencia (foto y audio)" }[tipo] || ("Orden «" + tipo + "»");
+    var e = { pending: "pendiente", received: "recibida por el teléfono", executed: "ejecutada", failed: "falló" }[estado] || estado || "estado desconocido";
+    return t + " · " + e;
+  }
+  function parsearEventos(texto) {
+    var t = String(texto || "").replace(/^﻿/, ""), i = t.search(/[\[{]/); if (i < 0) throw new Error("El archivo no tiene datos JSON.");
+    var dato = JSON.parse(t.slice(i)), filas = [];
+    if (Array.isArray(dato)) { dato.forEach(function (x) { if (x && Array.isArray(x.results)) filas = filas.concat(x.results); else filas.push(x); }); }
+    else if (dato && Array.isArray(dato.results)) filas = dato.results;
+    var ev = [];
+    filas.forEach(function (f) {
+      if (!f) return; var ms = Date.parse(f.executed_at || f.created_at || ""); if (!isFinite(ms)) return;
+      var estado = f.failed_at ? "failed" : String(f.status || ""), tipo = String(f.type || "?");
+      ev.push({ t: ms, tipo: tipo, estado: estado, texto: etiquetaEvento(tipo, estado), pedido: Date.parse(f.created_at || "") });
+    });
+    ev.sort(function (a, b) { return a.t - b.t; });
+    return ev;
+  }
   // Posición y estado en un instante: entre dos registros se interpola en línea recta, y se marca como estimado si el registro más cercano está a más de 90 s.
   function posicionEn(puntos, t) {
     var n = puntos.length; if (t <= puntos[0].t) return { la: puntos[0].la, lo: puntos[0].lo, ac: puntos[0].ac, estimado: false, hueco: 0, cerca: 0 };
@@ -504,13 +527,14 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var a = puntos[lo], b = puntos[hi], k = (t - a.t) / (b.t - a.t), cerca = Math.min(t - a.t, b.t - t);
     return { la: a.la + (b.la - a.la) * k, lo: a.lo + (b.lo - a.lo) * k, ac: a.ac !== null && b.ac !== null ? a.ac + (b.ac - a.ac) * k : (a.ac !== null ? a.ac : b.ac), estimado: cerca > 90000, hueco: b.t - a.t, cerca: cerca };
   }
-  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0, rPosPrev = null, rEsfera = null;
+  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0, rPosPrev = null, rEsfera = null, eventos = [];
   function limpiarRuta() {
     rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir";
     if (viewer) { rutaEnts.forEach(function (e) { viewer.entities.remove(e); }); if (rMarca) viewer.entities.remove(rMarca); }
-    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; $("rparadas").textContent = ""; $("rbarra").value = "0"; $("rhora").textContent = "—";
+    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; eventos = []; $("rparadas").textContent = ""; $("reventos").textContent = "Carga primero el recorrido y después el archivo de eventos."; $("archivoeventos").value = ""; $("rbarra").value = "0"; $("rhora").textContent = "—";
   }
   function formatoGap(ms) { var m = Math.round(ms / 60000); return m < 1 ? Math.round(ms / 1000) + " s" : m + " min"; }
+  function eventoCerca(t) { for (var i = 0; i < eventos.length; i++) if (Math.abs(eventos[i].t - t) <= 180000) return " · evento cercano: " + eventos[i].texto; return ""; }
   function actualizarRuta(frac) {
     if (!ruta.length || !viewer) return; rFrac = Math.max(0, Math.min(1, frac)); $("rbarra").value = String(Math.round(rFrac * 1000));
     var t = ruta[0].t + rFrac * (ruta[ruta.length - 1].t - ruta[0].t), p = posicionEn(ruta, t), alt = (est ? est.base : 30) + 2;
@@ -518,7 +542,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     if (!rMarca) rMarca = viewer.entities.add({ position: pos, point: { pixelSize: 15, color: Cesium.Color.fromCssColorString("#ffb400"), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
     rMarca.position = new Cesium.ConstantPositionProperty(pos);
     $("rhora").dataset.t = p.estimado ? "mal" : "ok";
-    $("rhora").textContent = new Date(t).toLocaleString("es-AR") + " · " + (p.estimado ? "posición estimada: el registro más cercano está a " + formatoGap(p.cerca) + " (hueco de " + formatoGap(p.hueco) + ")" : "cerca de un registro") + (p.ac !== null ? " · precisión ±" + Math.round(p.ac) + " m" : "");
+    $("rhora").textContent = new Date(t).toLocaleString("es-AR") + " · " + (p.estimado ? "posición estimada: el registro más cercano está a " + formatoGap(p.cerca) + " (hueco de " + formatoGap(p.hueco) + ")" : "cerca de un registro") + (p.ac !== null ? " · precisión ±" + Math.round(p.ac) + " m" : "") + eventoCerca(t);
     // La cámara acompaña al teléfono moviéndose lo mismo que él: no se toca la distancia ni el giro, así el zoom del usuario se respeta.
     if ($("rseguir").checked && rPosPrev) { viewer.camera.position = Cesium.Cartesian3.add(viewer.camera.position, Cesium.Cartesian3.subtract(pos, rPosPrev, new Cesium.Cartesian3()), new Cesium.Cartesian3()); }
     rPosPrev = pos;
@@ -542,6 +566,31 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     });
     var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "Las velocidades son en línea recta entre paradas, sin saber por dónde fue ni en qué: sirven solo como orientación."; caja.appendChild(pie);
   }
+
+  function mostrarEventos() {
+    var caja = $("reventos"); caja.textContent = ""; if (!eventos.length) { caja.textContent = "El archivo no trae eventos en ese período."; return; }
+    var tmin = ruta[0].t, tmax = ruta[ruta.length - 1].t, rango = Math.max(1, tmax - tmin), tit = document.createElement("div"); tit.textContent = eventos.length + " eventos del panel:"; caja.appendChild(tit);
+    var blanco = Cesium.Color.WHITE;
+    eventos.forEach(function (e, k) {
+      var dentro = e.t >= tmin && e.t <= tmax, fila = document.createElement("button"); fila.type = "button"; fila.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;text-transform:none;letter-spacing:0";
+      fila.textContent = "E" + (k + 1) + " · " + horaCorta(e.t) + " · " + e.texto + (dentro ? " · en el mapa: posición estimada según el recorrido" : " · fuera del tramo del recorrido");
+      if (dentro) fila.addEventListener("click", function () { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; actualizarRuta((e.t - tmin) / rango); });
+      caja.appendChild(fila);
+      if (dentro) {
+        var p = posicionEn(ruta, e.t), pos = Cesium.Cartesian3.fromDegrees(p.lo, p.la, (est ? est.base : 30) + 6);
+        rutaEnts.push(viewer.entities.add({ position: pos, point: { pixelSize: 12, color: blanco, outlineColor: Cesium.Color.fromCssColorString("#ffb400"), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: "E" + (k + 1) + " · " + horaCorta(e.t), font: "12px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, 18), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+      }
+    });
+    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "La hora es la de ejecución (o la de creación si no se ejecutó). Dónde estaba el teléfono en ese momento es una estimación entre registros."; caja.appendChild(pie);
+  }
+  $("archivoeventos").addEventListener("change", function () {
+    var f = $("archivoeventos").files && $("archivoeventos").files[0]; if (!f) return;
+    if (!ruta.length) { decir("Primero carga el archivo de recorrido y vuelve a elegir el de eventos.", true); $("archivoeventos").value = ""; return; }
+    if (f.size > 20 * 1024 * 1024) { decir("El archivo es demasiado grande (más de 20 MB).", true); return; }
+    var lector = new FileReader(); lector.onerror = function () { decir("No se pudo leer el archivo de eventos.", true); };
+    lector.onload = function () { try { eventos = parsearEventos(lector.result); mostrarEventos(); decir(eventos.length + " eventos cargados. Nada sale de tu navegador.", false); actualizarRuta(rFrac); } catch (e) { decir("No se pudo leer los eventos: " + (e && e.message ? e.message : e), true); } };
+    lector.readAsText(f);
+  });
   function pasoRuta() {
     if (!rJugando) return; var dur = (+$("rdur").value || 60) * 1000, f = (performance.now() - rT0) / dur;
     if (f >= 1) { actualizarRuta(1); rJugando = false; $("rplay").textContent = "▶ Reproducir"; return; }
