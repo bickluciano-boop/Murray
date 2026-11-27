@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v24</span>
+    <span class="tag">prueba · mapa real · v25</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -119,6 +119,17 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         <button id="c-calle" type="button" aria-pressed="false">Calle</button>
         <button id="c-giro" type="button" aria-pressed="false">Girar</button>
       </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>4 · Recorrido real (archivo de tu computadora)</legend>
+      <input id="archivoruta" type="file" accept=".json,.txt,application/json">
+      <p class="nota" id="rutainfo">Sin recorrido. El archivo se lee en este navegador: los puntos no se envían a ningún lado. Antes toca “Cargar y mostrar” para que el mapa esté listo.</p>
+      <div class="btns"><button id="rplay" type="button">▶ Reproducir</button><button id="rquitar" type="button">Quitar recorrido</button></div>
+      <input id="rbarra" type="range" min="0" max="1000" value="0" style="padding:0" aria-label="Momento del recorrido">
+      <label>Duración de la animación<select id="rdur"><option value="20">Rápida: 20 s</option><option value="60" selected>Normal: 60 s</option><option value="180">Lenta: 3 min</option></select></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input id="rseguir" type="checkbox" checked style="width:auto;margin-top:4px"><span>Seguir al teléfono con la cámara</span></label>
+      <p class="estado" id="rhora" role="status" aria-live="polite">—</p>
     </fieldset>
 
     <p class="estado" id="estado" role="status" aria-live="polite">Pega tu clave de Google y toca “Cargar y mostrar”.</p>
@@ -422,7 +433,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       decir("Cargando el mapa 3D de Google…", false);
       if (!viewer) crearVisor();
       await cargarMapa(clave);
-      $("suelo").textContent = "Suelo medido: midiendo…"; limpiarCapa(); est = null; edificios = []; idxEd = -1; $("osm").hidden = true; toggleGiro(false);
+      $("suelo").textContent = "Suelo medido: midiendo…"; limpiarRuta(); limpiarCapa(); est = null; edificios = []; idxEd = -1; $("osm").hidden = true; toggleGiro(false);
       var cart = Cesium.Cartographic.fromDegrees(lon, lat, 0);
       centro = Cesium.Cartesian3.fromDegrees(lon, lat, 30);
       viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(centro, 60), { duration: 2.2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(vista.pitch), vista.range) });
@@ -449,6 +460,82 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       decir((h0 === null ? "Mapa cargado, pero no se pudo medir el suelo: la franja puede verse desplazada. " : "Mapa cargado (suelo estimado a " + Math.round(h0) + " m sobre el elipsoide). ") + "Mira los edificios: si ves volúmenes con fachadas, la zona tiene 3D; si ves el piso liso, no. Arrastra para mover, rueda para acercar.", false);
       buscarEdificio();
     } catch (e) { decir(mensajeDeError(e), true); }
+  });
+
+  /* ---------- recorrido real: se lee un archivo local (salida de wrangler d1 --json) y se anima sobre el mapa ---------- */
+  // Acepta: [{results:[...]}], {results:[...]}, un arreglo de filas, con o sin texto antes del JSON. Cada fila: latitude, longitude, accuracy, captured_at.
+  function parsearRecorrido(texto) {
+    var t = String(texto || "").replace(/^﻿/, ""), i = t.search(/[\[{]/); if (i < 0) throw new Error("El archivo no tiene datos JSON.");
+    var dato = JSON.parse(t.slice(i)), filas = [];
+    if (Array.isArray(dato)) { dato.forEach(function (x) { if (x && Array.isArray(x.results)) filas = filas.concat(x.results); else filas.push(x); }); }
+    else if (dato && Array.isArray(dato.results)) filas = dato.results;
+    var puntos = [];
+    filas.forEach(function (f) {
+      if (!f) return; var la = Number(f.latitude), lo = Number(f.longitude), ms = Date.parse(f.captured_at || f.capturedAt || ""), ac = Number(f.accuracy);
+      if (isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180 && isFinite(ms)) puntos.push({ la: la, lo: lo, t: ms, ac: isFinite(ac) ? ac : null });
+    });
+    puntos.sort(function (a, b) { return a.t - b.t; });
+    if (puntos.length < 2) throw new Error("Hacen falta al menos 2 puntos con latitud, longitud y hora (hay " + puntos.length + ").");
+    return puntos;
+  }
+  // Posición y estado en un instante: entre dos registros se interpola en línea recta, y se marca como estimado si el registro más cercano está a más de 90 s.
+  function posicionEn(puntos, t) {
+    var n = puntos.length; if (t <= puntos[0].t) return { la: puntos[0].la, lo: puntos[0].lo, ac: puntos[0].ac, estimado: false, hueco: 0, cerca: 0 };
+    if (t >= puntos[n - 1].t) return { la: puntos[n - 1].la, lo: puntos[n - 1].lo, ac: puntos[n - 1].ac, estimado: false, hueco: 0, cerca: 0 };
+    var lo = 0, hi = n - 1; while (hi - lo > 1) { var m = (lo + hi) >> 1; if (puntos[m].t <= t) lo = m; else hi = m; }
+    var a = puntos[lo], b = puntos[hi], k = (t - a.t) / (b.t - a.t), cerca = Math.min(t - a.t, b.t - t);
+    return { la: a.la + (b.la - a.la) * k, lo: a.lo + (b.lo - a.lo) * k, ac: a.ac !== null && b.ac !== null ? a.ac + (b.ac - a.ac) * k : (a.ac !== null ? a.ac : b.ac), estimado: cerca > 90000, hueco: b.t - a.t, cerca: cerca };
+  }
+  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0;
+  function limpiarRuta() {
+    rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir";
+    if (viewer) { rutaEnts.forEach(function (e) { viewer.entities.remove(e); }); if (rMarca) viewer.entities.remove(rMarca); }
+    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; $("rbarra").value = "0"; $("rhora").textContent = "—";
+  }
+  function formatoGap(ms) { var m = Math.round(ms / 60000); return m < 1 ? Math.round(ms / 1000) + " s" : m + " min"; }
+  function actualizarRuta(frac) {
+    if (!ruta.length || !viewer) return; rFrac = Math.max(0, Math.min(1, frac)); $("rbarra").value = String(Math.round(rFrac * 1000));
+    var t = ruta[0].t + rFrac * (ruta[ruta.length - 1].t - ruta[0].t), p = posicionEn(ruta, t), alt = (est ? est.base : 30) + 2;
+    var pos = Cesium.Cartesian3.fromDegrees(p.lo, p.la, alt);
+    if (!rMarca) rMarca = viewer.entities.add({ position: pos, point: { pixelSize: 15, color: Cesium.Color.fromCssColorString("#ffb400"), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    rMarca.position = new Cesium.ConstantPositionProperty(pos);
+    $("rhora").dataset.t = p.estimado ? "mal" : "ok";
+    $("rhora").textContent = new Date(t).toLocaleString("es-AR") + " · " + (p.estimado ? "posición estimada: el registro más cercano está a " + formatoGap(p.cerca) + " (hueco de " + formatoGap(p.hueco) + ")" : "cerca de un registro") + (p.ac !== null ? " · precisión ±" + Math.round(p.ac) + " m" : "");
+    if ($("rseguir").checked) { viewer.camera.lookAt(pos, new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-40), 350)); }
+  }
+  function pasoRuta() {
+    if (!rJugando) return; var dur = (+$("rdur").value || 60) * 1000, f = (performance.now() - rT0) / dur;
+    if (f >= 1) { actualizarRuta(1); rJugando = false; $("rplay").textContent = "▶ Reproducir"; viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); return; }
+    actualizarRuta(f); rRaf = requestAnimationFrame(pasoRuta);
+  }
+  $("rplay").addEventListener("click", function () {
+    if (!ruta.length) { decir("Primero carga un archivo de recorrido.", true); return; }
+    if (rJugando) { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); return; }
+    if (rFrac >= 0.999) rFrac = 0; rJugando = true; $("rplay").textContent = "❚❚ Pausa"; rT0 = performance.now() - rFrac * (+$("rdur").value || 60) * 1000; toggleGiro(false); rRaf = requestAnimationFrame(pasoRuta);
+  });
+  $("rbarra").addEventListener("input", function () { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; actualizarRuta(+$("rbarra").value / 1000); });
+  $("rquitar").addEventListener("click", function () { limpiarRuta(); if (viewer) viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); $("rutainfo").textContent = "Recorrido quitado."; });
+  $("archivoruta").addEventListener("change", function () {
+    var f = $("archivoruta").files && $("archivoruta").files[0]; if (!f) return;
+    if (!viewer || !est) { decir("Primero toca “Cargar y mostrar” para que el mapa esté listo, y vuelve a elegir el archivo.", true); $("archivoruta").value = ""; return; }
+    if (f.size > 20 * 1024 * 1024) { decir("El archivo es demasiado grande (más de 20 MB).", true); return; }
+    var lector = new FileReader();
+    lector.onerror = function () { decir("No se pudo leer el archivo.", true); };
+    lector.onload = function () {
+      try {
+        var pts = parsearRecorrido(lector.result); limpiarRuta(); ruta = pts;
+        var cart = pts.map(function (p) { return Cesium.Cartesian3.fromDegrees(p.lo, p.la, est.base + 2); });
+        pts.forEach(function (p, i) { rutaEnts.push(viewer.entities.add({ position: cart[i], point: { pixelSize: 5, color: Cesium.Color.fromCssColorString("#ffb400").withAlpha(0.75), disableDepthTestDistance: Number.POSITIVE_INFINITY } })); });
+        var esfera = Cesium.BoundingSphere.fromPoints(cart);
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); toggleGiro(false);
+        viewer.camera.flyToBoundingSphere(esfera, { duration: 2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-60), Math.max(400, esfera.radius * 2.6)) });
+        var dur = pts[pts.length - 1].t - pts[0].t;
+        $("rutainfo").textContent = pts.length + " puntos · " + new Date(pts[0].t).toLocaleString("es-AR") + " a " + new Date(pts[pts.length - 1].t).toLocaleString("es-AR") + " (" + formatoGap(dur) + "). Los puntos naranjas son registros reales; entre ellos el teléfono se dibuja en línea recta, como estimación.";
+        actualizarRuta(0); if ($("rseguir").checked) viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+        decir("Recorrido cargado. Usa la barra o “Reproducir”. Mapa de Google y datos de tu panel: nada de esto sale de tu navegador.", false);
+      } catch (e) { decir("No se pudo leer el recorrido: " + (e && e.message ? e.message : e), true); }
+    };
+    lector.readAsText(f);
   });
 })();
 </script>
