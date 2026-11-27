@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v26</span>
+    <span class="tag">prueba · mapa real · v27</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -130,6 +130,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       <label>Duración de la animación<select id="rdur"><option value="20">Rápida: 20 s</option><option value="60" selected>Normal: 60 s</option><option value="180">Lenta: 3 min</option></select></label>
       <label style="display:flex;gap:8px;align-items:flex-start"><input id="rseguir" type="checkbox" checked style="width:auto;margin-top:4px"><span>La cámara acompaña al teléfono (puedes hacer zoom y girar con el mouse)</span></label>
       <p class="estado" id="rhora" role="status" aria-live="polite">—</p>
+      <div id="rparadas" class="nota" aria-live="polite"></div>
     </fieldset>
 
     <p class="estado" id="estado" role="status" aria-live="polite">Pega tu clave de Google y toca “Cargar y mostrar”.</p>
@@ -478,6 +479,23 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     if (puntos.length < 2) throw new Error("Hacen falta al menos 2 puntos con latitud, longitud y hora (hay " + puntos.length + ").");
     return puntos;
   }
+
+  // Paradas por reglas explicables: registros consecutivos que quedan a menos de ~50 m (más la mitad de la precisión, hasta 120 m) del centro del grupo,
+  // con al menos 2 registros y 10 minutos entre el primero y el último. No se sabe qué pasó entre registros: es un cálculo, no una observación.
+  function distM(la1, lo1, la2, lo2) { var R = 6371000, d2r = Math.PI / 180, a = Math.sin((la2 - la1) * d2r / 2), b = Math.sin((lo2 - lo1) * d2r / 2), h = a * a + Math.cos(la1 * d2r) * Math.cos(la2 * d2r) * b * b; return 2 * R * Math.asin(Math.sqrt(h)); }
+  function detectarParadas(pts, minMs) {
+    minMs = minMs || 10 * 60000; var out = [], i = 0, n = pts.length;
+    while (i < n) {
+      var sLa = pts[i].la, sLo = pts[i].lo, cnt = 1, j = i;
+      while (j + 1 < n) {
+        var q = pts[j + 1], cLa = sLa / cnt, cLo = sLo / cnt, r = Math.min(120, 50 + 0.5 * (q.ac || 0));
+        if (distM(cLa, cLo, q.la, q.lo) <= r) { sLa += q.la; sLo += q.lo; cnt++; j++; } else break;
+      }
+      if (cnt >= 2 && pts[j].t - pts[i].t >= minMs) { var acs = pts.slice(i, j + 1).map(function (p) { return p.ac; }).filter(function (v) { return v !== null; }); out.push({ i0: i, i1: j, t0: pts[i].t, t1: pts[j].t, la: sLa / cnt, lo: sLo / cnt, n: cnt, ac: acs.length ? Math.max.apply(null, acs) : null }); i = j + 1; }
+      else i++;
+    }
+    return out;
+  }
   // Posición y estado en un instante: entre dos registros se interpola en línea recta, y se marca como estimado si el registro más cercano está a más de 90 s.
   function posicionEn(puntos, t) {
     var n = puntos.length; if (t <= puntos[0].t) return { la: puntos[0].la, lo: puntos[0].lo, ac: puntos[0].ac, estimado: false, hueco: 0, cerca: 0 };
@@ -490,7 +508,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   function limpiarRuta() {
     rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir";
     if (viewer) { rutaEnts.forEach(function (e) { viewer.entities.remove(e); }); if (rMarca) viewer.entities.remove(rMarca); }
-    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; $("rbarra").value = "0"; $("rhora").textContent = "—";
+    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; $("rparadas").textContent = ""; $("rbarra").value = "0"; $("rhora").textContent = "—";
   }
   function formatoGap(ms) { var m = Math.round(ms / 60000); return m < 1 ? Math.round(ms / 1000) + " s" : m + " min"; }
   function actualizarRuta(frac) {
@@ -504,6 +522,25 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     // La cámara acompaña al teléfono moviéndose lo mismo que él: no se toca la distancia ni el giro, así el zoom del usuario se respeta.
     if ($("rseguir").checked && rPosPrev) { viewer.camera.position = Cesium.Cartesian3.add(viewer.camera.position, Cesium.Cartesian3.subtract(pos, rPosPrev, new Cesium.Cartesian3()), new Cesium.Cartesian3()); }
     rPosPrev = pos;
+  }
+
+  function horaCorta(ms) { return new Date(ms).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }); }
+  function mostrarParadas() {
+    var caja = $("rparadas"); caja.textContent = ""; if (!ruta.length) return;
+    var ps = detectarParadas(ruta), tmin = ruta[0].t, tmax = ruta[ruta.length - 1].t, rango = Math.max(1, tmax - tmin);
+    if (!ps.length) { caja.textContent = "Paradas: no se detectó ninguna (se necesitan 2 registros o más en el mismo lugar durante 10 min o más). Casi todo el recorrido está en movimiento o con pocos registros."; return; }
+    var tit = document.createElement("div"); tit.textContent = "Paradas detectadas (estimadas a partir de los registros):"; caja.appendChild(tit);
+    var azul = Cesium.Color.fromCssColorString("#cdebff");
+    ps.forEach(function (p, k) {
+      var fila = document.createElement("button"); fila.type = "button"; fila.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;text-transform:none;letter-spacing:0";
+      var tramo = k > 0 ? distM(ps[k - 1].la, ps[k - 1].lo, p.la, p.lo) : null, dt = k > 0 ? p.t0 - ps[k - 1].t1 : 0;
+      fila.textContent = "Parada " + (k + 1) + ": " + horaCorta(p.t0) + " a " + horaCorta(p.t1) + " (" + formatoGap(p.t1 - p.t0) + ", " + p.n + " registros" + (p.ac !== null ? ", precisión hasta ±" + Math.round(p.ac) + " m" : "") + ")" + (tramo !== null ? " · desde la anterior: " + (tramo >= 1000 ? (tramo / 1000).toFixed(1) + " km" : Math.round(tramo) + " m") + " en " + formatoGap(dt) + (dt > 0 ? " (≈ " + Math.round(tramo / 1000 / (dt / 3600000)) + " km/h en línea recta)" : "") : "");
+      fila.addEventListener("click", function () { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; actualizarRuta((p.t0 - tmin) / rango); });
+      caja.appendChild(fila);
+      var pos = Cesium.Cartesian3.fromDegrees(p.lo, p.la, (est ? est.base : 30) + 2);
+      rutaEnts.push(viewer.entities.add({ position: pos, point: { pixelSize: 11, color: azul.withAlpha(0.9), outlineColor: Cesium.Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: "P" + (k + 1) + " · " + formatoGap(p.t1 - p.t0), font: "12px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, -16), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+    });
+    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "Las velocidades son en línea recta entre paradas, sin saber por dónde fue ni en qué: sirven solo como orientación."; caja.appendChild(pie);
   }
   function pasoRuta() {
     if (!rJugando) return; var dur = (+$("rdur").value || 60) * 1000, f = (performance.now() - rT0) / dur;
@@ -535,7 +572,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         viewer.camera.flyToBoundingSphere(esfera, { duration: 2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-60), Math.max(400, esfera.radius * 2.6)) });
         var dur = pts[pts.length - 1].t - pts[0].t;
         $("rutainfo").textContent = pts.length + " puntos · " + new Date(pts[0].t).toLocaleString("es-AR") + " a " + new Date(pts[pts.length - 1].t).toLocaleString("es-AR") + " (" + formatoGap(dur) + "). Los puntos naranjas son registros reales; entre ellos el teléfono se dibuja en línea recta, como estimación.";
-        actualizarRuta(0);
+        actualizarRuta(0); mostrarParadas();
         decir("Recorrido cargado. Usa la barra o “Reproducir”. Mapa de Google y datos de tu panel: nada de esto sale de tu navegador.", false);
       } catch (e) { decir("No se pudo leer el recorrido: " + (e && e.message ? e.message : e), true); }
     };
