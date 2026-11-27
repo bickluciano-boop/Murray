@@ -2217,3 +2217,7 @@ Solo busqueda web. Se agrego `data.buenosaires.gob.ar` al entorno "Predeterminad
 - Comando de exportacion (el JSON queda en la PC de Luciano, no pasa por el chat): ver mensaje del 27/11; filtra por el nombre del equipo y las ultimas 24 h, hasta 1500 filas, columnas latitude, longitude, accuracy, captured_at.
 - Probado: parser (12 casos con formatos de wrangler, BOM, texto antes del JSON, filas invalidas), interpolacion y flujo con Cesium offline (carga 40 puntos, barra, reproducir, pausa, quitar, archivo malo). No probado con datos reales ni con el mapa de Google.
 - Limites: usa la altura de suelo medida en el punto cargado (est.base) para todo el recorrido; los registros automaticos llegan cada ~20 min, asi que entre ellos todo es estimado.
+
+## 27/11/2026 - Visor v26: el zoom no funcionaba con el recorrido
+- Luciano corrio el comando de exportacion y vio que no podia hacer zoom en el recorrido. Causa (mia): con "Seguir al telefono", v25 llamaba a `camera.lookAt(pos, rango 350 m)` en CADA actualizacion (barra, reproduccion), reponiendo la distancia y anulando el zoom; ademas `actualizarRuta(0)` pisaba el vuelo inicial a todo el recorrido.
+- v26: la camara acompana al telefono SUMANDO el mismo desplazamiento que el (no toca distancia ni giro); botones "Ver todo el recorrido" e "Ir al telefono" (vuelos). Probado con Cesium offline: zoom manual de 350 a 140 m se mantiene al mover la barra y durante la reproduccion; "Ver todo" aleja a ~3,6 km. No probado con el mapa real.

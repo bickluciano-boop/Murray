@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v25</span>
+    <span class="tag">prueba · mapa real · v26</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -125,10 +125,10 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       <legend>4 · Recorrido real (archivo de tu computadora)</legend>
       <input id="archivoruta" type="file" accept=".json,.txt,application/json">
       <p class="nota" id="rutainfo">Sin recorrido. El archivo se lee en este navegador: los puntos no se envían a ningún lado. Antes toca “Cargar y mostrar” para que el mapa esté listo.</p>
-      <div class="btns"><button id="rplay" type="button">▶ Reproducir</button><button id="rquitar" type="button">Quitar recorrido</button></div>
+      <div class="btns"><button id="rplay" type="button">▶ Reproducir</button><button id="rtodo" type="button">Ver todo el recorrido</button><button id="rir" type="button">Ir al teléfono</button><button id="rquitar" type="button">Quitar recorrido</button></div>
       <input id="rbarra" type="range" min="0" max="1000" value="0" style="padding:0" aria-label="Momento del recorrido">
       <label>Duración de la animación<select id="rdur"><option value="20">Rápida: 20 s</option><option value="60" selected>Normal: 60 s</option><option value="180">Lenta: 3 min</option></select></label>
-      <label style="display:flex;gap:8px;align-items:flex-start"><input id="rseguir" type="checkbox" checked style="width:auto;margin-top:4px"><span>Seguir al teléfono con la cámara</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input id="rseguir" type="checkbox" checked style="width:auto;margin-top:4px"><span>La cámara acompaña al teléfono (puedes hacer zoom y girar con el mouse)</span></label>
       <p class="estado" id="rhora" role="status" aria-live="polite">—</p>
     </fieldset>
 
@@ -486,11 +486,11 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var a = puntos[lo], b = puntos[hi], k = (t - a.t) / (b.t - a.t), cerca = Math.min(t - a.t, b.t - t);
     return { la: a.la + (b.la - a.la) * k, lo: a.lo + (b.lo - a.lo) * k, ac: a.ac !== null && b.ac !== null ? a.ac + (b.ac - a.ac) * k : (a.ac !== null ? a.ac : b.ac), estimado: cerca > 90000, hueco: b.t - a.t, cerca: cerca };
   }
-  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0;
+  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0, rPosPrev = null, rEsfera = null;
   function limpiarRuta() {
     rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir";
     if (viewer) { rutaEnts.forEach(function (e) { viewer.entities.remove(e); }); if (rMarca) viewer.entities.remove(rMarca); }
-    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; $("rbarra").value = "0"; $("rhora").textContent = "—";
+    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; $("rbarra").value = "0"; $("rhora").textContent = "—";
   }
   function formatoGap(ms) { var m = Math.round(ms / 60000); return m < 1 ? Math.round(ms / 1000) + " s" : m + " min"; }
   function actualizarRuta(frac) {
@@ -501,20 +501,24 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     rMarca.position = new Cesium.ConstantPositionProperty(pos);
     $("rhora").dataset.t = p.estimado ? "mal" : "ok";
     $("rhora").textContent = new Date(t).toLocaleString("es-AR") + " · " + (p.estimado ? "posición estimada: el registro más cercano está a " + formatoGap(p.cerca) + " (hueco de " + formatoGap(p.hueco) + ")" : "cerca de un registro") + (p.ac !== null ? " · precisión ±" + Math.round(p.ac) + " m" : "");
-    if ($("rseguir").checked) { viewer.camera.lookAt(pos, new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-40), 350)); }
+    // La cámara acompaña al teléfono moviéndose lo mismo que él: no se toca la distancia ni el giro, así el zoom del usuario se respeta.
+    if ($("rseguir").checked && rPosPrev) { viewer.camera.position = Cesium.Cartesian3.add(viewer.camera.position, Cesium.Cartesian3.subtract(pos, rPosPrev, new Cesium.Cartesian3()), new Cesium.Cartesian3()); }
+    rPosPrev = pos;
   }
   function pasoRuta() {
     if (!rJugando) return; var dur = (+$("rdur").value || 60) * 1000, f = (performance.now() - rT0) / dur;
-    if (f >= 1) { actualizarRuta(1); rJugando = false; $("rplay").textContent = "▶ Reproducir"; viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); return; }
+    if (f >= 1) { actualizarRuta(1); rJugando = false; $("rplay").textContent = "▶ Reproducir"; return; }
     actualizarRuta(f); rRaf = requestAnimationFrame(pasoRuta);
   }
   $("rplay").addEventListener("click", function () {
     if (!ruta.length) { decir("Primero carga un archivo de recorrido.", true); return; }
-    if (rJugando) { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); return; }
-    if (rFrac >= 0.999) rFrac = 0; rJugando = true; $("rplay").textContent = "❚❚ Pausa"; rT0 = performance.now() - rFrac * (+$("rdur").value || 60) * 1000; toggleGiro(false); rRaf = requestAnimationFrame(pasoRuta);
+    if (rJugando) { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; return; }
+    if (rFrac >= 0.999) rFrac = 0; rJugando = true; $("rplay").textContent = "❚❚ Pausa"; rT0 = performance.now() - rFrac * (+$("rdur").value || 60) * 1000; toggleGiro(false); viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); rRaf = requestAnimationFrame(pasoRuta);
   });
   $("rbarra").addEventListener("input", function () { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; actualizarRuta(+$("rbarra").value / 1000); });
-  $("rquitar").addEventListener("click", function () { limpiarRuta(); if (viewer) viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); $("rutainfo").textContent = "Recorrido quitado."; });
+  $("rquitar").addEventListener("click", function () { limpiarRuta(); $("rutainfo").textContent = "Recorrido quitado."; });
+  $("rtodo").addEventListener("click", function () { if (!rEsfera) { decir("Primero carga un archivo de recorrido.", true); return; } viewer.camera.flyToBoundingSphere(rEsfera, { duration: 1.5, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-60), Math.max(400, rEsfera.radius * 2.6)) }); });
+  $("rir").addEventListener("click", function () { if (!rMarca || !rPosPrev) { decir("Primero carga un archivo de recorrido.", true); return; } viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(rPosPrev, 40), { duration: 1.2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-40), 350) }); });
   $("archivoruta").addEventListener("change", function () {
     var f = $("archivoruta").files && $("archivoruta").files[0]; if (!f) return;
     if (!viewer || !est) { decir("Primero toca “Cargar y mostrar” para que el mapa esté listo, y vuelve a elegir el archivo.", true); $("archivoruta").value = ""; return; }
@@ -527,11 +531,11 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
         var cart = pts.map(function (p) { return Cesium.Cartesian3.fromDegrees(p.lo, p.la, est.base + 2); });
         pts.forEach(function (p, i) { rutaEnts.push(viewer.entities.add({ position: cart[i], point: { pixelSize: 5, color: Cesium.Color.fromCssColorString("#ffb400").withAlpha(0.75), disableDepthTestDistance: Number.POSITIVE_INFINITY } })); });
         var esfera = Cesium.BoundingSphere.fromPoints(cart);
-        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); toggleGiro(false);
+        rEsfera = esfera; viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); toggleGiro(false);
         viewer.camera.flyToBoundingSphere(esfera, { duration: 2, offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-60), Math.max(400, esfera.radius * 2.6)) });
         var dur = pts[pts.length - 1].t - pts[0].t;
         $("rutainfo").textContent = pts.length + " puntos · " + new Date(pts[0].t).toLocaleString("es-AR") + " a " + new Date(pts[pts.length - 1].t).toLocaleString("es-AR") + " (" + formatoGap(dur) + "). Los puntos naranjas son registros reales; entre ellos el teléfono se dibuja en línea recta, como estimación.";
-        actualizarRuta(0); if ($("rseguir").checked) viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+        actualizarRuta(0);
         decir("Recorrido cargado. Usa la barra o “Reproducir”. Mapa de Google y datos de tu panel: nada de esto sale de tu navegador.", false);
       } catch (e) { decir("No se pudo leer el recorrido: " + (e && e.message ? e.message : e), true); }
     };
