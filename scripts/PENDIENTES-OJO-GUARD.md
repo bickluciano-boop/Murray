@@ -2232,3 +2232,8 @@ Solo busqueda web. Se agrego `data.buenosaires.gob.ar` al entorno "Predeterminad
 - Se listan como E1, E2... (boton que lleva la barra a ese instante), se marcan en el mapa donde ESTABA el telefono segun el recorrido (posicion estimada, interpolada) y la hora de la barra avisa "evento cercano" a +-3 min. Los que caen fuera del tramo del recorrido se listan pero sin marca. Requiere cargar primero el recorrido.
 - Probado: parser (7 casos: orden, fechas invalidas, fallido, tipo desconocido, sin JSON, vacio) y flujo con Cesium offline (9 comprobaciones: sin recorrido avisa, 3 eventos, 2 marcas, lista, textos honestos, tocar evento mueve la barra, "evento cercano", quitar limpia). No con datos reales. No guarda ni envia nada.
 - Limite: solo ordenes del panel (tabla `commands`); no incluye alertas ni pantalla encendida (no hay tabla de eventos confirmada para eso). Las columnas de `evidence_attempts` con hora no estan confirmadas.
+
+## 27/11/2026 - Visor v29: las ordenes de rutina (auto-locate) se ocultan por defecto
+- Luciano cargo eventos.json en v28: 101 eventos, casi todos `auto-locate` (orden de rutina cada ~20 min). Se superponian las etiquetas en el mapa (E75/E76/E77 apiladas en una parada) y la lista era larguisima.
+- v29: `auto-locate` se muestra como "Ubicacion automatica (rutina)", se OCULTA por defecto (casilla "Incluir las N ordenes de rutina"); arriba hay un resumen por tipo y estado. Las de rutina, si se incluyen, van como punto chico sin etiqueta; "evento cercano" ignora las de rutina mientras estan ocultas. Numeracion E1.. solo sobre las visibles.
+- Probado con Cesium offline (10 eventos: resumen, 1 visible por defecto, 10 con la casilla, vuelve a 1 sin duplicar marcas, quitar limpia, sin errores). No con datos reales.

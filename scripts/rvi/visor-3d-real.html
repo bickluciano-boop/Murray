@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v28</span>
+    <span class="tag">prueba · mapa real · v29</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -501,7 +501,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 
   // Eventos del panel (tabla commands): orden enviada al teléfono, con su estado y horas. Se ubican en el mapa donde ESTABA el teléfono según el recorrido (posición estimada).
   function etiquetaEvento(tipo, estado) {
-    var t = { "capture-evidence": "Orden de evidencia (foto y audio)" }[tipo] || ("Orden «" + tipo + "»");
+    var t = { "capture-evidence": "Orden de evidencia (foto y audio)", "auto-locate": "Ubicación automática (rutina)" }[tipo] || ("Orden «" + tipo + "»");
     var e = { pending: "pendiente", received: "recibida por el teléfono", executed: "ejecutada", failed: "falló" }[estado] || estado || "estado desconocido";
     return t + " · " + e;
   }
@@ -527,14 +527,15 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var a = puntos[lo], b = puntos[hi], k = (t - a.t) / (b.t - a.t), cerca = Math.min(t - a.t, b.t - t);
     return { la: a.la + (b.la - a.la) * k, lo: a.lo + (b.lo - a.lo) * k, ac: a.ac !== null && b.ac !== null ? a.ac + (b.ac - a.ac) * k : (a.ac !== null ? a.ac : b.ac), estimado: cerca > 90000, hueco: b.t - a.t, cerca: cerca };
   }
-  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0, rPosPrev = null, rEsfera = null, eventos = [];
+  var ruta = [], rutaEnts = [], rMarca = null, rJugando = false, rFrac = 0, rT0 = 0, rRaf = 0, rPosPrev = null, rEsfera = null, eventos = [], evEnts = [], verAuto = false;
+  function limpiarEvEnts() { if (viewer) evEnts.forEach(function (e) { viewer.entities.remove(e); }); evEnts = []; }
   function limpiarRuta() {
     rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir";
     if (viewer) { rutaEnts.forEach(function (e) { viewer.entities.remove(e); }); if (rMarca) viewer.entities.remove(rMarca); }
-    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; eventos = []; $("rparadas").textContent = ""; $("reventos").textContent = "Carga primero el recorrido y después el archivo de eventos."; $("archivoeventos").value = ""; $("rbarra").value = "0"; $("rhora").textContent = "—";
+    rutaEnts = []; rMarca = null; ruta = []; rFrac = 0; rPosPrev = null; rEsfera = null; eventos = []; limpiarEvEnts(); $("rparadas").textContent = ""; $("reventos").textContent = "Carga primero el recorrido y después el archivo de eventos."; $("archivoeventos").value = ""; $("rbarra").value = "0"; $("rhora").textContent = "—";
   }
   function formatoGap(ms) { var m = Math.round(ms / 60000); return m < 1 ? Math.round(ms / 1000) + " s" : m + " min"; }
-  function eventoCerca(t) { for (var i = 0; i < eventos.length; i++) if (Math.abs(eventos[i].t - t) <= 180000) return " · evento cercano: " + eventos[i].texto; return ""; }
+  function eventoCerca(t) { for (var i = 0; i < eventos.length; i++) if ((verAuto || !esRutina(eventos[i])) && Math.abs(eventos[i].t - t) <= 180000) return " · evento cercano: " + eventos[i].texto; return ""; }
   function actualizarRuta(frac) {
     if (!ruta.length || !viewer) return; rFrac = Math.max(0, Math.min(1, frac)); $("rbarra").value = String(Math.round(rFrac * 1000));
     var t = ruta[0].t + rFrac * (ruta[ruta.length - 1].t - ruta[0].t), p = posicionEn(ruta, t), alt = (est ? est.base : 30) + 2;
@@ -567,21 +568,36 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "Las velocidades son en línea recta entre paradas, sin saber por dónde fue ni en qué: sirven solo como orientación."; caja.appendChild(pie);
   }
 
+  function esRutina(e) { return e.tipo === "auto-locate"; }
   function mostrarEventos() {
+    limpiarEvEnts();
     var caja = $("reventos"); caja.textContent = ""; if (!eventos.length) { caja.textContent = "El archivo no trae eventos en ese período."; return; }
-    var tmin = ruta[0].t, tmax = ruta[ruta.length - 1].t, rango = Math.max(1, tmax - tmin), tit = document.createElement("div"); tit.textContent = eventos.length + " eventos del panel:"; caja.appendChild(tit);
+    var tmin = ruta[0].t, tmax = ruta[ruta.length - 1].t, rango = Math.max(1, tmax - tmin);
+    var cuentas = {}; eventos.forEach(function (e) { var k = e.texto; cuentas[k] = (cuentas[k] || 0) + 1; });
+    var res = document.createElement("div"); res.textContent = eventos.length + " eventos en el archivo: " + Object.keys(cuentas).map(function (k) { return cuentas[k] + " × " + k; }).join("; ") + "."; caja.appendChild(res);
+    var rutinas = eventos.filter(esRutina).length;
+    if (rutinas) {
+      var lab = document.createElement("label"); lab.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:8px;text-transform:none;letter-spacing:0";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = verAuto; cb.style.width = "auto";
+      cb.addEventListener("change", function () { verAuto = cb.checked; mostrarEventos(); actualizarRuta(rFrac); });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode("Incluir las " + rutinas + " órdenes de rutina (ubicación automática)")); caja.appendChild(lab);
+    }
+    var vis = eventos.filter(function (e) { return verAuto || !esRutina(e); });
+    if (!vis.length) { var vacio = document.createElement("div"); vacio.style.marginTop = "6px"; vacio.textContent = "No hay órdenes que no sean de rutina en ese período."; caja.appendChild(vacio); }
     var blanco = Cesium.Color.WHITE;
-    eventos.forEach(function (e, k) {
-      var dentro = e.t >= tmin && e.t <= tmax, fila = document.createElement("button"); fila.type = "button"; fila.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;text-transform:none;letter-spacing:0";
+    vis.forEach(function (e, k) {
+      var dentro = e.t >= tmin && e.t <= tmax, rut = esRutina(e), fila = document.createElement("button"); fila.type = "button"; fila.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;text-transform:none;letter-spacing:0";
       fila.textContent = "E" + (k + 1) + " · " + horaCorta(e.t) + " · " + e.texto + (dentro ? " · en el mapa: posición estimada según el recorrido" : " · fuera del tramo del recorrido");
       if (dentro) fila.addEventListener("click", function () { rJugando = false; cancelAnimationFrame(rRaf); $("rplay").textContent = "▶ Reproducir"; actualizarRuta((e.t - tmin) / rango); });
       caja.appendChild(fila);
       if (dentro) {
         var p = posicionEn(ruta, e.t), pos = Cesium.Cartesian3.fromDegrees(p.lo, p.la, (est ? est.base : 30) + 6);
-        rutaEnts.push(viewer.entities.add({ position: pos, point: { pixelSize: 12, color: blanco, outlineColor: Cesium.Color.fromCssColorString("#ffb400"), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: "E" + (k + 1) + " · " + horaCorta(e.t), font: "12px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, 18), disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+        var ent = { position: pos, point: { pixelSize: rut ? 7 : 12, color: blanco, outlineColor: Cesium.Color.fromCssColorString("#ffb400"), outlineWidth: rut ? 2 : 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } };
+        if (!rut) ent.label = { text: "E" + (k + 1) + " · " + horaCorta(e.t), font: "12px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, 18), disableDepthTestDistance: Number.POSITIVE_INFINITY };
+        evEnts.push(viewer.entities.add(ent));
       }
     });
-    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "La hora es la de ejecución (o la de creación si no se ejecutó). Dónde estaba el teléfono en ese momento es una estimación entre registros."; caja.appendChild(pie);
+    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "La hora es la de ejecución (o la de creación si no se ejecutó). Dónde estaba el teléfono en ese momento es una estimación entre registros. Las órdenes de rutina se ocultan por defecto porque se repiten cada pocos minutos."; caja.appendChild(pie);
   }
   $("archivoeventos").addEventListener("change", function () {
     var f = $("archivoeventos").files && $("archivoeventos").files[0]; if (!f) return;
