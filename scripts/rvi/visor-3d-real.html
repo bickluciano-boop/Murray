@@ -48,7 +48,7 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 <body>
 <div class="app">
   <aside class="lado" aria-label="Controles">
-    <span class="tag">prueba · mapa real · v29</span>
+    <span class="tag">prueba · mapa real · v30</span>
     <h1>Reconstrucción visual</h1>
     <p class="sub">Mira un lugar en el mapa 3D real de Google y marca encima un punto, su precisión y una franja de pisos posibles. Es una prueba para ver si tu zona tiene edificios en 3D.</p>
 
@@ -510,13 +510,21 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
     var dato = JSON.parse(t.slice(i)), filas = [];
     if (Array.isArray(dato)) { dato.forEach(function (x) { if (x && Array.isArray(x.results)) filas = filas.concat(x.results); else filas.push(x); }); }
     else if (dato && Array.isArray(dato.results)) filas = dato.results;
-    var ev = [];
+    var ev = [], descartados = 0;
     filas.forEach(function (f) {
-      if (!f) return; var ms = Date.parse(f.executed_at || f.created_at || ""); if (!isFinite(ms)) return;
-      var estado = f.failed_at ? "failed" : String(f.status || ""), tipo = String(f.type || "?");
+      if (!f) return; var tipo = String(f.type || "?");
+      if (tipo === "evidence-attempt") {
+        var me = Date.parse(f.created_at || ""); if (!isFinite(me)) { descartados++; return; }
+        var si = function (v) { return Number(v) === 1; }, partes = ["foto frontal " + (si(f.has_front) ? "sí" : "no"), "foto trasera " + (si(f.has_rear) ? "sí" : "no"), "audio " + (si(f.has_audio) ? "sí" + (Number(f.audio_duration_seconds) > 0 ? " (" + Math.round(Number(f.audio_duration_seconds)) + " s)" : "") : "no")];
+        var mail = Date.parse(f.mail_at || ""); if (isFinite(mail)) partes.push("aviso entregado " + horaCorta(mail));
+        ev.push({ t: me, tipo: tipo, estado: "received", grupo: "Evidencia recibida", texto: "Evidencia recibida: " + partes.join(" · ") }); return;
+      }
+      var ms = Date.parse(f.executed_at || f.created_at || ""); if (!isFinite(ms)) { descartados++; return; }
+      var estado = f.failed_at ? "failed" : String(f.status || "");
       ev.push({ t: ms, tipo: tipo, estado: estado, texto: etiquetaEvento(tipo, estado), pedido: Date.parse(f.created_at || "") });
     });
     ev.sort(function (a, b) { return a.t - b.t; });
+    ev.descartados = descartados;
     return ev;
   }
   // Posición y estado en un instante: entre dos registros se interpola en línea recta, y se marca como estimado si el registro más cercano está a más de 90 s.
@@ -571,9 +579,9 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
   function esRutina(e) { return e.tipo === "auto-locate"; }
   function mostrarEventos() {
     limpiarEvEnts();
-    var caja = $("reventos"); caja.textContent = ""; if (!eventos.length) { caja.textContent = "El archivo no trae eventos en ese período."; return; }
+    var caja = $("reventos"); caja.textContent = ""; if (!eventos.length) { caja.textContent = "El archivo no trae eventos en ese período." + (eventos.descartados ? " (" + eventos.descartados + " filas sin hora válida)" : ""); return; }
     var tmin = ruta[0].t, tmax = ruta[ruta.length - 1].t, rango = Math.max(1, tmax - tmin);
-    var cuentas = {}; eventos.forEach(function (e) { var k = e.texto; cuentas[k] = (cuentas[k] || 0) + 1; });
+    var cuentas = {}; eventos.forEach(function (e) { var k = e.grupo || e.texto; cuentas[k] = (cuentas[k] || 0) + 1; });
     var res = document.createElement("div"); res.textContent = eventos.length + " eventos en el archivo: " + Object.keys(cuentas).map(function (k) { return cuentas[k] + " × " + k; }).join("; ") + "."; caja.appendChild(res);
     var rutinas = eventos.filter(esRutina).length;
     if (rutinas) {
@@ -592,12 +600,12 @@ button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
       caja.appendChild(fila);
       if (dentro) {
         var p = posicionEn(ruta, e.t), pos = Cesium.Cartesian3.fromDegrees(p.lo, p.la, (est ? est.base : 30) + 6);
-        var ent = { position: pos, point: { pixelSize: rut ? 7 : 12, color: blanco, outlineColor: Cesium.Color.fromCssColorString("#ffb400"), outlineWidth: rut ? 2 : 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } };
+        var ent = { position: pos, point: { pixelSize: rut ? 7 : 12, color: blanco, outlineColor: Cesium.Color.fromCssColorString(e.tipo === "evidence-attempt" ? "#5ad1a0" : "#ffb400"), outlineWidth: rut ? 2 : 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } };
         if (!rut) ent.label = { text: "E" + (k + 1) + " · " + horaCorta(e.t), font: "12px IBM Plex Mono, monospace", fillColor: Cesium.Color.WHITE, showBackground: true, backgroundColor: Cesium.Color.fromCssColorString("#070707").withAlpha(0.8), pixelOffset: new Cesium.Cartesian2(0, 18), disableDepthTestDistance: Number.POSITIVE_INFINITY };
         evEnts.push(viewer.entities.add(ent));
       }
     });
-    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = "La hora es la de ejecución (o la de creación si no se ejecutó). Dónde estaba el teléfono en ese momento es una estimación entre registros. Las órdenes de rutina se ocultan por defecto porque se repiten cada pocos minutos."; caja.appendChild(pie);
+    var pie = document.createElement("div"); pie.style.marginTop = "6px"; pie.textContent = (eventos.descartados ? eventos.descartados + " filas se descartaron por no tener una hora válida. " : "") + "La hora es la de ejecución (o la de creación si no se ejecutó). Dónde estaba el teléfono en ese momento es una estimación entre registros. Las órdenes de rutina se ocultan por defecto porque se repiten cada pocos minutos."; caja.appendChild(pie);
   }
   $("archivoeventos").addEventListener("change", function () {
     var f = $("archivoeventos").files && $("archivoeventos").files[0]; if (!f) return;
